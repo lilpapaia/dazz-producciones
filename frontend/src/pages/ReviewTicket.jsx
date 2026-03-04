@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTicket, updateTicket } from '../services/api';
-import { ArrowLeft, Save, X, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Save, X, ZoomIn, Download, FileText } from 'lucide-react';
 
 const invoiceStatusOptions = [
   "RECIBIDO",
@@ -53,8 +53,9 @@ const ReviewTicket = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateTicket(id, ticket);
-      alert('✓ Ticket actualizado correctamente');
+      // Marcar como revisado al guardar
+      await updateTicket(id, {...ticket, is_reviewed: true});
+      alert('✓ Ticket actualizado y marcado como revisado');
       navigate(-1);
     } catch (error) {
       alert('Error al actualizar ticket');
@@ -63,10 +64,17 @@ const ReviewTicket = () => {
     }
   };
 
-  const getImageUrl = () => {
+  const getFileUrl = () => {
     if (!ticket?.file_path) return null;
-    // El backend sirve archivos desde /uploads
     return `http://localhost:8000/${ticket.file_path}`;
+  };
+
+  const getFileType = () => {
+    if (!ticket?.file_name) return 'unknown';
+    const ext = ticket.file_name.toLowerCase().split('.').pop();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (ext === 'pdf') return 'pdf';
+    return 'unknown';
   };
 
   if (loading) {
@@ -77,7 +85,8 @@ const ReviewTicket = () => {
     );
   }
 
-  const imageUrl = getImageUrl();
+  const fileUrl = getFileUrl();
+  const fileType = getFileType();
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -90,7 +99,14 @@ const ReviewTicket = () => {
             <ArrowLeft size={18} />
             <span className="text-sm">Volver</span>
           </button>
-          <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
+            {ticket.is_reviewed ? (
+              <span className="text-2xl" title="Ya revisado">✅</span>
+            ) : (
+              <span className="text-2xl" title="Pendiente revisión">👁️</span>
+            )}
+          </div>
           <span className={`inline-block mt-2 px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
             ticket.type === 'factura'
               ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
@@ -104,40 +120,94 @@ const ReviewTicket = () => {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">
           
-          {/* VISTA PREVIA DEL TICKET - MINIATURA CLICKEABLE CON LIGHTBOX */}
-          {imageUrl && (
+          {/* VISTA PREVIA - SOPORTE IMÁGENES Y PDFs */}
+          {fileUrl && (
             <div className="bg-zinc-950 border border-zinc-700 rounded-sm overflow-hidden">
-              <div 
-                onClick={() => setShowLightbox(true)}
-                className="relative cursor-pointer group"
-              >
-                <img 
-                  src={imageUrl} 
-                  alt="Vista previa del ticket"
-                  className="w-full h-64 object-contain bg-zinc-900"
-                  onError={(e) => {
-                    e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><text x="50%" y="50%" text-anchor="middle" fill="%23555" font-size="16">Error cargando imagen</text></svg>';
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg">
-                      <ZoomIn size={24} />
+              {/* IMÁGENES (JPG, PNG, etc.) */}
+              {fileType === 'image' && (
+                <>
+                  <div 
+                    onClick={() => setShowLightbox(true)}
+                    className="relative cursor-pointer group"
+                  >
+                    <img 
+                      src={fileUrl} 
+                      alt="Vista previa del ticket"
+                      className="w-full h-64 object-contain bg-zinc-900"
+                      onError={(e) => {
+                        console.error('Error cargando imagen:', fileUrl);
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-zinc-500"><p>Error cargando imagen</p></div>';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg">
+                          <ZoomIn size={24} />
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  <div className="px-4 py-2 bg-zinc-900/50 border-t border-zinc-800">
+                    <p className="text-xs text-zinc-500 font-mono">
+                      <ZoomIn size={14} className="inline mr-1" />
+                      Click para ver en tamaño completo
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* PDFs */}
+              {fileType === 'pdf' && (
+                <>
+                  <div className="relative">
+                    <iframe 
+                      src={fileUrl}
+                      className="w-full h-96 bg-zinc-900"
+                      title="Vista previa PDF"
+                    />
+                  </div>
+                  <div className="px-4 py-3 bg-zinc-900/50 border-t border-zinc-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-amber-500" />
+                      <p className="text-xs text-zinc-400 font-mono">
+                        Documento PDF • {ticket.file_name}
+                      </p>
+                    </div>
+                    <a
+                      href={fileUrl}
+                      download={ticket.file_name}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs rounded-sm transition-colors"
+                    >
+                      <Download size={14} />
+                      Descargar PDF
+                    </a>
+                  </div>
+                </>
+              )}
+
+              {/* ARCHIVO DESCONOCIDO */}
+              {fileType === 'unknown' && (
+                <div className="h-64 flex flex-col items-center justify-center text-zinc-500 gap-3">
+                  <FileText size={48} className="text-zinc-600" />
+                  <p className="text-sm">Tipo de archivo no soportado</p>
+                  <a
+                    href={fileUrl}
+                    download={ticket.file_name}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-zinc-950 text-sm font-semibold rounded-sm"
+                  >
+                    <Download size={16} />
+                    Descargar archivo
+                  </a>
                 </div>
-              </div>
-              <div className="px-4 py-2 bg-zinc-900/50 border-t border-zinc-800">
-                <p className="text-xs text-zinc-500 font-mono">
-                  <ZoomIn size={14} className="inline mr-1" />
-                  Click para ver en tamaño completo
-                </p>
-              </div>
+              )}
             </div>
           )}
 
-          {/* LIGHTBOX MODAL - IMAGEN COMPLETA */}
-          {showLightbox && imageUrl && (
+          {/* LIGHTBOX MODAL - SOLO PARA IMÁGENES */}
+          {showLightbox && fileType === 'image' && fileUrl && (
             <div 
               className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
               onClick={() => setShowLightbox(false)}
@@ -153,7 +223,7 @@ const ReviewTicket = () => {
               </button>
               <div className="max-w-7xl max-h-full">
                 <img 
-                  src={imageUrl} 
+                  src={fileUrl} 
                   alt="Ticket completo"
                   className="max-w-full max-h-[90vh] object-contain shadow-2xl"
                   onClick={(e) => e.stopPropagation()}
@@ -177,6 +247,8 @@ const ReviewTicket = () => {
             </div>
           </div>
 
+          {/* RESTO DEL FORMULARIO (igual que antes) */}
+          
           {/* Fecha y Proveedor */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -232,7 +304,7 @@ const ReviewTicket = () => {
             </div>
           )}
 
-          {/* Nombre contacto (facturas) */}
+          {/* Nombre contacto */}
           {ticket.type === 'factura' && (
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NOMBRE CONTACTO</label>
@@ -268,7 +340,7 @@ const ReviewTicket = () => {
             </div>
           </div>
 
-          {/* NOTAS (PO SI APLICA) */}
+          {/* NOTAS */}
           <div>
             <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NOTAS (PO SI APLICA)</label>
             <textarea
@@ -280,7 +352,7 @@ const ReviewTicket = () => {
             />
           </div>
 
-          {/* Estados: FACTURA y PAGO */}
+          {/* Estados */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ESTATUS FACTURA</label>
@@ -324,7 +396,7 @@ const ReviewTicket = () => {
               className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save size={18} />
-              {saving ? 'GUARDANDO...' : 'MARCAR REVISADO'}
+              {saving ? 'GUARDANDO...' : 'MARCAR REVISADO ✓'}
             </button>
           </div>
         </div>
