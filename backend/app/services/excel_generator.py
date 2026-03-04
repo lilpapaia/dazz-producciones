@@ -2,6 +2,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from datetime import datetime
 from typing import List, Dict
+from io import BytesIO
 import os
 
 def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path: str) -> str:
@@ -62,7 +63,7 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
     sheet.cell(row=3, column=9, value=project_data.get('other_invoice_data', ''))
     sheet.cell(row=3, column=10, value=project_data.get('client_data', ''))
     sheet.cell(row=3, column=11, value=project_data.get('client_email', ''))
-    sheet.cell(row=3, column=12, value=project_data.get('client_oc', ''))  # OC de cliente
+    sheet.cell(row=3, column=12, value=project_data.get('client_oc', ''))
     
     # === FILA 4: Link proyecto SharePoint ===
     sheet.cell(row=4, column=1, value="LINK A PROYECTO:")
@@ -71,28 +72,28 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
     
     # === FILA 5: Encabezados de tickets ===
     headers_row5 = [
-        "FECHA SU FACTURA",       # A
-        "Proveedor - Nombre",      # B
-        "Nº FACTURA PROVEEDOR",    # C
-        "PO SI APLICA",            # D
-        "IMPORTE",                 # E (base_amount)
-        "TIPO",                    # F (iva_amount)
-        "TIPO IVA",                # G (iva_percentage)
-        "TOTAL",                   # H (total_with_iva)
-        "TIPO IRPF",               # I (irpf_percentage)
-        "RETENCION",               # J (irpf_amount)
-        "TOTAL",                   # K (final_total)
-        "ESTATUS FACTURA",         # L
-        "ESTATUS PAGO",            # M
-        "TELEFONO",                # N
-        "EMAIL",                   # O
-        "NOMBRE",                  # P (contacto)
-        "ESTATUS EN CONTABILIDAD", # Q
-        "nº de GASTO",             # R
-        "ESTATUS PAGO",            # S (duplicado - contabilidad)
-        "LINK",                    # T
-        "COMO SE PAGÓ",            # U
-        "FECHA PAGO"               # V
+        "FECHA SU FACTURA",
+        "Proveedor - Nombre",
+        "Nº FACTURA PROVEEDOR",
+        "PO SI APLICA",
+        "IMPORTE",
+        "TIPO",
+        "TIPO IVA",
+        "TOTAL",
+        "TIPO IRPF",
+        "RETENCION",
+        "TOTAL",
+        "ESTATUS FACTURA",
+        "ESTATUS PAGO",
+        "TELEFONO",
+        "EMAIL",
+        "NOMBRE",
+        "ESTATUS EN CONTABILIDAD",
+        "nº de GASTO",
+        "ESTATUS PAGO",
+        "LINK",
+        "COMO SE PAGÓ",
+        "FECHA PAGO"
     ]
     
     for col, header in enumerate(headers_row5, start=1):
@@ -103,25 +104,24 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
     
     # === FILA 6+: Tickets individuales ===
     for idx, ticket in enumerate(tickets, start=6):
-        sheet.cell(row=idx, column=1, value=ticket.get('date', ''))  # A: Fecha
-        sheet.cell(row=idx, column=2, value=ticket.get('provider', ''))  # B: Proveedor
-        sheet.cell(row=idx, column=3, value=ticket.get('invoice_number', ''))  # C: Nº factura
-        sheet.cell(row=idx, column=4, value=ticket.get('po_notes', ''))  # D: PO/Notas
-        sheet.cell(row=idx, column=5, value=ticket.get('base_amount', 0))  # E: Base imponible
-        sheet.cell(row=idx, column=6, value=ticket.get('iva_amount', 0))  # F: IVA cantidad
-        sheet.cell(row=idx, column=7, value=ticket.get('iva_percentage', 0))  # G: IVA %
-        sheet.cell(row=idx, column=8, value=ticket.get('total_with_iva', 0))  # H: Total con IVA
-        sheet.cell(row=idx, column=9, value=ticket.get('irpf_percentage', 0))  # I: IRPF %
-        sheet.cell(row=idx, column=10, value=ticket.get('irpf_amount', 0))  # J: IRPF cantidad
-        sheet.cell(row=idx, column=11, value=ticket.get('final_total', 0))  # K: Total final
-        sheet.cell(row=idx, column=12, value=ticket.get('invoice_status', ''))  # L: Estatus factura
-        sheet.cell(row=idx, column=13, value=ticket.get('payment_status', ''))  # M: Estatus pago
+        sheet.cell(row=idx, column=1, value=ticket.get('date', ''))
+        sheet.cell(row=idx, column=2, value=ticket.get('provider', ''))
+        sheet.cell(row=idx, column=3, value=ticket.get('invoice_number', ''))
+        sheet.cell(row=idx, column=4, value=ticket.get('po_notes', ''))
+        sheet.cell(row=idx, column=5, value=ticket.get('base_amount', 0))
+        sheet.cell(row=idx, column=6, value=ticket.get('iva_amount', 0))
+        sheet.cell(row=idx, column=7, value=ticket.get('iva_percentage', 0))
+        sheet.cell(row=idx, column=8, value=ticket.get('total_with_iva', 0))
+        sheet.cell(row=idx, column=9, value=ticket.get('irpf_percentage', 0))
+        sheet.cell(row=idx, column=10, value=ticket.get('irpf_amount', 0))
+        sheet.cell(row=idx, column=11, value=ticket.get('final_total', 0))
+        sheet.cell(row=idx, column=12, value=ticket.get('invoice_status', ''))
+        sheet.cell(row=idx, column=13, value=ticket.get('payment_status', ''))
         
-        # Solo para facturas (no tickets)
         if ticket.get('type') == 'factura':
-            sheet.cell(row=idx, column=14, value=ticket.get('phone', ''))  # N: Teléfono
-            sheet.cell(row=idx, column=15, value=ticket.get('email', ''))  # O: Email
-            sheet.cell(row=idx, column=16, value=ticket.get('contact_name', ''))  # P: Nombre contacto
+            sheet.cell(row=idx, column=14, value=ticket.get('phone', ''))
+            sheet.cell(row=idx, column=15, value=ticket.get('email', ''))
+            sheet.cell(row=idx, column=16, value=ticket.get('contact_name', ''))
     
     # === Ajustar anchos de columnas ===
     column_widths = {
@@ -133,7 +133,6 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
     for col_letter, width in column_widths.items():
         sheet.column_dimensions[col_letter].width = width
     
-    # Guardar archivo
     wb.save(output_path)
     return output_path
 
@@ -141,20 +140,9 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
 def create_project_excel_from_db(project, tickets, output_dir: str = "excel_generated") -> str:
     """
     Create Excel from database project and tickets
-    
-    Args:
-        project: SQLAlchemy Project object
-        tickets: List of SQLAlchemy Ticket objects
-        output_dir: Directory to save Excel files
-        
-    Returns:
-        Path to generated Excel file
     """
-    
-    # Create output directory if not exists
     os.makedirs(output_dir, exist_ok=True)
     
-    # Prepare project data
     project_data = {
         'year': project.year,
         'send_date': project.send_date,
@@ -170,14 +158,13 @@ def create_project_excel_from_db(project, tickets, output_dir: str = "excel_gene
         'project_link': project.project_link
     }
     
-    # Prepare tickets data
     tickets_data = []
     for ticket in tickets:
         tickets_data.append({
             'date': ticket.date,
             'provider': ticket.provider,
             'invoice_number': ticket.invoice_number,
-            'po_notes': ticket.po_notes,
+            'po_notes': getattr(ticket, 'po_notes', '') or getattr(ticket, 'notes', '') or '',
             'base_amount': ticket.base_amount,
             'iva_amount': ticket.iva_amount,
             'iva_percentage': ticket.iva_percentage,
@@ -193,10 +180,168 @@ def create_project_excel_from_db(project, tickets, output_dir: str = "excel_gene
             'contact_name': ticket.contact_name
         })
     
-    # Generate filename
     safe_code = project.creative_code.replace('/', '-').replace('\\', '-')
     filename = f"{safe_code}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     output_path = os.path.join(output_dir, filename)
     
-    # Generate Excel
     return generate_project_excel(project_data, tickets_data, output_path)
+
+
+# ========================================
+# FUNCIÓN PARA GENERAR EXCEL EN BYTES (CLOUD)
+# FIX: Usar getattr() para campos que pueden no existir
+# ========================================
+
+def create_project_excel_bytes(project, tickets) -> bytes:
+    """
+    Create Excel in memory (BytesIO) and return bytes
+    OPTIMIZADO PARA CLOUD + FIX para campos opcionales
+    
+    Args:
+        project: SQLAlchemy Project object
+        tickets: List of SQLAlchemy Ticket objects
+        
+    Returns:
+        bytes: Excel file as bytes
+    """
+    
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = "Hoja 1"
+    
+    # === FILA 2: Cabecera del proyecto ===
+    headers_row2 = [
+        "AÑO",
+        "FECHA ENVIO FACTURAR",
+        "CREATIVO",
+        "EMPRESA FACTURACION",
+        "QUIEN GESTIONA",
+        "TIPO FACTURA",
+        "DESCRIPCIÓN/CAMPAÑA/ACCIÓN",
+        "IMPORTE BRUTO TOTAL",
+        "OTROS DATOS FACTURA",
+        "DATOS CLIENTE",
+        "EMAIL CLIENTE",
+        "ESTATUS",
+        "LINEA FISPER"
+    ]
+    
+    for col, header in enumerate(headers_row2, start=1):
+        cell = sheet.cell(row=2, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # === FILA 3: Datos del proyecto ===
+    sheet.cell(row=3, column=1, value=int(project.year) if project.year else 2026)
+    sheet.cell(row=3, column=2, value=project.send_date or '')
+    sheet.cell(row=3, column=3, value=project.creative_code or '')
+    sheet.cell(row=3, column=4, value=project.company or '')
+    sheet.cell(row=3, column=5, value=project.responsible or '')
+    sheet.cell(row=3, column=6, value=project.invoice_type or '')
+    sheet.cell(row=3, column=7, value=project.description or '')
+    
+    # IMPORTE BRUTO TOTAL
+    if tickets:
+        last_row = 5 + len(tickets)
+        sheet.cell(row=3, column=8, value=f'=SUM(K6:K{last_row})')
+    else:
+        sheet.cell(row=3, column=8, value=0)
+    
+    sheet.cell(row=3, column=9, value=project.other_invoice_data or '')
+    sheet.cell(row=3, column=10, value=project.client_data or '')
+    sheet.cell(row=3, column=11, value=project.client_email or '')
+    sheet.cell(row=3, column=12, value=project.client_oc or '')
+    
+    # === FILA 4: Link proyecto ===
+    sheet.cell(row=4, column=1, value="LINK A PROYECTO:")
+    sheet.cell(row=4, column=1).font = Font(bold=True)
+    sheet.cell(row=4, column=2, value=project.project_link or '')
+    
+    # === FILA 5: Encabezados tickets ===
+    headers_row5 = [
+        "FECHA SU FACTURA",
+        "Proveedor - Nombre",
+        "Nº FACTURA PROVEEDOR",
+        "PO SI APLICA",
+        "IMPORTE",
+        "TIPO",
+        "TIPO IVA",
+        "TOTAL",
+        "TIPO IRPF",
+        "RETENCION",
+        "TOTAL",
+        "ESTATUS FACTURA",
+        "ESTATUS PAGO",
+        "TELEFONO",
+        "EMAIL",
+        "NOMBRE",
+        "ESTATUS EN CONTABILIDAD",
+        "nº de GASTO",
+        "ESTATUS PAGO",
+        "LINK",
+        "COMO SE PAGÓ",
+        "FECHA PAGO"
+    ]
+    
+    for col, header in enumerate(headers_row5, start=1):
+        cell = sheet.cell(row=5, column=col, value=header)
+        cell.font = Font(bold=True, size=10)
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+    
+    # === FILA 6+: Tickets ===
+    # FIX: Usar getattr() para campos que pueden tener diferentes nombres
+    for idx, ticket in enumerate(tickets, start=6):
+        sheet.cell(row=idx, column=1, value=ticket.date or '')
+        sheet.cell(row=idx, column=2, value=ticket.provider or '')
+        sheet.cell(row=idx, column=3, value=ticket.invoice_number or '')
+        
+        # FIX: Campo notas puede llamarse 'notes', 'po_notes', o 'description'
+        # Intenta en orden: notes → po_notes → description → vacío
+        notes_value = getattr(ticket, 'notes', None) or \
+                     getattr(ticket, 'po_notes', None) or \
+                     getattr(ticket, 'description', '') or ''
+        sheet.cell(row=idx, column=4, value=notes_value)
+        
+        sheet.cell(row=idx, column=5, value=ticket.base_amount or 0)
+        sheet.cell(row=idx, column=6, value=ticket.iva_amount or 0)
+        sheet.cell(row=idx, column=7, value=ticket.iva_percentage or 0)
+        
+        # total_with_iva = base + iva
+        total_with_iva = (ticket.base_amount or 0) + (ticket.iva_amount or 0)
+        sheet.cell(row=idx, column=8, value=total_with_iva)
+        
+        # IRPF (campos opcionales)
+        irpf_percentage = getattr(ticket, 'irpf_percentage', 0) or 0
+        irpf_amount = getattr(ticket, 'irpf_amount', 0) or 0
+        sheet.cell(row=idx, column=9, value=irpf_percentage)
+        sheet.cell(row=idx, column=10, value=irpf_amount)
+        
+        sheet.cell(row=idx, column=11, value=ticket.final_total or 0)
+        sheet.cell(row=idx, column=12, value=ticket.invoice_status or '')
+        sheet.cell(row=idx, column=13, value=ticket.payment_status or '')
+        
+        # Solo para facturas
+        if ticket.type == 'factura':
+            sheet.cell(row=idx, column=14, value=ticket.phone or '')
+            sheet.cell(row=idx, column=15, value=ticket.email or '')
+            # contact_name también puede no existir
+            contact_name = getattr(ticket, 'contact_name', '') or ''
+            sheet.cell(row=idx, column=16, value=contact_name)
+    
+    # === Ajustar anchos ===
+    column_widths = {
+        'A': 15, 'B': 25, 'C': 18, 'D': 20, 'E': 12, 'F': 10, 'G': 10, 'H': 12,
+        'I': 10, 'J': 12, 'K': 12, 'L': 18, 'M': 18, 'N': 15, 'O': 30, 'P': 20,
+        'Q': 25, 'R': 12, 'S': 18, 'T': 15, 'U': 18, 'V': 15
+    }
+    
+    for col_letter, width in column_widths.items():
+        sheet.column_dimensions[col_letter].width = width
+    
+    # === GUARDAR EN MEMORIA ===
+    excel_buffer = BytesIO()
+    wb.save(excel_buffer)
+    excel_buffer.seek(0)
+    
+    return excel_buffer.getvalue()

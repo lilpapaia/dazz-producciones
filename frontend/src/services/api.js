@@ -49,6 +49,19 @@ export const closeProject = (id) => api.post(`/projects/${id}/close`);
 
 export const reopenProject = (id) => api.post(`/projects/${id}/reopen`);
 
+// Cerrar proyecto con descarga de Excel
+export const closeProjectWithDownload = (id) => 
+  api.post(`/projects/${id}/close`, {}, {
+    responseType: 'blob'  // Importante: recibe Excel como blob
+  });
+
+// Cerrar proyecto con emails personalizados
+export const closeProjectWithEmails = (id, emails) => 
+  api.post(`/projects/${id}/close`, 
+    { recipients: emails },
+    { responseType: 'blob' }
+  );
+
 export const deleteProject = (id) => api.delete(`/projects/${id}`);
 
 export const uploadTicket = (projectId, file) => {

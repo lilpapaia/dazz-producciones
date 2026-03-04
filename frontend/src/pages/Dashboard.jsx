@@ -144,8 +144,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header OPACO (sin transparencia) */}
-      <div className="border-b border-zinc-800 bg-zinc-900 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header OPACO Y STICKY */}
+      <div className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -198,13 +198,13 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* BÚSQUEDA COMPACTA */}
-            <div className="flex-1 relative" ref={searchRef}>
+            {/* BÚSQUEDA COMPACTA Y MÁS ESTRECHA */}
+            <div className="w-96 relative ml-auto" ref={searchRef}>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
                 <input
                   type="search"
-                  placeholder="🔍 Buscar por OC, nombre, año, responsable..."
+                  placeholder=" Buscar proyectos..."
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => searchTerm && setShowSuggestions(true)}
@@ -318,8 +318,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Projects Grid - Con padding para no ir debajo del header */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      {/* Projects Grid - CON PADDING PARA NO IR DEBAJO DEL HEADER */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         {filteredProjects.length === 0 ? (
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-12 text-center">
             <p className="text-zinc-400 mb-2">No hay proyectos que mostrar</p>

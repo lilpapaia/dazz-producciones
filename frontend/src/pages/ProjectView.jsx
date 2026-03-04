@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjectTickets, deleteTicket, closeProject, reopenProject } from '../services/api';
 import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 const ProjectView = () => {
   const { id } = useParams();
@@ -11,7 +11,6 @@ const ProjectView = () => {
   const [project, setProject] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [closingProject, setClosingProject] = useState(false);
   const [reopeningProject, setReopeningProject] = useState(false);
 
   // Búsqueda tickets
@@ -131,19 +130,9 @@ const ProjectView = () => {
     }
   };
 
-  const handleCloseProject = async () => {
-    if (!window.confirm('¿Cerrar proyecto? Se generará Excel y enviará email.')) return;
-
-    setClosingProject(true);
-    try {
-      await closeProject(id);
-      alert('✓ Proyecto cerrado. Excel generado y email enviado.');
-      loadProject(); // Recargar para actualizar estado
-    } catch (error) {
-      alert('Error al cerrar proyecto');
-    } finally {
-      setClosingProject(false);
-    }
+  const handleCloseProject = () => {
+    // Redirigir a pantalla de revisión antes de cerrar
+    navigate(`/projects/${id}/close-review`);
   };
 
   const handleReopenProject = async () => {
@@ -257,11 +246,11 @@ const ProjectView = () => {
           {project.status === 'en_curso' && (
             <button
               onClick={handleCloseProject}
-              disabled={closingProject || tickets.length === 0}
+              disabled={tickets.length === 0}
               className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Lock size={18} />
-              {closingProject ? 'CERRANDO...' : 'CERRAR PROYECTO'}
+              CERRAR PROYECTO
             </button>
           )}
 
@@ -278,12 +267,12 @@ const ProjectView = () => {
           )}
 
           {/* BÚSQUEDA TICKETS - COMPACTA */}
-          <div className="flex-1 relative" ref={searchRef}>
+          <div className="w-96 relative ml-auto" ref={searchRef}>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
               <input
                 type="search"
-                placeholder="🔍 Buscar por proveedor, importe, nº factura..."
+                placeholder="Buscar por proveedor, importe, nº factura..."
                 value={ticketSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onFocus={() => ticketSearch && setShowSuggestions(true)}

@@ -1,22 +1,94 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket } from '../services/api';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 const UploadTickets = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [results, setResults] = useState([]);
 
-  const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
+  // Función para comprimir imagen si supera 5MB
+  const compressImageIfNeeded = async (file) => {
+    // Solo comprimir imágenes
+    if (!file.type.startsWith('image/')) {
+      return file;
+    }
+
+    // Si es menor de 5MB, no comprimir
+    const maxSize = 5 * 1024 * 1024; // 5MB en bytes
+    if (file.size < maxSize) {
+      return file;
+    }
+
+    console.log(`🔄 Comprimiendo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)...`);
+
+    try {
+      const options = {
+        maxSizeMB: 4.5,          // Comprimir hasta 4.5MB (margen seguridad)
+        maxWidthOrHeight: 2048,  // Máximo ancho/alto
+        useWebWorker: true,      // Usar worker para no bloquear UI
+        fileType: file.type      // Mantener tipo original
+      };
+
+      const compressedFile = await imageCompression(file, options);
+      
+      console.log(`✅ ${file.name} comprimido: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      
+      return compressedFile;
+    } catch (error) {
+      console.error('Error al comprimir:', error);
+      // Si falla compresión, intentar con imagen original
+      return file;
+    }
   };
 
-  const handleDrop = (e) => {
+  const handleFileChange = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    
+    // Mostrar mensaje si hay imágenes grandes
+    const largeImages = selectedFiles.filter(f => 
+      f.type.startsWith('image/') && f.size > 5 * 1024 * 1024
+    );
+    
+    if (largeImages.length > 0) {
+      setCompressing(true);
+      
+      // Comprimir imágenes grandes
+      const processedFiles = await Promise.all(
+        selectedFiles.map(file => compressImageIfNeeded(file))
+      );
+      
+      setFiles(processedFiles);
+      setCompressing(false);
+    } else {
+      setFiles(selectedFiles);
+    }
+  };
+
+  const handleDrop = async (e) => {
     e.preventDefault();
-    setFiles(Array.from(e.dataTransfer.files));
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    
+    // Comprimir si es necesario
+    const largeImages = droppedFiles.filter(f => 
+      f.type.startsWith('image/') && f.size > 5 * 1024 * 1024
+    );
+    
+    if (largeImages.length > 0) {
+      setCompressing(true);
+      const processedFiles = await Promise.all(
+        droppedFiles.map(file => compressImageIfNeeded(file))
+      );
+      setFiles(processedFiles);
+      setCompressing(false);
+    } else {
+      setFiles(droppedFiles);
+    }
   };
 
   const handleUpload = async () => {
@@ -69,6 +141,19 @@ const UploadTickets = () => {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-8">
+          
+          {/* Mensaje de compresión */}
+          {compressing && (
+            <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-sm">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+                <p className="text-sm text-blue-400">
+                  🔄 Comprimiendo imágenes grandes... Esto puede tardar unos segundos
+                </p>
+              </div>
+            </div>
+          )}
+
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
@@ -76,25 +161,55 @@ const UploadTickets = () => {
           >
             <Upload size={48} className="mx-auto text-zinc-600 mb-4" />
             <p className="text-lg font-medium text-zinc-300 mb-2">
-              Arrastra archivos aquí o haz click para seleccionar
+              Arrastra archivos aquí o elige una opción
             </p>
-            <p className="text-sm text-zinc-500 mb-4 font-mono">
-              Acepta: JPG, PNG, PDF
+            <p className="text-sm text-zinc-500 mb-6 font-mono">
+              Acepta: JPG, PNG, PDF • Imágenes grandes se comprimen automáticamente
             </p>
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              multiple
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="inline-block bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30"
-            >
-              SELECCIONAR ARCHIVOS
-            </label>
+
+            {/* BOTONES: CÁMARA Y ARCHIVOS */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+              
+              {/* BOTÓN 1: TOMAR FOTO CON CÁMARA */}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="camera-input"
+              />
+              <label
+                htmlFor="camera-input"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/30"
+              >
+                <Camera size={20} />
+                TOMAR FOTO
+              </label>
+
+              {/* BOTÓN 2: ELEGIR ARCHIVOS */}
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30"
+              >
+                <FolderOpen size={20} />
+                ELEGIR ARCHIVOS
+              </label>
+            </div>
+
+            {/* Hint para móvil */}
+            <p className="text-xs text-zinc-600 mt-4">
+              💡 "Tomar Foto" abre la cámara en móvil
+            </p>
           </div>
 
           {files.length > 0 && (
@@ -104,7 +219,7 @@ const UploadTickets = () => {
                 {files.map((file, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-sm">
                     <FileText size={20} className="text-amber-500" />
-                    <span className="flex-1 text-sm">{file.name}</span>
+                    <span className="flex-1 text-sm truncate">{file.name}</span>
                     <span className="text-xs text-zinc-500 font-mono">
                       {(file.size / 1024).toFixed(1)} KB
                     </span>
@@ -114,7 +229,7 @@ const UploadTickets = () => {
 
               <button
                 onClick={handleUpload}
-                disabled={uploading}
+                disabled={uploading || compressing}
                 className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-zinc-950 py-3 rounded-sm font-bold transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Upload size={18} />

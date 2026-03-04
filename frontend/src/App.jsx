@@ -1,11 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import ProjectView from './pages/ProjectView';
 import ProjectCreate from './pages/ProjectCreate';
+import ProjectView from './pages/ProjectView';
+import ProjectCloseReview from './pages/ProjectCloseReview';
 import UploadTickets from './pages/UploadTickets';
 import ReviewTicket from './pages/ReviewTicket';
 import Users from './pages/Users';
@@ -13,86 +14,99 @@ import Users from './pages/Users';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <>
+      <Router>
+        <div className="min-h-screen bg-zinc-950">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected Routes con Navbar */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
                   <Navbar />
                   <Dashboard />
-                </>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/projects/new"
-            element={
-              <ProtectedRoute>
-                <>
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Navbar />
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Projects - ORDEN CORRECTO: específicas primero */}
+            <Route 
+              path="/projects/create" 
+              element={
+                <ProtectedRoute>
                   <Navbar />
                   <ProjectCreate />
-                </>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/projects/:id"
-            element={
-              <ProtectedRoute>
-                <>
-                  <Navbar />
-                  <ProjectView />
-                </>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/projects/:id/upload"
-            element={
-              <ProtectedRoute>
-                <>
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/projects/:id/upload" 
+              element={
+                <ProtectedRoute>
                   <Navbar />
                   <UploadTickets />
-                </>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/tickets/:id/review"
-            element={
-              <ProtectedRoute>
-                <>
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* NUEVA RUTA - Preview antes de cerrar proyecto */}
+            <Route 
+              path="/projects/:id/close-review" 
+              element={
+                <ProtectedRoute>
+                  <Navbar />
+                  <ProjectCloseReview />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/projects/:id" 
+              element={
+                <ProtectedRoute>
+                  <Navbar />
+                  <ProjectView />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Tickets */}
+            <Route 
+              path="/tickets/:id/review" 
+              element={
+                <ProtectedRoute>
                   <Navbar />
                   <ReviewTicket />
-                </>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute adminOnly>
-                <>
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Users - Admin only */}
+            <Route 
+              path="/users" 
+              element={
+                <ProtectedRoute adminOnly>
                   <Navbar />
                   <Users />
-                </>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </div>
+      </Router>
     </AuthProvider>
   );
 }

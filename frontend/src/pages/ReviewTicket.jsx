@@ -15,14 +15,15 @@ const invoiceStatusOptions = [
 ];
 
 const paymentStatusOptions = [
-  "PENDIENTE",
-  "PAGADO REVOLUT",
-  "ADELANTADO",
-  "REPARTIR STATEMENT TALENT",
-  "PAGADO TARJETA PERSONAL",
-  "PAGADO CAJA",
-  "PAGADO SABADELL",
-  "PAGADO BBVA"
+  'ADELANTADO',
+  'PAGADO BBVA',
+  'PAGADO CAJA',
+  'PAGADO REVOLUT',
+  'PAGADO SABADELL',
+  'PAGADO TARJETA PERSONAL',
+  'PAGADO VIVID', 
+  'PENDIENTE',
+  'REPARTIR STATEMENT TALENT'
 ];
 
 const ReviewTicket = () => {
@@ -53,7 +54,6 @@ const ReviewTicket = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Marcar como revisado al guardar
       await updateTicket(id, {...ticket, is_reviewed: true});
       alert('✓ Ticket actualizado y marcado como revisado');
       navigate(-1);
@@ -90,7 +90,8 @@ const ReviewTicket = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header OPACO Y STICKY */}
+      <div className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate(-1)}
@@ -117,13 +118,14 @@ const ReviewTicket = () => {
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      {/* Main Content - CON PADDING PARA NO IR DEBAJO DEL HEADER */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">
           
           {/* VISTA PREVIA - SOPORTE IMÁGENES Y PDFs */}
           {fileUrl && (
             <div className="bg-zinc-950 border border-zinc-700 rounded-sm overflow-hidden">
-              {/* IMÁGENES (JPG, PNG, etc.) */}
+              {/* IMÁGENES */}
               {fileType === 'image' && (
                 <>
                   <div 
@@ -137,7 +139,6 @@ const ReviewTicket = () => {
                       onError={(e) => {
                         console.error('Error cargando imagen:', fileUrl);
                         e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<div class="h-64 flex items-center justify-center text-zinc-500"><p>Error cargando imagen</p></div>';
                       }}
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
@@ -247,16 +248,15 @@ const ReviewTicket = () => {
             </div>
           </div>
 
-          {/* RESTO DEL FORMULARIO (igual que antes) */}
-          
           {/* Fecha y Proveedor */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">FECHA FACTURA</label>
               <input
-                type="date"
+                type="text"
                 value={ticket.date || ''}
                 onChange={(e) => setTicket({...ticket, date: e.target.value})}
+                placeholder="DD/MM/AAAA"
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
