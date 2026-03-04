@@ -13,6 +13,8 @@ def extract_ticket_data(file_path: str, file_type: str) -> Dict[str, Any]:
     """
     Extract data from ticket/invoice using Claude AI
     
+    MEJORA: Ahora detecta fechas en múltiples idiomas y convierte a DD/MM/YYYY
+    
     Args:
         file_path: Path to the image/PDF file
         file_type: MIME type of the file
@@ -38,13 +40,39 @@ def extract_ticket_data(file_path: str, file_type: str) -> Dict[str, Any]:
     # Create Claude client
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     
-    # Prompt optimizado para facturas españolas
-    prompt = """Analiza esta factura o ticket español y extrae la siguiente información en formato JSON.
+    # Prompt optimizado con detección de fechas multiidioma
+    prompt = """Analiza esta factura o ticket y extrae la siguiente información en formato JSON.
 
 IMPORTANTE: Devuelve SOLO el JSON, sin explicaciones ni texto adicional.
 
-Campos a extraer:
-- date: Fecha de la factura (formato DD/MM/YYYY)
+🌍 DETECCIÓN DE FECHAS MULTIIDIOMA - MUY IMPORTANTE:
+La fecha puede estar en CUALQUIER idioma. SIEMPRE convierte a formato DD/MM/YYYY:
+
+Ejemplos:
+- "17 de desembre de 2025" (catalán) → "17/12/2025"
+- "17 de diciembre de 2025" (español) → "17/12/2025"  
+- "December 17, 2025" (inglés) → "17/12/2025"
+- "17 dicembre 2025" (italiano) → "17/12/2025"
+- "17 décembre 2025" (francés) → "17/12/2025"
+- "17 de dezembro de 2025" (portugués) → "17/12/2025"
+
+Meses (número correspondiente):
+Enero/gener/January/gennaio/janvier/janeiro = 01
+Febrero/febrer/February/febbraio/février/fevereiro = 02
+Marzo/març/March/marzo/mars/março = 03
+Abril/abril/April/aprile/avril/abril = 04
+Mayo/maig/May/maggio/mai/maio = 05
+Junio/juny/June/giugno/juin/junho = 06
+Julio/juliol/July/luglio/juillet/julho = 07
+Agosto/agost/August/agosto/août/agosto = 08
+Septiembre/setembre/September/settembre/septembre/setembro = 09
+Octubre/octubre/October/ottobre/octobre/outubro = 10
+Noviembre/novembre/November/novembre/novembre/novembro = 11
+Diciembre/desembre/December/dicembre/décembre/dezembro = 12
+
+CAMPOS A EXTRAER:
+
+- date: Fecha (SIEMPRE DD/MM/YYYY, convertir desde cualquier idioma)
 - provider: Nombre del proveedor/empresa
 - invoice_number: Número de factura (si existe)
 - base_amount: Base imponible (importe sin IVA)
@@ -69,21 +97,22 @@ CÁLCULOS:
 Si no encuentras algún campo, usa null para strings y 0.0 para números.
 
 FORMATO DE RESPUESTA (JSON puro, sin markdown):
+
 {
-  "date": "15/02/2026",
-  "provider": "MediaMarkt España",
-  "invoice_number": "F-2026-1234",
-  "base_amount": 195.04,
+  "date": "17/12/2025",
+  "provider": "Ariadna Soto Abellan",
+  "invoice_number": "095",
+  "base_amount": 400.00,
   "iva_percentage": 0.21,
-  "iva_amount": 40.96,
-  "total_with_iva": 236.00,
-  "irpf_percentage": 0.0,
-  "irpf_amount": 0.0,
-  "final_total": 236.00,
+  "iva_amount": 84.00,
+  "total_with_iva": 484.00,
+  "irpf_percentage": 0.15,
+  "irpf_amount": 60.00,
+  "final_total": 424.00,
   "type": "factura",
-  "phone": "+34 912 345 678",
-  "email": "facturas@mediamarkt.es",
-  "contact_name": "Dpto. Facturación",
+  "phone": "+34 650 088 184",
+  "email": "handycrushh@gmail.com",
+  "contact_name": "Ariadna Soto Abellan",
   "confidence": 0.95
 }
 """
