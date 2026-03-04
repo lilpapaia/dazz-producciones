@@ -1,0 +1,40 @@
+# Environment variables (CRÍTICO)
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*venv/
+*env/
+
+# Node
+*node_modules/
+*dist/
+*build/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads y generados
+uploads/
+excel_generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

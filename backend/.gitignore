@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Database (CRÍTICO - NO SUBIR)
+*.db
+*.sqlite
+*.sqlite3
+dazz_producciones.db
+
+# Environment variables (CRÍTICO - NUNCA SUBIR)
+.env
+.env.local
+
+# Uploads y archivos generados (NO SUBIR)
+uploads/
+excel_generated/
+temp/
+*.xlsx
+*.xls
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+Thumbs.db
