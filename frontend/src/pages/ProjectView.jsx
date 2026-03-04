@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, deleteTicket, closeProject } from '../services/api';
-import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock } from 'lucide-react';
+import { getProject, getProjectTickets, deleteTicket, closeProject, reopenProject } from '../services/api';
+import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProjectView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [closingProject, setClosingProject] = useState(false);
+  const [reopeningProject, setReopeningProject] = useState(false);
 
   // Búsqueda tickets
   const [ticketSearch, setTicketSearch] = useState('');
@@ -135,10 +138,26 @@ const ProjectView = () => {
     try {
       await closeProject(id);
       alert('✓ Proyecto cerrado. Excel generado y email enviado.');
-      navigate('/dashboard');
+      loadProject(); // Recargar para actualizar estado
     } catch (error) {
       alert('Error al cerrar proyecto');
+    } finally {
       setClosingProject(false);
+    }
+  };
+
+  const handleReopenProject = async () => {
+    if (!window.confirm('¿Reabrir proyecto?')) return;
+
+    setReopeningProject(true);
+    try {
+      await reopenProject(id);
+      alert('✓ Proyecto reabierto correctamente');
+      loadProject(); // Recargar para actualizar estado
+    } catch (error) {
+      alert('Error al reabrir proyecto');
+    } finally {
+      setReopeningProject(false);
     }
   };
 
@@ -177,10 +196,12 @@ const ProjectView = () => {
     );
   }
 
+  const isAdmin = user?.role === 'admin';
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header OPACO (sin transparencia) */}
-      <div className="border-b border-zinc-800 bg-zinc-900 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header OPACO Y STICKY */}
+      <div className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate('/dashboard')}
@@ -219,8 +240,8 @@ const ProjectView = () => {
         </div>
       </div>
 
-      {/* Main Content - Con padding para no ir debajo del header */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      {/* Main Content - PADDING TOP PARA NO IR DEBAJO DEL HEADER */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         {/* Actions + Búsqueda COMPACTA */}
         <div className="flex items-center gap-3 mb-6">
           <button
@@ -232,6 +253,7 @@ const ProjectView = () => {
             SUBIR TICKETS
           </button>
 
+          {/* BOTÓN CERRAR (solo si EN CURSO) */}
           {project.status === 'en_curso' && (
             <button
               onClick={handleCloseProject}
@@ -243,7 +265,19 @@ const ProjectView = () => {
             </button>
           )}
 
-          {/* BÚSQUEDA TICKETS - COMPACTA (2/3 más pequeña) */}
+          {/* BOTÓN REABRIR (solo si CERRADO y es ADMIN) */}
+          {project.status === 'cerrado' && isAdmin && (
+            <button
+              onClick={handleReopenProject}
+              disabled={reopeningProject}
+              className="flex items-center gap-2 px-6 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Unlock size={18} />
+              {reopeningProject ? 'REABRIENDO...' : 'REABRIR PROYECTO'}
+            </button>
+          )}
+
+          {/* BÚSQUEDA TICKETS - COMPACTA */}
           <div className="flex-1 relative" ref={searchRef}>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
