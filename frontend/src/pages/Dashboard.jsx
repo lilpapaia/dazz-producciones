@@ -144,8 +144,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header */}
-      <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header OPACO (sin transparencia) */}
+      <div className="border-b border-zinc-800 bg-zinc-900 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -155,7 +155,7 @@ const Dashboard = () => {
             
             <button
               onClick={() => navigate('/projects/create')}
-              className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30"
+              className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30"
             >
               <Plus size={18} />
               NUEVO PROYECTO
@@ -198,10 +198,10 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* BÚSQUEDA CON TODAS LAS CARACTERÍSTICAS */}
+            {/* BÚSQUEDA COMPACTA */}
             <div className="flex-1 relative" ref={searchRef}>
               <div className="relative">
-                <Search className="absolute left-4 top-3.5 text-zinc-500" size={20} />
+                <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
                 <input
                   type="search"
                   placeholder="🔍 Buscar por OC, nombre, año, responsable..."
@@ -209,32 +209,32 @@ const Dashboard = () => {
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => searchTerm && setShowSuggestions(true)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-                  className="w-full px-4 py-3 pl-12 pr-24 bg-zinc-900 border border-zinc-700 rounded-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full px-3 py-2 pl-10 pr-20 bg-zinc-900 border border-zinc-700 rounded-sm text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
                 />
                 
                 {/* Botones: Limpiar + Micrófono */}
-                <div className="absolute right-2 top-2 flex items-center gap-1">
+                <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
                   {searchTerm && (
                     <button
                       onClick={clearSearch}
-                      className="p-1.5 hover:bg-zinc-800 rounded-sm transition-colors"
+                      className="p-1 hover:bg-zinc-800 rounded-sm transition-colors"
                       title="Limpiar búsqueda"
                     >
-                      <X size={18} className="text-zinc-500" />
+                      <X size={16} className="text-zinc-500" />
                     </button>
                   )}
                   
                   <button
                     onClick={startVoiceSearch}
                     disabled={isListening}
-                    className={`p-1.5 rounded-sm transition-colors ${
+                    className={`p-1 rounded-sm transition-colors ${
                       isListening 
                         ? 'bg-red-500 text-white animate-pulse' 
                         : 'hover:bg-zinc-800 text-zinc-500'
                     }`}
                     title="Búsqueda por voz"
                   >
-                    <Mic size={18} />
+                    <Mic size={16} />
                   </button>
                 </div>
               </div>
@@ -245,7 +245,7 @@ const Dashboard = () => {
                   {/* Sugerencias de proyectos */}
                   {searchTerm && suggestions.length > 0 && (
                     <div>
-                      <div className="px-4 py-2 text-xs text-zinc-500 font-mono border-b border-zinc-800">
+                      <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800">
                         PROYECTOS ENCONTRADOS
                       </div>
                       {suggestions.map((project) => (
@@ -255,7 +255,7 @@ const Dashboard = () => {
                             navigate(`/projects/${project.id}`);
                             saveRecentSearch(searchTerm);
                           }}
-                          className="px-4 py-3 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
+                          className="px-3 py-2.5 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
@@ -267,7 +267,7 @@ const Dashboard = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-amber-500 font-bold">{project.total_amount?.toFixed(2)}€</p>
+                              <p className="text-amber-500 font-bold text-sm">{project.total_amount?.toFixed(2)}€</p>
                               <p className="text-xs text-zinc-500">{project.tickets_count} tickets</p>
                             </div>
                           </div>
@@ -278,7 +278,7 @@ const Dashboard = () => {
 
                   {/* Sin resultados */}
                   {searchTerm && suggestions.length === 0 && (
-                    <div className="px-4 py-8 text-center text-zinc-500">
+                    <div className="px-4 py-6 text-center text-zinc-500">
                       <p className="text-sm">No se encontraron proyectos</p>
                     </div>
                   )}
@@ -286,8 +286,8 @@ const Dashboard = () => {
                   {/* Historial de búsquedas recientes */}
                   {!searchTerm && recentSearches.length > 0 && (
                     <div>
-                      <div className="px-4 py-2 text-xs text-zinc-500 font-mono border-b border-zinc-800 flex items-center gap-2">
-                        <Clock size={14} />
+                      <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800 flex items-center gap-2">
+                        <Clock size={12} />
                         BÚSQUEDAS RECIENTES
                       </div>
                       {recentSearches.map((term, index) => (
@@ -297,9 +297,9 @@ const Dashboard = () => {
                             setSearchTerm(term);
                             setShowSuggestions(true);
                           }}
-                          className="px-4 py-2.5 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0 flex items-center gap-2"
+                          className="px-3 py-2 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0 flex items-center gap-2"
                         >
-                          <Search size={14} className="text-zinc-600" />
+                          <Search size={12} className="text-zinc-600" />
                           <span className="text-sm text-zinc-300">{term}</span>
                         </div>
                       ))}
@@ -318,8 +318,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Projects Grid */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      {/* Projects Grid - Con padding para no ir debajo del header */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {filteredProjects.length === 0 ? (
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-12 text-center">
             <p className="text-zinc-400 mb-2">No hay proyectos que mostrar</p>

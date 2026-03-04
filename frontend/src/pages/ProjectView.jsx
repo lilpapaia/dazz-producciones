@@ -179,8 +179,8 @@ const ProjectView = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header */}
-      <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header OPACO (sin transparencia) */}
+      <div className="border-b border-zinc-800 bg-zinc-900 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate('/dashboard')}
@@ -219,14 +219,14 @@ const ProjectView = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Actions + Búsqueda */}
+      {/* Main Content - Con padding para no ir debajo del header */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {/* Actions + Búsqueda COMPACTA */}
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => navigate(`/projects/${id}/upload`)}
             disabled={project.status === 'cerrado'}
-            className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Upload size={18} />
             SUBIR TICKETS
@@ -236,17 +236,17 @@ const ProjectView = () => {
             <button
               onClick={handleCloseProject}
               disabled={closingProject || tickets.length === 0}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Lock size={18} />
               {closingProject ? 'CERRANDO...' : 'CERRAR PROYECTO'}
             </button>
           )}
 
-          {/* BÚSQUEDA TICKETS */}
+          {/* BÚSQUEDA TICKETS - COMPACTA (2/3 más pequeña) */}
           <div className="flex-1 relative" ref={searchRef}>
             <div className="relative">
-              <Search className="absolute left-4 top-3.5 text-zinc-500" size={20} />
+              <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
               <input
                 type="search"
                 placeholder="🔍 Buscar por proveedor, importe, nº factura..."
@@ -254,32 +254,32 @@ const ProjectView = () => {
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onFocus={() => ticketSearch && setShowSuggestions(true)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-                className="w-full px-4 py-3 pl-12 pr-24 bg-zinc-900 border border-zinc-700 rounded-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 pl-10 pr-20 bg-zinc-900 border border-zinc-700 rounded-sm text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
               />
 
               {/* Botones: Limpiar + Micrófono */}
-              <div className="absolute right-2 top-2 flex items-center gap-1">
+              <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
                 {ticketSearch && (
                   <button
                     onClick={clearSearch}
-                    className="p-1.5 hover:bg-zinc-800 rounded-sm transition-colors"
+                    className="p-1 hover:bg-zinc-800 rounded-sm transition-colors"
                     title="Limpiar búsqueda"
                   >
-                    <X size={18} className="text-zinc-500" />
+                    <X size={16} className="text-zinc-500" />
                   </button>
                 )}
 
                 <button
                   onClick={startVoiceSearch}
                   disabled={isListening}
-                  className={`p-1.5 rounded-sm transition-colors ${
+                  className={`p-1 rounded-sm transition-colors ${
                     isListening
                       ? 'bg-red-500 text-white animate-pulse'
                       : 'hover:bg-zinc-800 text-zinc-500'
                   }`}
                   title="Búsqueda por voz"
                 >
-                  <Mic size={18} />
+                  <Mic size={16} />
                 </button>
               </div>
             </div>
@@ -290,7 +290,7 @@ const ProjectView = () => {
                 {/* Sugerencias de tickets */}
                 {ticketSearch && suggestions.length > 0 && (
                   <div>
-                    <div className="px-4 py-2 text-xs text-zinc-500 font-mono border-b border-zinc-800">
+                    <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800">
                       TICKETS ENCONTRADOS
                     </div>
                     {suggestions.map((ticket) => (
@@ -300,7 +300,7 @@ const ProjectView = () => {
                           navigate(`/tickets/${ticket.id}/review`);
                           saveRecentSearch(ticketSearch);
                         }}
-                        className="px-4 py-3 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
+                        className="px-3 py-2.5 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
@@ -324,7 +324,7 @@ const ProjectView = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-amber-500 font-bold">{ticket.final_total?.toFixed(2)}€</p>
+                            <p className="text-amber-500 font-bold text-sm">{ticket.final_total?.toFixed(2)}€</p>
                             <p className="text-xs text-zinc-500">Base: {ticket.base_amount?.toFixed(2)}€</p>
                           </div>
                         </div>
@@ -335,7 +335,7 @@ const ProjectView = () => {
 
                 {/* Sin resultados */}
                 {ticketSearch && suggestions.length === 0 && (
-                  <div className="px-4 py-8 text-center text-zinc-500">
+                  <div className="px-4 py-6 text-center text-zinc-500">
                     <p className="text-sm">No se encontraron tickets</p>
                   </div>
                 )}
@@ -343,8 +343,8 @@ const ProjectView = () => {
                 {/* Historial de búsquedas recientes */}
                 {!ticketSearch && recentSearches.length > 0 && (
                   <div>
-                    <div className="px-4 py-2 text-xs text-zinc-500 font-mono border-b border-zinc-800 flex items-center gap-2">
-                      <Clock size={14} />
+                    <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800 flex items-center gap-2">
+                      <Clock size={12} />
                       BÚSQUEDAS RECIENTES
                     </div>
                     {recentSearches.map((term, index) => (
@@ -354,9 +354,9 @@ const ProjectView = () => {
                           setTicketSearch(term);
                           setShowSuggestions(true);
                         }}
-                        className="px-4 py-2.5 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0 flex items-center gap-2"
+                        className="px-3 py-2 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0 flex items-center gap-2"
                       >
-                        <Search size={14} className="text-zinc-600" />
+                        <Search size={12} className="text-zinc-600" />
                         <span className="text-sm text-zinc-300">{term}</span>
                       </div>
                     ))}
