@@ -35,12 +35,8 @@ export default api;
 // AUTH
 // ============================================
 
-export const login = (email, password) => {
-  const formData = new FormData();
-  formData.append('username', email); // FastAPI OAuth2 usa 'username'
-  formData.append('password', password);
-  return api.post('/auth/login', formData);
-};
+export const login = (email, password) => 
+  api.post('/auth/login', { email, password });
 
 export const registerUser = (data) => 
   api.post('/auth/register', data);
