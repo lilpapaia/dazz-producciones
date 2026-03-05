@@ -178,20 +178,61 @@ const UploadTickets = () => {
                 {uploading ? `PROCESANDO... (${uploadProgress.current}/${uploadProgress.total})` : 'PROCESAR CON IA'}
               </button>
 
-              {/* BARRA DE PROGRESO - SOLO AÑADIDO ESTO */}
+              {/* BARRA DE PROGRESO MEJORADA */}
               {uploading && (
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-400">Procesando archivos...</span>
-                    <span className="text-amber-400 font-mono">
-                      {uploadProgress.current}/{uploadProgress.total}
-                    </span>
+                <div className="mt-4 p-4 bg-zinc-950 border border-amber-500/30 rounded-sm space-y-3">
+                  {/* Header con contador */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-amber-500 border-t-transparent"></div>
+                      </div>
+                      <span className="text-sm font-semibold text-zinc-100">
+                        Procesando con IA...
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-amber-500">
+                        {uploadProgress.current}/{uploadProgress.total}
+                      </span>
+                      <span className="text-xs text-zinc-500 ml-2">
+                        {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
+
+                  {/* Barra de progreso con animación */}
+                  <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
+                    {/* Barra de fondo con gradiente */}
                     <div
-                      className="absolute inset-y-0 left-0 bg-amber-500 transition-all duration-300 rounded-full"
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 transition-all duration-500 ease-out rounded-full"
                       style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
-                    />
+                    >
+                      {/* Efecto de brillo animado */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                    </div>
+                    
+                    {/* Puntos de checkpoint cada 25% */}
+                    <div className="absolute inset-0 flex items-center justify-between px-1">
+                      {[25, 50, 75].map(percent => (
+                        <div 
+                          key={percent}
+                          className={`w-1 h-1 rounded-full ${
+                            (uploadProgress.current / uploadProgress.total) * 100 >= percent 
+                              ? 'bg-white' 
+                              : 'bg-zinc-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mensaje descriptivo */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-amber-500">🤖</span>
+                    <span className="text-zinc-400">
+                      Analizando facturas y extrayendo datos automáticamente
+                    </span>
                   </div>
                 </div>
               )}
@@ -217,19 +258,19 @@ const UploadTickets = () => {
                         <p className="font-medium text-sm mb-1">{result.file}</p>
                         {result.success ? (
                           <div className="text-xs space-y-1 font-mono text-zinc-400">
-                            <p><span className="font-medium">Proveedor:</span> {result.data.provider}</p>
-                            <p><span className="font-medium">Total:</span> {result.data.final_total}€</p>
-                            <p><span className="font-medium">Tipo:</span> {result.data.type === 'factura' ? 'Factura' : 'Ticket'}</p>
-                            {result.data.is_foreign && (
+                            <p><span className="font-medium">Proveedor:</span> {result.data?.provider || 'N/A'}</p>
+                            <p><span className="font-medium">Total:</span> {result.data?.final_total ? `${result.data.final_total}€` : 'N/A'}</p>
+                            <p><span className="font-medium">Tipo:</span> {result.data?.type === 'factura' ? 'Factura' : 'Ticket'}</p>
+                            {result.data?.is_foreign && (
                               <div className="mt-2 pt-2 border-t border-blue-500/30">
                                 <p className="text-blue-400 font-bold mb-1">🌍 Factura internacional detectada</p>
-                                <p><span className="font-medium">Divisa:</span> <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">{result.data.currency}</span></p>
+                                <p><span className="font-medium">Divisa:</span> <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">{result.data.currency || 'N/A'}</span></p>
                                 {result.data.country_code && <p><span className="font-medium">País:</span> {result.data.country_code}</p>}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <p className="text-xs text-red-400">{result.error}</p>
+                          <p className="text-xs text-red-400">{typeof result.error === 'string' ? result.error : JSON.stringify(result.error)}</p>
                         )}
                       </div>
                     </div>
@@ -246,6 +287,17 @@ const UploadTickets = () => {
           )}
         </div>
       </main>
+
+      {/* CSS para animación shimmer */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
     </div>
   );
 };
