@@ -41,6 +41,9 @@ export const login = (identifier, password) =>
 export const registerUser = (data) =>
   api.post('/auth/register', data);
 
+export const setPassword = (token, newPassword) =>
+  api.post('/auth/set-password', { token, new_password: newPassword });
+
 // ============================================
 // PROJECTS
 // ============================================

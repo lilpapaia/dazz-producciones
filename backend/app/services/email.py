@@ -1,180 +1,182 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.application import MIMEApplication
-from email import encoders
 import os
-from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.ionos.es")
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.ionos.es")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "aibot@dazzcreative.com")
+SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-EMAIL_FROM = os.getenv("EMAIL_FROM", "aibot@dazzcreative.com")
-EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Dazz Creative - Sistema Gastos")
-EMAIL_TO = os.getenv("EMAIL_TO", "miguel@dazzle-agency.com")
+FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://producciones.dazzcreative.com")
 
+def send_email(to_email: str, subject: str, html_content: str):
+    """Función base para enviar emails HTML"""
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = FROM_EMAIL
+    msg['To'] = to_email
 
-def get_styled_email_template(project_name, project_code, responsible_name, tickets_count, total_amount, excel_filename):
-    """Template de email CORREGIDO - Logo grande, full width, sin botón"""
-    
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {{margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #18181b; color: #f4f4f5;}}
-        .container {{max-width: 600px; margin: 0 auto; background-color: #18181b;}}
-        .header {{background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 50px 30px; text-align: center;}}
-        .logo-container {{display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px;}}
-        .logo-text {{color: white; font-size: 36px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase;}}
-        .header h1 {{margin: 15px 0 0 0; font-size: 32px; font-weight: 900; letter-spacing: 0.1em; color: #18181b; text-transform: uppercase;}}
-        .content {{background-color: #27272a; margin: 0; padding: 40px 0; border-radius: 0;}}
-        .intro {{color: #a1a1aa; font-size: 15px; line-height: 1.6; margin: 0 30px 30px 30px; text-align: center;}}
-        .info-grid {{background-color: #18181b; border: none; border-radius: 0; padding: 30px 40px; margin: 0;}}
-        .info-row {{display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #3f3f46;}}
-        .info-row:last-child {{border-bottom: none; padding-bottom: 0;}}
-        .info-label {{color: #71717a; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;}}
-        .info-value {{color: #f4f4f5; font-size: 16px; font-weight: 600; text-align: right; letter-spacing: 0.02em;}}
-        .total-amount {{font-size: 32px; font-weight: 900; color: #f59e0b;}}
-        .attachment-box {{background: linear-gradient(135deg, #f59e0b20 0%, #d9770620 100%); border: 2px solid #f59e0b40; border-radius: 8px; padding: 30px; margin: 30px 30px; text-align: center;}}
-        .attachment-icon {{font-size: 48px; margin-bottom: 15px;}}
-        .attachment-title {{color: #f59e0b; font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.05em;}}
-        .attachment-filename {{color: #a1a1aa; font-size: 15px; font-family: 'Courier New', monospace; word-break: break-all;}}
-        .footer {{text-align: center; padding: 40px 30px; color: #71717a; font-size: 13px; line-height: 1.8;}}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo-container">
-                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 66 69" fill="none">
-                    <path d="M58.7442 59.5633L46.4651 68.332L32.7907 50.377L19.5349 68.332L6.97674 59.5633L20.3721 40.634L0 34.2314L4.60465 20.1736L24.5581 26.5761V3.33203H41.0233V26.5761L60.9767 20.1736L66 34.2314L45.3488 40.634L58.7442 59.5633Z" fill="white"/>
-                </svg>
-                <span class="logo-text">DAZZ CREATIVE</span>
-            </div>
-            <h1>✓ PRODUCCIÓN CERRADA</h1>
-        </div>
-        <div class="content">
-            <p class="intro">Se ha cerrado la siguiente producción:</p>
-            <div class="info-grid">
-                <div class="info-row"><span class="info-label">Proyecto</span><span class="info-value">{project_name}</span></div>
-                <div class="info-row"><span class="info-label">Código OC</span><span class="info-value">{project_code}</span></div>
-                <div class="info-row"><span class="info-label">Responsable</span><span class="info-value">{responsible_name}</span></div>
-                <div class="info-row"><span class="info-label">Total Tickets</span><span class="info-value">{tickets_count}</span></div>
-                <div class="info-row"><span class="info-label">Importe Total</span><span class="info-value total-amount">{total_amount:,.2f}€</span></div>
-            </div>
-            <div class="attachment-box">
-                <div class="attachment-icon">📊</div>
-                <div class="attachment-title">ARCHIVO ADJUNTO</div>
-                <div class="attachment-filename">{excel_filename}</div>
-            </div>
-        </div>
-        <div class="footer">
-            <svg xmlns="http://www.w3.org/2000/svg" width="120" height="12" viewBox="0 0 708 69" fill="none" style="margin-bottom: 20px;">
-                <path d="M58.7442 59.5633L46.4651 68.332L32.7907 50.377L19.5349 68.332L6.97674 59.5633L20.3721 40.634L0 34.2314L4.60465 20.1736L24.5581 26.5761V3.33203H41.0233V26.5761L60.9767 20.1736L66 34.2314L45.3488 40.634L58.7442 59.5633Z" fill="#71717a"/>
-                <path d="M117.987 55.1217H129.049C140.689 55.1217 145.691 47.8108 145.691 33.3812C145.691 18.9517 140.689 13.1798 127.895 13.1798H117.987V55.1217ZM131.743 65.992H105V2.11719H129.723C147.038 2.11719 159.351 13.9494 159.351 33.3812C159.351 52.813 148.289 65.992 131.743 65.992Z" fill="#71717a"/>
-                <path d="M192.939 41.8466L184.955 16.4505H184.859L176.682 41.8466H192.939ZM215.353 65.992H200.827L196.787 52.813H173.219L168.698 65.992H154.557L177.355 2.11719H192.843L215.353 65.992Z" fill="#71717a"/>
-                <path d="M266.393 65.992H216.467V54.6408L249.655 13.276H217.429V2.11719H266.393V12.6027L233.013 54.6408H266.393V65.992Z" fill="#71717a"/>
-                <path d="M319.283 65.992H269.356V54.6408L302.544 13.276H270.318V2.11719H319.283V12.6027L285.902 54.6408H319.283V65.992Z" fill="#71717a"/>
-            </svg>
-            <p>Este email fue enviado automáticamente por el<br><strong>Sistema de Gestión de Gastos de Dazz Creative</strong></p>
-            <p style="color: #52525b; margin-top: 15px;">No respondas a este email</p>
-        </div>
-    </div>
-</body>
-</html>"""
-    
-    return html
+    html_part = MIMEText(html_content, 'html')
+    msg.attach(html_part)
 
-
-def send_email(to_email: str, subject: str, html_body: str, cc_emails: Optional[List[str]] = None, attachments: Optional[List[tuple]] = None) -> bool:
-    """Send email via SMTP"""
     try:
-        msg = MIMEMultipart('alternative')
-        msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        
-        if cc_emails:
-            msg['Cc'] = ', '.join(cc_emails)
-        
-        html_part = MIMEText(html_body, 'html', 'utf-8')
-        msg.attach(html_part)
-        
-        if attachments:
-            for filename, filepath in attachments:
-                with open(filepath, 'rb') as f:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(f.read())
-                    encoders.encode_base64(part)
-                    part.add_header('Content-Disposition', f'attachment; filename={filename}')
-                    msg.attach(part)
-        
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
-            recipients = [to_email]
-            if cc_emails:
-                recipients.extend(cc_emails)
-            server.send_message(msg, from_addr=EMAIL_FROM, to_addrs=recipients)
-        
+            server.sendmail(FROM_EMAIL, to_email, msg.as_string())
         return True
     except Exception as e:
         print(f"Error sending email: {str(e)}")
-        return False
+        raise e
 
+def send_set_password_email(user_name: str, user_email: str, token: str):
+    """
+    Enviar email con link para que el usuario elija su contraseña
+    
+    Args:
+        user_name: Nombre del usuario
+        user_email: Email del usuario
+        token: Token único para set password
+    """
+    set_password_url = f"{FRONTEND_URL}/set-password?token={token}"
+    
+    subject = "¡Bienvenido a DAZZ Creative! - Configura tu contraseña"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #18181b;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #18181b; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #27272a; border-radius: 8px; overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px; text-align: center;">
+                                <div style="display: inline-block; width: 60px; height: 60px; background-color: rgba(255,255,255,0.2); border-radius: 50%; padding: 15px; margin-bottom: 15px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" style="width: 100%; height: 100%;" stroke-width="2.5" stroke-linecap="round">
+                                        <line x1="12" y1="3" x2="12" y2="21" />
+                                        <line x1="3" y1="12" x2="21" y2="12" />
+                                        <line x1="5.5" y1="5.5" x2="18.5" y2="18.5" />
+                                        <line x1="18.5" y1="5.5" x2="5.5" y2="18.5" />
+                                    </svg>
+                                </div>
+                                <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 2px;">
+                                    DAZZ CREATIVE
+                                </h1>
+                                <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.8); font-size: 12px; letter-spacing: 3px;">
+                                    SISTEMA GESTIÓN GASTOS
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px;">
+                                <h2 style="margin: 0 0 20px 0; color: #f59e0b; font-size: 24px;">
+                                    ¡Bienvenido, {user_name}!
+                                </h2>
+                                
+                                <p style="margin: 0 0 20px 0; color: #d4d4d8; font-size: 16px; line-height: 1.6;">
+                                    Tu cuenta ha sido creada en el sistema de gestión de producciones de DAZZ Creative.
+                                </p>
+                                
+                                <p style="margin: 0 0 30px 0; color: #d4d4d8; font-size: 16px; line-height: 1.6;">
+                                    Para comenzar, necesitas <strong style="color: #f59e0b;">configurar tu contraseña</strong>. 
+                                    Haz clic en el botón de abajo para elegir una contraseña segura:
+                                </p>
+                                
+                                <!-- Button -->
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0;">
+                                            <a href="{set_password_url}" 
+                                               style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000000; text-decoration: none; font-weight: bold; font-size: 16px; border-radius: 4px; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">
+                                                CONFIGURAR CONTRASEÑA
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <p style="margin: 30px 0 10px 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
+                                    O copia y pega este enlace en tu navegador:
+                                </p>
+                                <p style="margin: 0; padding: 12px; background-color: #18181b; border-radius: 4px; word-break: break-all;">
+                                    <a href="{set_password_url}" style="color: #f59e0b; text-decoration: none; font-size: 13px;">
+                                        {set_password_url}
+                                    </a>
+                                </p>
+                                
+                                <div style="margin-top: 30px; padding: 20px; background-color: #3f3f46; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                                    <p style="margin: 0; color: #e4e4e7; font-size: 14px; line-height: 1.6;">
+                                        <strong style="color: #f59e0b;">⚠️ Importante:</strong> Este enlace expirará en <strong>24 horas</strong>. 
+                                        Si no configuras tu contraseña a tiempo, contacta con tu administrador.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #18181b; padding: 30px; text-align: center; border-top: 1px solid #3f3f46;">
+                                <p style="margin: 0 0 10px 0; color: #71717a; font-size: 13px;">
+                                    Este email fue enviado desde el Sistema de Gestión de Producciones
+                                </p>
+                                <p style="margin: 0; color: #52525b; font-size: 12px;">
+                                    © 2026 DAZZ Creative. Todos los derechos reservados.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    return send_email(user_email, subject, html_content)
 
-def send_project_closed_email_multi(recipients: List[str], project_name: str, project_code: str, responsible_name: str, tickets_count: int, total_amount: float, excel_bytes: bytes, excel_filename: str) -> bool:
-    """Envía email con Excel adjunto a múltiples destinatarios - VERSIÓN CORREGIDA"""
-    try:
-        if not SMTP_USER or not SMTP_PASSWORD:
-            print("⚠️ SMTP_USER o SMTP_PASSWORD no configurados")
-            return False
-        
-        msg = MIMEMultipart('alternative')
-        msg['From'] = f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>"
-        msg['To'] = ', '.join(recipients)
-        msg['Subject'] = f"[Producción Cerrada] {project_code} - {project_name}"
-        
-        # Usar template CORREGIDO
-        html_body = get_styled_email_template(
-            project_name, 
-            project_code, 
-            responsible_name, 
-            tickets_count, 
-            total_amount, 
-            excel_filename
-        )
-        
-        html_part = MIMEText(html_body, 'html', 'utf-8')
-        msg.attach(html_part)
-        
-        # Adjuntar Excel desde bytes
-        part = MIMEApplication(excel_bytes, Name=excel_filename)
-        part['Content-Disposition'] = f'attachment; filename="{excel_filename}"'
-        msg.attach(part)
-        
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg, from_addr=EMAIL_FROM, to_addrs=recipients)
-        
-        print(f"✅ Email enviado correctamente a: {', '.join(recipients)}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error enviando email: {str(e)}")
-        return False
+def send_user_created_email(user_name: str, user_email: str, temporary_password: str):
+    """
+    Email antiguo - Ahora solo se usa si NO se genera token
+    Mantenerlo por compatibilidad
+    """
+    subject = "Bienvenido a DAZZ Creative - Credenciales de acceso"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px;">
+            <h2 style="color: #333;">Bienvenido a DAZZ Creative</h2>
+            <p>Hola {user_name},</p>
+            <p>Tu cuenta ha sido creada en el sistema de gestión de producciones.</p>
+            <div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Email:</strong> {user_email}</p>
+                <p style="margin: 5px 0;"><strong>Contraseña temporal:</strong> {temporary_password}</p>
+            </div>
+            <p>Accede al sistema: <a href="{FRONTEND_URL}/login">https://producciones.dazzcreative.com</a></p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">Por favor, cambia tu contraseña después de iniciar sesión por primera vez.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return send_email(user_email, subject, html_content)
 
-
-def send_user_created_email(user_name: str, user_email: str, temporary_password: str) -> bool:
-    """Send email when new user is created"""
-    subject = "Tu cuenta en Dazz Creative - Sistema Gastos"
-    html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px}}.header{{background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:white;padding:30px;border-radius:8px;margin-bottom:30px;text-align:center}}.content{{background:#f9fafb;padding:25px;border-radius:8px;border:1px solid #e5e7eb}}.credentials{{background:white;padding:20px;border-radius:6px;border:2px solid #f59e0b;margin:20px 0}}.credential-item{{padding:10px 0;border-bottom:1px solid #e5e7eb}}.credential-item:last-child{{border-bottom:none}}.label{{font-weight:600;color:#6b7280;font-size:12px;text-transform:uppercase}}.value{{font-size:16px;color:#111827;font-family:monospace;background:#fef3c7;padding:5px 10px;border-radius:4px;display:inline-block;margin-top:5px}}.warning{{background:#fef3c7;border-left:4px solid #f59e0b;padding:15px;margin:20px 0;border-radius:4px}}.button{{display:inline-block;background:#f59e0b;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;margin-top:20px}}.footer{{margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:14px;text-align:center}}</style></head><body><div class="header"><h1>👋 Bienvenido/a a Dazz Creative</h1></div><div class="content"><p>Hola <strong>{user_name}</strong>,</p><p>Se ha creado tu cuenta en el Sistema de Gestión de Gastos de Dazz Creative.</p><div class="credentials"><div class="credential-item"><div class="label">Email de acceso:</div><div class="value">{user_email}</div></div><div class="credential-item"><div class="label">Contraseña temporal:</div><div class="value">{temporary_password}</div></div></div><div class="warning"><strong>⚠️ Importante:</strong> Por seguridad, cambia tu contraseña en tu primer inicio de sesión.</div><a href="https://producciones.dazzcreative.com" class="button">Iniciar Sesión</a><p style="margin-top:30px;">Si tienes alguna duda, contacta con tu administrador.</p></div><div class="footer"><p>Sistema de Gestión de Gastos - Dazz Creative</p><p>aibot@dazzcreative.com</p></div></body></html>"""
-    return send_email(to_email=user_email, subject=subject, html_body=html_body)
+def send_project_closed_email(recipients: list, project_data: dict):
+    """Enviar email cuando se cierra un proyecto"""
+    # ... (código existente de project_closed_email)
+    pass

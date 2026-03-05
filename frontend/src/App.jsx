@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
+import SetPassword from './pages/SetPassword';
 import Dashboard from './pages/Dashboard';
 import ProjectCreate from './pages/ProjectCreate';
 import ProjectView from './pages/ProjectView';
@@ -22,6 +23,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/set-password" element={<SetPassword />} />
             
             {/* Protected Routes con Navbar */}
             <Route 

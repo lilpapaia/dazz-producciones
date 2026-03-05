@@ -16,18 +16,21 @@ class TicketType(str, Enum):
     TICKET = "ticket"
     FACTURA = "factura"
 
-# User Schemas
+# ============================================
+# USER SCHEMAS
+# ============================================
+
 class UserBase(BaseModel):
     email: EmailStr
     name: str
-    username: Optional[str] = None  # ← AÑADIDO (opcional)
+    username: Optional[str] = None
     role: UserRole = UserRole.USER
 
 class UserCreate(UserBase):
     password: str
 
 class UserLogin(BaseModel):
-    identifier: str  # ← CAMBIADO: puede ser email o username
+    identifier: str  # Email O username
     password: str
 
 class UserResponse(UserBase):
@@ -43,7 +46,22 @@ class Token(BaseModel):
     token_type: str
     user: UserResponse
 
-# Project Schemas (sin cambios)
+# ============================================
+# PASSWORD RESET / SET PASSWORD SCHEMAS
+# ============================================
+
+class SetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class SetPasswordResponse(BaseModel):
+    message: str
+    success: bool
+
+# ============================================
+# PROJECT SCHEMAS
+# ============================================
+
 class ProjectBase(BaseModel):
     year: str
     send_date: Optional[str] = None
@@ -88,7 +106,10 @@ class ProjectResponse(ProjectBase):
     class Config:
         from_attributes = True
 
-# Ticket Schemas (sin cambios)
+# ============================================
+# TICKET SCHEMAS
+# ============================================
+
 class TicketBase(BaseModel):
     date: str
     provider: str
@@ -157,7 +178,10 @@ class TicketResponse(TicketBase):
     class Config:
         from_attributes = True
 
-# AI Extraction Response (sin cambios)
+# ============================================
+# AI EXTRACTION RESPONSE
+# ============================================
+
 class AIExtractionResponse(BaseModel):
     date: str
     provider: str
@@ -181,7 +205,10 @@ class AIExtractionResponse(BaseModel):
     foreign_total: Optional[float] = None
     foreign_tax_amount: Optional[float] = None
 
-# SCHEMAS ESTADÍSTICAS (sin cambios)
+# ============================================
+# SCHEMAS ESTADÍSTICAS
+# ============================================
+
 class StatisticsOverview(BaseModel):
     total_spent: float
     international_spent: float

@@ -1,26 +1,32 @@
 """
 Script para crear la tabla password_reset_tokens
-Ejecutar UNA SOLA VEZ
+Versión 2: Recibe DATABASE_URL directamente
 
 Uso:
-    python create_tokens_table.py
+    python create_tokens_table_v2.py "postgresql://postgres:PASSWORD@host:port/railway"
 """
 
-import os
+import sys
 from sqlalchemy import create_engine, text
-from dotenv import load_dotenv
 
-load_dotenv()
+if len(sys.argv) < 2:
+    print("❌ ERROR: Debes pasar el DATABASE_URL como argumento")
+    print("\nUso:")
+    print('   python create_tokens_table_v2.py "postgresql://postgres:PASSWORD@host:port/railway"')
+    print("\n💡 Copia el DATABASE_URL de Railway → Postgres → Variables")
+    exit(1)
 
-# Obtener DATABASE_URL de las variables de entorno
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = sys.argv[1]
 
-if not DATABASE_URL:
-    print("❌ ERROR: No se encontró DATABASE_URL en las variables de entorno")
-    print("   Asegúrate de tener el archivo .env o las variables configuradas")
+# Verificar que es PostgreSQL
+if not DATABASE_URL.startswith('postgresql://') and not DATABASE_URL.startswith('postgres://'):
+    print("❌ ERROR: El DATABASE_URL debe ser de PostgreSQL")
+    print(f"   Recibido: {DATABASE_URL[:20]}...")
+    print("   Debe empezar con: postgresql://")
     exit(1)
 
 print("🔧 Conectando a PostgreSQL...")
+print(f"   Host: {DATABASE_URL.split('@')[1].split('/')[0] if '@' in DATABASE_URL else 'unknown'}")
 
 try:
     engine = create_engine(DATABASE_URL)
@@ -68,12 +74,12 @@ try:
         print("   - expires_at (TIMESTAMP)")
         print("   - created_at (TIMESTAMP)")
         print("   - used_at (TIMESTAMP NULL)")
-        print("\n✅ Puedes verificar en Railway → PostgreSQL → Data → password_reset_tokens")
+        print("\n✅ Verifica en Railway → PostgreSQL → Data → password_reset_tokens")
         
 except Exception as e:
     print(f"\n❌ ERROR: {str(e)}")
     print("\nPosibles causas:")
-    print("1. DATABASE_URL incorrecta o no configurada")
+    print("1. DATABASE_URL incorrecta")
     print("2. No tienes permisos para crear tablas")
-    print("3. La tabla ya existe (en ese caso, está bien)")
+    print("3. La tabla ya existe (en ese caso, ignora este error)")
     exit(1)
