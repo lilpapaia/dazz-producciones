@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../services/api';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // ← Cambiado de 'email' a 'identifier'
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await loginApi(email, password);
+      const response = await loginApi(identifier, password); // ← Envía identifier
       login(response.data.access_token, response.data.user);
       navigate('/dashboard');
     } catch (err) {
@@ -53,13 +53,17 @@ const Login = () => {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
+              {/* ← Cambiado label y tipo de input */}
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">
+                EMAIL O USUARIO
+              </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text" // ← Cambiado de "email" a "text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-3 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors"
-                placeholder="tu@email.com"
+                placeholder="usuario o email"
+                autoComplete="username"
                 required
               />
             </div>
@@ -72,6 +76,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-3 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors"
                 placeholder="••••••••"
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -89,6 +94,16 @@ const Login = () => {
             >
               {loading ? 'ENTRANDO...' : 'ENTRAR'}
             </button>
+
+            {/* ← Link a forgot password */}
+            <div className="text-center pt-2">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-zinc-400 hover:text-amber-500 transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </form>
         </div>
       </div>
