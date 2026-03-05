@@ -216,8 +216,73 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
                     pass
 
 
+def delete_ticket_files(file_pages_json: str = None, pdf_url: str = None) -> bool:
+    """
+    Elimina todos los archivos de un ticket de Cloudinary.
+    
+    Args:
+        file_pages_json: String JSON con array de URLs de páginas
+        pdf_url: URL del PDF original
+    
+    Returns:
+        bool: True si se eliminó todo correctamente
+    """
+    success = True
+    
+    # 1. Eliminar páginas (imágenes WebP)
+    if file_pages_json:
+        try:
+            import json
+            file_pages = json.loads(file_pages_json)
+            
+            for url in file_pages:
+                try:
+                    # Extraer public_id de la URL
+                    # Ejemplo: https://res.cloudinary.com/cloud/image/upload/v123/dazz-producciones/project_1/file_page_1.webp
+                    # public_id: dazz-producciones/project_1/file_page_1
+                    
+                    parts = url.split("/upload/")
+                    if len(parts) == 2:
+                        # Quitar versión y extensión
+                        path = parts[1].split("/", 1)[1] if "/" in parts[1] else parts[1]  # Quita vXXX
+                        public_id = path.rsplit(".", 1)[0]  # Quita extensión
+                        
+                        result = cloudinary.uploader.destroy(public_id, resource_type="image")
+                        if result.get("result") != "ok":
+                            print(f"⚠️ No se pudo eliminar {public_id}")
+                            success = False
+                        else:
+                            print(f"✅ Eliminado de Cloudinary: {public_id}")
+                except Exception as e:
+                    print(f"⚠️ Error eliminando página {url}: {str(e)}")
+                    success = False
+        except Exception as e:
+            print(f"⚠️ Error parseando file_pages: {str(e)}")
+            success = False
+    
+    # 2. Eliminar PDF original (si existe)
+    if pdf_url:
+        try:
+            parts = pdf_url.split("/upload/")
+            if len(parts) == 2:
+                path = parts[1].split("/", 1)[1] if "/" in parts[1] else parts[1]
+                public_id = path.rsplit(".", 1)[0]
+                
+                result = cloudinary.uploader.destroy(public_id, resource_type="raw")
+                if result.get("result") != "ok":
+                    print(f"⚠️ No se pudo eliminar PDF {public_id}")
+                    success = False
+                else:
+                    print(f"✅ PDF eliminado de Cloudinary: {public_id}")
+        except Exception as e:
+            print(f"⚠️ Error eliminando PDF {pdf_url}: {str(e)}")
+            success = False
+    
+    return success
+
+
 def delete_ticket_file(public_id: str, resource_type: str = "image") -> bool:
-    """Elimina un archivo de Cloudinary"""
+    """Elimina un archivo de Cloudinary (función legacy, usar delete_ticket_files)"""
     try:
         result = cloudinary.uploader.destroy(public_id, resource_type=resource_type)
         return result.get("result") == "ok"

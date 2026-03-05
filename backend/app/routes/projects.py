@@ -145,11 +145,44 @@ async def reopen_project(project_id: int, db: Session = Depends(get_db), current
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can delete projects")
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    
+    # Verificar permisos: Admin o Owner del proyecto
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+    
+    # 1. BORRAR TODOS LOS TICKETS DEL PROYECTO (con sus archivos en Cloudinary)
+    from app.models.database import Ticket
+    tickets = db.query(Ticket).filter(Ticket.project_id == project_id).all()
+    
+    if tickets:
+        print(f"🗑️ Borrando {len(tickets)} tickets del proyecto {project_id}")
+        
+        try:
+            from app.services.cloudinary_service import delete_ticket_files
+            
+            for ticket in tickets:
+                # Borrar archivos de Cloudinary
+                try:
+                    delete_ticket_files(ticket.file_pages, ticket.pdf_url)
+                    print(f"  ✅ Archivos eliminados para ticket {ticket.id}")
+                except Exception as e:
+                    print(f"  ⚠️ Error eliminando archivos del ticket {ticket.id}: {str(e)}")
+                    # Continuar aunque falle
+                
+                # Borrar ticket de BD
+                db.delete(ticket)
+            
+            print(f"✅ {len(tickets)} tickets eliminados")
+        except Exception as e:
+            print(f"⚠️ Error durante borrado de tickets: {str(e)}")
+            # Continuar con el borrado del proyecto aunque falle
+    
+    # 2. BORRAR EL PROYECTO
     db.delete(project)
     db.commit()
+    
+    print(f"✅ Proyecto {project_id} eliminado completamente")
     return None

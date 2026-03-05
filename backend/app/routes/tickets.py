@@ -196,6 +196,17 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     project = db.query(Project).filter(Project.id == ticket.project_id).first()
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # 1. BORRAR ARCHIVOS DE CLOUDINARY PRIMERO
+    try:
+        from app.services.cloudinary_service import delete_ticket_files
+        delete_ticket_files(ticket.file_pages, ticket.pdf_url)
+        print(f"🗑️ Archivos de Cloudinary eliminados para ticket {ticket_id}")
+    except Exception as e:
+        print(f"⚠️ Error eliminando archivos de Cloudinary: {str(e)}")
+        # Continuar aunque falle (evitar bloqueo)
+    
+    # 2. BORRAR DE BASE DE DATOS
     project.tickets_count -= 1
     project.total_amount -= ticket.final_total
     db.delete(ticket)
