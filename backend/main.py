@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
+
 from database_config import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics
