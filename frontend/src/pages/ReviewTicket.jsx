@@ -66,7 +66,8 @@ const ReviewTicket = () => {
 
   const getFileUrl = () => {
     if (!ticket?.file_path) return null;
-    return `http://localhost:8000/${ticket.file_path}`;
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    return `${API_URL}/${ticket.file_path}`;
   };
 
   const getFileType = () => {
