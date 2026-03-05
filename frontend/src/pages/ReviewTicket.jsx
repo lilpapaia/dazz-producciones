@@ -173,7 +173,7 @@ const ReviewTicket = () => {
                 <>
                   <div className="relative">
                     <iframe 
-                      src={fileUrl}
+                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
                       className="w-full h-96 bg-zinc-900"
                       title="Vista previa PDF"
                     />
