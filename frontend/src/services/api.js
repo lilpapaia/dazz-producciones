@@ -100,7 +100,7 @@ export const deleteTicket = (id) =>
 // USERS
 // ============================================
 
-export const getUsers = () => api.get('/users');
+export const getUsers = () => api.get('/users/');
 
 export const getUser = (id) => api.get(`/users/${id}`);
 
