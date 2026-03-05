@@ -1,29 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTicket, updateTicket } from '../services/api';
-import { ArrowLeft, Save, X, ZoomIn, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Save, X, ZoomIn, Download, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const invoiceStatusOptions = [
-  "RECIBIDO",
-  "PEDIDO",
-  "PENDIENTE PEDIR",
-  "RECIBIDO PERO ERRONEO",
-  "TICKET (NO FACTURA)",
-  "A REPARTIR EN STATEMENT",
-  "ALTA SS",
-  "PERDIDO"
+  "RECIBIDO", "PEDIDO", "PENDIENTE PEDIR", "RECIBIDO PERO ERRONEO",
+  "TICKET (NO FACTURA)", "A REPARTIR EN STATEMENT", "ALTA SS", "PERDIDO"
 ];
 
 const paymentStatusOptions = [
-  'ADELANTADO',
-  'PAGADO BBVA',
-  'PAGADO CAJA',
-  'PAGADO REVOLUT',
-  'PAGADO SABADELL',
-  'PAGADO TARJETA PERSONAL',
-  'PAGADO VIVID', 
-  'PENDIENTE',
-  'REPARTIR STATEMENT TALENT'
+  'ADELANTADO', 'PAGADO BBVA', 'PAGADO CAJA', 'PAGADO REVOLUT',
+  'PAGADO SABADELL', 'PAGADO TARJETA PERSONAL', 'PAGADO VIVID',
+  'PENDIENTE', 'REPARTIR STATEMENT TALENT'
 ];
 
 const ReviewTicket = () => {
@@ -33,17 +21,15 @@ const ReviewTicket = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
-  useEffect(() => {
-    loadTicket();
-  }, [id]);
+  useEffect(() => { loadTicket(); }, [id]);
 
   const loadTicket = async () => {
     try {
       const response = await getTicket(id);
       setTicket(response.data);
     } catch (error) {
-      console.error('Error:', error);
       alert('Error al cargar ticket');
       navigate(-1);
     } finally {
@@ -64,21 +50,29 @@ const ReviewTicket = () => {
     }
   };
 
-  const getFileUrl = () => {
-    if (!ticket?.file_path) return null;
-    // Si ya es URL completa (Cloudinary), usarla directamente
-    if (ticket.file_path.startsWith('http')) return ticket.file_path;
-    // Fallback para archivos locales antiguos
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    return `${API_URL}/${ticket.file_path}`;
+  // Obtener array de páginas/imágenes
+  const getPages = () => {
+    if (!ticket) return [];
+    if (ticket.file_pages) {
+      try {
+        const pages = JSON.parse(ticket.file_pages);
+        if (Array.isArray(pages) && pages.length > 0) return pages;
+      } catch {}
+    }
+    if (ticket.file_path && ticket.file_path.startsWith('http')) return [ticket.file_path];
+    return [];
   };
 
-  const getFileType = () => {
-    if (!ticket?.file_name) return 'unknown';
-    const ext = ticket.file_name.toLowerCase().split('.').pop();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-    if (ext === 'pdf') return 'pdf';
-    return 'unknown';
+  // URL de descarga: PDF original si existe, si no la imagen
+  const getDownloadUrl = () => {
+    if (ticket?.pdf_url) return ticket.pdf_url;
+    if (ticket?.file_path?.startsWith('http')) return ticket.file_path;
+    return null;
+  };
+
+  const getDownloadName = () => {
+    if (!ticket?.file_name) return 'archivo';
+    return ticket.file_name;
   };
 
   if (loading) {
@@ -89,29 +83,22 @@ const ReviewTicket = () => {
     );
   }
 
-  const fileUrl = getFileUrl();
-  const fileType = getFileType();
+  const pages = getPages();
+  const totalPages = pages.length;
+  const downloadUrl = getDownloadUrl();
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header OPACO Y STICKY */}
+      {/* Header */}
       <div className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3"
-          >
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3">
             <ArrowLeft size={18} />
             <span className="text-sm">Volver</span>
           </button>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
-            {ticket.is_reviewed ? (
-              <span className="text-2xl" title="Ya revisado">✅</span>
-            ) : (
-              <span className="text-2xl" title="Pendiente revisión">👁️</span>
-            )}
-            {/* Badge internacional */}
+            {ticket.is_reviewed ? <span className="text-2xl">✅</span> : <span className="text-2xl">👁️</span>}
             {ticket.is_foreign && (
               <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
                 🌍 Internacional
@@ -119,127 +106,140 @@ const ReviewTicket = () => {
             )}
           </div>
           <span className={`inline-block mt-2 px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
-            ticket.type === 'factura'
-              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-              : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
+            ticket.type === 'factura' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
           }`}>
             {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
           </span>
         </div>
       </div>
 
-      {/* Main Content - CON PADDING PARA NO IR DEBAJO DEL HEADER */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">
-          
-          {/* VISTA PREVIA - SOPORTE IMÁGENES Y PDFs */}
-          {fileUrl && (
+
+          {/* VISOR GALERÍA */}
+          {pages.length > 0 && (
             <div className="bg-zinc-950 border border-zinc-700 rounded-sm overflow-hidden">
-              {/* IMÁGENES */}
-              {fileType === 'image' && (
-                <>
-                  <div 
-                    onClick={() => setShowLightbox(true)}
-                    className="relative cursor-pointer group"
-                  >
-                    <img 
-                      src={fileUrl} 
-                      alt="Vista previa del ticket"
-                      className="w-full h-64 object-contain bg-zinc-900"
-                      onError={(e) => {
-                        console.error('Error cargando imagen:', fileUrl);
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg">
-                          <ZoomIn size={24} />
-                        </div>
-                      </div>
+              
+              {/* Imagen principal */}
+              <div
+                className="relative cursor-zoom-in group"
+                onClick={() => setShowLightbox(true)}
+              >
+                <img
+                  src={pages[currentPage]}
+                  alt={`Página ${currentPage + 1}`}
+                  className="w-full max-h-96 object-contain bg-zinc-900"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg">
+                      <ZoomIn size={24} />
                     </div>
                   </div>
-                  <div className="px-4 py-2 bg-zinc-900/50 border-t border-zinc-800">
-                    <p className="text-xs text-zinc-500 font-mono">
-                      <ZoomIn size={14} className="inline mr-1" />
-                      Click para ver en tamaño completo
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* PDFs */}
-              {fileType === 'pdf' && (
-                <>
-                  <div className="relative">
-                    <iframe 
-                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-                      className="w-full h-96 bg-zinc-900"
-                      title="Vista previa PDF"
-                    />
-                  </div>
-                  <div className="px-4 py-3 bg-zinc-900/50 border-t border-zinc-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText size={16} className="text-amber-500" />
-                      <p className="text-xs text-zinc-400 font-mono">
-                        Documento PDF • {ticket.file_name}
-                      </p>
-                    </div>
-                    <a
-                      href={fileUrl}
-                      download={ticket.file_name}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs rounded-sm transition-colors"
-                    >
-                      <Download size={14} />
-                      Descargar PDF
-                    </a>
-                  </div>
-                </>
-              )}
-
-              {/* ARCHIVO DESCONOCIDO */}
-              {fileType === 'unknown' && (
-                <div className="h-64 flex flex-col items-center justify-center text-zinc-500 gap-3">
-                  <FileText size={48} className="text-zinc-600" />
-                  <p className="text-sm">Tipo de archivo no soportado</p>
-                  <a
-                    href={fileUrl}
-                    download={ticket.file_name}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-zinc-950 text-sm font-semibold rounded-sm"
-                  >
-                    <Download size={16} />
-                    Descargar archivo
-                  </a>
                 </div>
-              )}
+              </div>
+
+              {/* Controles navegación */}
+              <div className="px-4 py-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Flechas */}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+
+                  <span className="text-sm font-mono text-zinc-300">
+                    {totalPages > 1 ? `${currentPage + 1} / ${totalPages}` : ticket.file_name}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={currentPage === totalPages - 1}
+                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+
+                {/* Dots indicadores */}
+                {totalPages > 1 && (
+                  <div className="flex gap-1.5">
+                    {pages.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`w-2 h-2 rounded-full transition-colors ${i === currentPage ? 'bg-amber-500' : 'bg-zinc-600 hover:bg-zinc-400'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Botón descarga */}
+                {downloadUrl && (
+                  <a
+                    href={downloadUrl}
+                    download={getDownloadName()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs rounded-sm transition-colors"
+                  >
+                    <Download size={14} />
+                    Descargar
+                  </a>
+                )}
+              </div>
             </div>
           )}
 
-          {/* LIGHTBOX MODAL - SOLO PARA IMÁGENES */}
-          {showLightbox && fileType === 'image' && fileUrl && (
-            <div 
-              className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          {/* LIGHTBOX */}
+          {showLightbox && pages.length > 0 && (
+            <div
+              className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
               onClick={() => setShowLightbox(false)}
             >
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowLightbox(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); setShowLightbox(false); }}
                 className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700"
               >
                 <X size={32} />
               </button>
-              <div className="max-w-7xl max-h-full">
-                <img 
-                  src={fileUrl} 
-                  alt="Ticket completo"
-                  className="max-w-full max-h-[90vh] object-contain shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
+
+              {/* Flecha izquierda lightbox */}
+              {totalPages > 1 && currentPage > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCurrentPage(p => p - 1); }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+              )}
+
+              <img
+                src={pages[currentPage]}
+                alt={`Página ${currentPage + 1}`}
+                className="max-w-full max-h-[90vh] object-contain shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              {/* Flecha derecha lightbox */}
+              {totalPages > 1 && currentPage < totalPages - 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCurrentPage(p => p + 1); }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700"
+                >
+                  <ChevronRight size={28} />
+                </button>
+              )}
+
+              {/* Contador lightbox */}
+              {totalPages > 1 && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900/80 px-4 py-2 rounded-full text-sm font-mono text-zinc-300 border border-zinc-700">
+                  {currentPage + 1} / {totalPages}
+                </div>
+              )}
             </div>
           )}
 
@@ -258,71 +258,55 @@ const ReviewTicket = () => {
             </div>
           </div>
 
-          {/* Info Moneda Extranjera */}
+          {/* Info Internacional */}
           {ticket.is_foreign && (
             <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-sm p-5">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl">🌍</span>
                 <h3 className="text-lg font-bold text-blue-400">FACTURA INTERNACIONAL</h3>
               </div>
-              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-zinc-500 text-xs mb-1">País</p>
-                  <p className="font-semibold text-zinc-100">{ticket.country_code || 'N/A'}</p>
+                  <p className="font-semibold">{ticket.country_code || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-zinc-500 text-xs mb-1">Divisa</p>
                   <p className="font-semibold">
-                    <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-sm">
-                      {ticket.currency}
-                    </span>
+                    <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-sm">{ticket.currency}</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-zinc-500 text-xs mb-1">Clasificación</p>
-                  <p className="font-semibold">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      ticket.geo_classification === 'UE' 
-                        ? 'bg-blue-500/20 text-blue-400' 
-                        : 'bg-purple-500/20 text-purple-400'
-                    }`}>
-                      {ticket.geo_classification || 'N/A'}
-                    </span>
-                  </p>
+                  <span className={`px-2 py-1 rounded text-xs ${ticket.geo_classification === 'UE' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                    {ticket.geo_classification || 'N/A'}
+                  </span>
                 </div>
                 {ticket.exchange_rate && (
                   <div>
                     <p className="text-zinc-500 text-xs mb-1">Tasa cambio</p>
-                    <p className="font-semibold text-zinc-100">{ticket.exchange_rate.toFixed(4)}</p>
+                    <p className="font-semibold">{ticket.exchange_rate.toFixed(4)}</p>
                   </div>
                 )}
               </div>
-              
               {ticket.foreign_amount && (
                 <div className="mt-4 pt-4 border-t border-blue-500/30">
                   <p className="text-xs text-zinc-500 mb-2">Importes en divisa original:</p>
                   <div className="grid grid-cols-3 gap-3 text-sm">
                     <div>
                       <p className="text-zinc-400 text-xs">Base original</p>
-                      <p className="font-semibold text-blue-400">
-                        {ticket.foreign_amount.toFixed(2)} {ticket.currency}
-                      </p>
+                      <p className="font-semibold text-blue-400">{ticket.foreign_amount.toFixed(2)} {ticket.currency}</p>
                     </div>
                     {ticket.foreign_tax_amount && (
                       <div>
                         <p className="text-zinc-400 text-xs">IVA original</p>
-                        <p className="font-semibold text-blue-400">
-                          {ticket.foreign_tax_amount.toFixed(2)} {ticket.currency}
-                        </p>
+                        <p className="font-semibold text-blue-400">{ticket.foreign_tax_amount.toFixed(2)} {ticket.currency}</p>
                       </div>
                     )}
                     {ticket.foreign_tax_eur && (
                       <div>
                         <p className="text-zinc-400 text-xs">IVA reclamable</p>
-                        <p className="font-bold text-green-400">
-                          {ticket.foreign_tax_eur.toFixed(2)}€ ✅
-                        </p>
+                        <p className="font-bold text-green-400">{ticket.foreign_tax_eur.toFixed(2)}€ ✅</p>
                       </div>
                     )}
                   </div>
@@ -335,68 +319,41 @@ const ReviewTicket = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">FECHA FACTURA</label>
-              <input
-                type="text"
-                value={ticket.date || ''}
-                onChange={(e) => setTicket({...ticket, date: e.target.value})}
-                placeholder="DD/MM/AAAA"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <input type="text" value={ticket.date || ''} onChange={(e) => setTicket({...ticket, date: e.target.value})}
+                placeholder="DD/MM/AAAA" className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
             </div>
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">PROVEEDOR *</label>
-              <input
-                type="text"
-                value={ticket.provider || ''}
-                onChange={(e) => setTicket({...ticket, provider: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <input type="text" value={ticket.provider || ''} onChange={(e) => setTicket({...ticket, provider: e.target.value})}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
             </div>
           </div>
 
-          {/* Campos adicionales para facturas */}
           {ticket.type === 'factura' && (
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">Nº FACTURA</label>
-                <input
-                  type="text"
-                  value={ticket.invoice_number || ''}
-                  onChange={(e) => setTicket({...ticket, invoice_number: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                />
+                <input type="text" value={ticket.invoice_number || ''} onChange={(e) => setTicket({...ticket, invoice_number: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
               </div>
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TELÉFONO</label>
-                <input
-                  type="text"
-                  value={ticket.phone || ''}
-                  onChange={(e) => setTicket({...ticket, phone: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                />
+                <input type="text" value={ticket.phone || ''} onChange={(e) => setTicket({...ticket, phone: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
               </div>
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
-                <input
-                  type="email"
-                  value={ticket.email || ''}
-                  onChange={(e) => setTicket({...ticket, email: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                />
+                <input type="email" value={ticket.email || ''} onChange={(e) => setTicket({...ticket, email: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
               </div>
             </div>
           )}
 
-          {/* Nombre contacto */}
           {ticket.type === 'factura' && (
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NOMBRE CONTACTO</label>
-              <input
-                type="text"
-                value={ticket.contact_name || ''}
-                onChange={(e) => setTicket({...ticket, contact_name: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-              />
+              <input type="text" value={ticket.contact_name || ''} onChange={(e) => setTicket({...ticket, contact_name: e.target.value})}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
             </div>
           )}
 
@@ -423,65 +380,46 @@ const ReviewTicket = () => {
             </div>
           </div>
 
-          {/* NOTAS */}
+          {/* Notas */}
           <div>
             <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NOTAS (PO SI APLICA)</label>
-            <textarea
-              value={ticket.notes || ''}
-              onChange={(e) => setTicket({...ticket, notes: e.target.value})}
-              rows={3}
-              placeholder="Descripción del gasto, observaciones..."
-              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors resize-none"
-            />
+            <textarea value={ticket.notes || ''} onChange={(e) => setTicket({...ticket, notes: e.target.value})}
+              rows={3} placeholder="Descripción del gasto, observaciones..."
+              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 resize-none" />
           </div>
 
           {/* Estados */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ESTATUS FACTURA</label>
-              <select
-                value={ticket.invoice_status || ''}
-                onChange={(e) => setTicket({...ticket, invoice_status: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-              >
+              <select value={ticket.invoice_status || ''} onChange={(e) => setTicket({...ticket, invoice_status: e.target.value})}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500">
                 <option value="">Seleccionar...</option>
-                {invoiceStatusOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
+                {invoiceStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ESTATUS PAGO</label>
-              <select
-                value={ticket.payment_status || ''}
-                onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-              >
+              <select value={ticket.payment_status || ''} onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500">
                 <option value="">Seleccionar...</option>
-                {paymentStatusOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
+                {paymentStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
             </div>
           </div>
 
           {/* Botones */}
           <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex-1 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold"
-            >
+            <button onClick={() => navigate(-1)} className="flex-1 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold">
               Cancelar
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
               <Save size={18} />
               {saving ? 'GUARDANDO...' : 'MARCAR REVISADO ✓'}
             </button>
           </div>
+
         </div>
       </main>
     </div>
