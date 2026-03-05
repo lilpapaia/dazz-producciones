@@ -9,7 +9,7 @@ from app.services.auth import get_current_admin_user, get_password_hash
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.get("/", response_model=List[schemas.UserResponse])
+@router.get("", response_model=List[schemas.UserResponse])  # ← Sin "/" 
 async def get_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
