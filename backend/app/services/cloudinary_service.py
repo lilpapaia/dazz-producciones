@@ -5,6 +5,7 @@ Servicio Cloudinary para almacenamiento de tickets/facturas
 - URLs permanentes (no se pierden en redeploys)
 """
 
+
 import cloudinary
 import cloudinary.uploader
 import os
