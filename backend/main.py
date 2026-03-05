@@ -16,13 +16,12 @@ app = FastAPI(
 )
 
 # CORS middleware actualizado para Railway + Vercel
+# CORS middleware actualizado para Railway + Vercel
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
     CORSMiddleware,
-    app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # TEMPORAL - permite TODO
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
