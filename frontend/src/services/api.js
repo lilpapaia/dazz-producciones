@@ -35,8 +35,12 @@ export default api;
 // AUTH
 // ============================================
 
-export const login = (email, password) => 
-  api.post('/auth/login', { email, password });
+export const login = (email, password) => {
+  const formData = new FormData();
+  formData.append('username', email); // FastAPI OAuth2 usa 'username'
+  formData.append('password', password);
+  return api.post('/auth/login', formData);
+};
 
 export const registerUser = (data) => 
   api.post('/auth/register', data);
@@ -60,7 +64,7 @@ export const reopenProject = (id) => api.post(`/projects/${id}/reopen`);
 // Cerrar proyecto con descarga de Excel
 export const closeProjectWithDownload = (id) => 
   api.post(`/projects/${id}/close`, {}, {
-    responseType: 'blob'  // Importante: recibe Excel como blob
+    responseType: 'blob'
   });
 
 // Cerrar proyecto con emails personalizados
@@ -109,15 +113,9 @@ export const updateUser = (id, data) => api.put(`/users/${id}`, data);
 export const deleteUser = (id) => api.delete(`/users/${id}`);
 
 // ============================================
-// ESTADÍSTICAS (NUEVO)
+// ESTADÍSTICAS
 // ============================================
 
-/**
- * Obtiene resumen general de estadísticas
- * @param {number} year - Año a consultar
- * @param {number} quarter - Trimestre (1-4), opcional
- * @param {string} geoFilter - 'NACIONAL', 'UE', 'INTERNACIONAL', opcional
- */
 export const getStatisticsOverview = (year, quarter = null, geoFilter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
@@ -125,41 +123,21 @@ export const getStatisticsOverview = (year, quarter = null, geoFilter = null) =>
   return api.get('/statistics/overview', { params });
 };
 
-/**
- * Obtiene evolución mensual de gastos
- * @param {number} year - Año a consultar
- */
 export const getMonthlyEvolution = (year) => 
   api.get('/statistics/monthly-evolution', { params: { year } });
 
-/**
- * Obtiene distribución por divisa/origen
- * @param {number} year - Año a consultar
- * @param {number} quarter - Trimestre opcional
- */
 export const getCurrencyDistribution = (year, quarter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
   return api.get('/statistics/currency-distribution', { params });
 };
 
-/**
- * Obtiene desglose de gastos internacionales por país
- * @param {number} year - Año a consultar
- * @param {number} quarter - Trimestre opcional
- */
 export const getForeignBreakdown = (year, quarter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
   return api.get('/statistics/foreign-breakdown', { params });
 };
 
-/**
- * Obtiene todas las estadísticas en una sola llamada
- * @param {number} year - Año a consultar
- * @param {number} quarter - Trimestre opcional
- * @param {string} geoFilter - Filtro geográfico opcional
- */
 export const getCompleteStatistics = (year, quarter = null, geoFilter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
