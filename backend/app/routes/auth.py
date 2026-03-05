@@ -29,26 +29,36 @@ async def register(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin_user)
 ):
+    """
+    Crear nuevo usuario (solo admin)
+    
+    IMPORTANTE: Este endpoint SIEMPRE devuelve el usuario creado,
+    incluso si falla el envío del email. El admin puede reenviar el email manualmente.
+    """
     print(f"📝 Intentando crear usuario: {user.email}, role: {user.role}")
     
     # Verificar si el email ya existe
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         print(f"❌ Email ya registrado: {user.email}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Email already registered"
+        )
     
     # Verificar si el username ya existe (si se proporcionó)
     if user.username:
         existing_username = db.query(User).filter(User.username == user.username).first()
         if existing_username:
             print(f"❌ Username ya registrado: {user.username}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Username already taken"
+            )
     
-    # Crear usuario
+    # Crear usuario en BD
     try:
         hashed_password = get_password_hash(user.password)
-        
-        # Convertir role a string si es un Enum
         role_value = user.role.value if hasattr(user.role, 'value') else user.role
         
         db_user = User(
@@ -58,51 +68,76 @@ async def register(
             hashed_password=hashed_password, 
             role=role_value
         )
+        
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        print(f"✅ Usuario creado exitosamente: {user.email}")
         
-        # Generar token para set password
-        try:
-            token = generate_token()
-            expires_at = datetime.utcnow() + timedelta(hours=24)
-            
-            reset_token = PasswordResetToken(
-                user_id=db_user.id,
-                token=token,
-                expires_at=expires_at
-            )
-            db.add(reset_token)
-            db.commit()
-            print(f"✅ Token generado: {token[:10]}...")
-            
-            # Enviar email con link para set password
-            try:
-                print(f"📧 Intentando enviar email de set password a {user.email}...")
-                send_set_password_email(
-                    user_name=user.name,
-                    user_email=user.email,
-                    token=token
-                )
-                print(f"✅ Email enviado correctamente")
-            except Exception as e:
-                print(f"⚠️ No se pudo enviar email (pero el usuario fue creado): {str(e)}")
-                # NO fallar si el email no se puede enviar
-                
-        except Exception as e:
-            print(f"⚠️ Error al generar token o enviar email: {str(e)}")
-            # Continuar aunque falle el email
-        
-        return db_user
+        print(f"✅ Usuario creado exitosamente: {user.email} (ID: {db_user.id})")
         
     except Exception as e:
         db.rollback()
-        print(f"❌ Error al crear usuario: {str(e)}")
+        print(f"❌ Error al crear usuario en BD: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Error al crear usuario: {str(e)}"
         )
+    
+    # IMPORTANTE: A partir de aquí, el usuario YA ESTÁ CREADO
+    # Si algo falla, NO hacemos rollback - solo loggeamos el error
+    
+    # Intentar generar token y enviar email (NO CRÍTICO)
+    email_sent = False
+    token_created = False
+    
+    try:
+        # Generar token
+        token = generate_token()
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+        
+        reset_token = PasswordResetToken(
+            user_id=db_user.id,
+            token=token,
+            expires_at=expires_at
+        )
+        
+        db.add(reset_token)
+        db.commit()
+        token_created = True
+        
+        print(f"✅ Token generado: {token[:10]}... (expira en 24h)")
+        
+        # Intentar enviar email (con timeout implícito de SMTP)
+        try:
+            print(f"📧 Intentando enviar email a {user.email}...")
+            send_set_password_email(
+                user_name=user.name,
+                user_email=user.email,
+                token=token
+            )
+            email_sent = True
+            print(f"✅ Email enviado correctamente a {user.email}")
+            
+        except Exception as email_error:
+            # Email falló pero NO es crítico
+            print(f"⚠️ Error al enviar email (usuario creado OK): {str(email_error)}")
+            # NO hacer raise - continuar normalmente
+            
+    except Exception as token_error:
+        # Error al crear token, tampoco es crítico
+        print(f"⚠️ Error al generar token (usuario creado OK): {str(token_error)}")
+        # NO hacer rollback del usuario - solo no tiene token
+    
+    # Log final del resultado
+    if token_created and email_sent:
+        print(f"🎉 Usuario creado + Token generado + Email enviado: {user.email}")
+    elif token_created and not email_sent:
+        print(f"⚠️ Usuario creado + Token generado, pero email NO enviado: {user.email}")
+    else:
+        print(f"⚠️ Usuario creado pero sin token/email: {user.email}")
+    
+    # SIEMPRE devolver el usuario creado (esto es lo importante)
+    return db_user
 
 @router.post("/login", response_model=schemas.Token)
 async def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
@@ -121,12 +156,6 @@ async def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_d
 async def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_db)):
     """
     Endpoint para que el usuario elija su contraseña con un token
-    
-    Args:
-        request: {token, new_password}
-    
-    Returns:
-        {message, success}
     """
     print(f"🔑 Intentando set password con token: {request.token[:10]}...")
     
@@ -156,8 +185,6 @@ async def set_password(request: schemas.SetPasswordRequest, db: Session = Depend
     # Actualizar contraseña
     try:
         user.hashed_password = get_password_hash(request.new_password)
-        
-        # Marcar token como usado
         reset_token.used_at = datetime.utcnow()
         
         db.commit()
@@ -180,7 +207,10 @@ async def set_password(request: schemas.SetPasswordRequest, db: Session = Depend
 async def register_first_admin(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing_users = db.query(User).count()
     if existing_users > 0:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Users already exist. Use regular registration.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Users already exist. Use regular registration."
+        )
     hashed_password = get_password_hash(user.password)
     db_user = User(
         name=user.name, 
