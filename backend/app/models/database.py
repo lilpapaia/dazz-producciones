@@ -23,6 +23,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=True)  # ← AÑADIDO
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
     is_active = Column(Boolean, default=True)
@@ -84,10 +85,10 @@ class Ticket(Base):
     exchange_rate_date = Column(Date, nullable=True)
     foreign_tax_eur = Column(Float, nullable=True)
     type = Column(Enum(TicketType), default=TicketType.TICKET, nullable=False)
-    file_path = Column(String, nullable=False)       # URL primera imagen (o única)
-    file_name = Column(String, nullable=False)        # Nombre archivo original
-    file_pages = Column(Text, nullable=True)          # JSON array de URLs de páginas
-    pdf_url = Column(String, nullable=True)           # URL PDF original para descarga
+    file_path = Column(String, nullable=False)
+    file_name = Column(String, nullable=False)
+    file_pages = Column(Text, nullable=True)
+    pdf_url = Column(String, nullable=True)
     is_reviewed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)

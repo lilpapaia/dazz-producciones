@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 import os
 from dotenv import load_dotenv
 
@@ -40,9 +41,25 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def authenticate_user(db: Session, email: str, password: str):
-    """Authenticate a user"""
-    user = db.query(User).filter(User.email == email).first()
+def authenticate_user(db: Session, identifier: str, password: str):
+    """
+    Authenticate a user by email OR username
+    
+    Args:
+        identifier: Can be either email or username
+        password: User's password
+    
+    Returns:
+        User object if authenticated, False otherwise
+    """
+    # Buscar por email O username
+    user = db.query(User).filter(
+        or_(
+            User.email == identifier,
+            User.username == identifier
+        )
+    ).first()
+    
     if not user:
         return False
     if not verify_password(password, user.hashed_password):

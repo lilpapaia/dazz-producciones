@@ -20,13 +20,14 @@ class TicketType(str, Enum):
 class UserBase(BaseModel):
     email: EmailStr
     name: str
+    username: Optional[str] = None  # ← AÑADIDO (opcional)
     role: UserRole = UserRole.USER
 
 class UserCreate(UserBase):
     password: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    identifier: str  # ← CAMBIADO: puede ser email o username
     password: str
 
 class UserResponse(UserBase):
@@ -42,7 +43,7 @@ class Token(BaseModel):
     token_type: str
     user: UserResponse
 
-# Project Schemas
+# Project Schemas (sin cambios)
 class ProjectBase(BaseModel):
     year: str
     send_date: Optional[str] = None
@@ -87,7 +88,7 @@ class ProjectResponse(ProjectBase):
     class Config:
         from_attributes = True
 
-# Ticket Schemas
+# Ticket Schemas (sin cambios)
 class TicketBase(BaseModel):
     date: str
     provider: str
@@ -116,7 +117,7 @@ class TicketUpdate(BaseModel):
     provider: Optional[str] = None
     invoice_number: Optional[str] = None
     po_notes: Optional[str] = None
-    notes: Optional[str] = None  # Notas adicionales
+    notes: Optional[str] = None
     base_amount: Optional[float] = None
     iva_amount: Optional[float] = None
     iva_percentage: Optional[float] = None
@@ -136,13 +137,12 @@ class TicketResponse(TicketBase):
     id: int
     file_name: str
     file_path: str
-    file_pages: Optional[str] = None  # JSON array de URLs de páginas
-    pdf_url: Optional[str] = None  # URL del PDF original
-    notes: Optional[str] = None  # Notas/PO
+    file_pages: Optional[str] = None
+    pdf_url: Optional[str] = None
+    notes: Optional[str] = None
     is_reviewed: bool
     created_at: datetime
     project_id: int
-    # Campos internacionales
     is_foreign: bool
     currency: str
     country_code: Optional[str] = None
@@ -157,7 +157,7 @@ class TicketResponse(TicketBase):
     class Config:
         from_attributes = True
 
-# AI Extraction Response
+# AI Extraction Response (sin cambios)
 class AIExtractionResponse(BaseModel):
     date: str
     provider: str
@@ -173,8 +173,7 @@ class AIExtractionResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     contact_name: Optional[str] = None
-    confidence: float  # 0-1 score
-    # Campos internacionales
+    confidence: float
     is_foreign: bool = False
     currency: str = "EUR"
     country_code: Optional[str] = None
@@ -182,35 +181,28 @@ class AIExtractionResponse(BaseModel):
     foreign_total: Optional[float] = None
     foreign_tax_amount: Optional[float] = None
 
-# ============================================
-# SCHEMAS ESTADÍSTICAS
-# ============================================
-
+# SCHEMAS ESTADÍSTICAS (sin cambios)
 class StatisticsOverview(BaseModel):
-    """Métricas generales para cards principales"""
-    total_spent: float  # Total gastado (nacional + internacional)
-    international_spent: float  # Solo internacional
-    iva_reclamable: float  # IVA extranjero reclamable
-    projects_total: int  # Total proyectos
-    projects_closed: int  # Proyectos cerrados
-    projects_open: int  # Proyectos en curso
+    total_spent: float
+    international_spent: float
+    iva_reclamable: float
+    projects_total: int
+    projects_closed: int
+    projects_open: int
 
 class MonthlyDataPoint(BaseModel):
-    """Punto de datos para gráfico mensual"""
-    month: int  # 1-12
-    month_name: str  # "Enero", "Febrero", etc.
-    total: float  # Total gastado ese mes
+    month: int
+    month_name: str
+    total: float
 
 class CurrencyDistribution(BaseModel):
-    """Distribución por divisa para pie chart"""
-    currency: str  # "EUR", "USD", "GBP", etc.
-    label: str  # "ESP Nacional", "USD", etc.
-    total: float  # Total en EUR
-    percentage: float  # % del total
-    color: str  # Color para gráfico
+    currency: str
+    label: str
+    total: float
+    percentage: float
+    color: str
 
 class ProjectSummary(BaseModel):
-    """Resumen de proyecto para tabla expandible"""
     id: int
     creative_code: str
     description: str
@@ -219,19 +211,17 @@ class ProjectSummary(BaseModel):
     currency: Optional[str] = None
 
 class CountryBreakdown(BaseModel):
-    """Desglose por país con proyectos"""
     country_code: str
     country_name: str
-    geo_classification: str  # NACIONAL / UE / INTERNACIONAL
+    geo_classification: str
     currency: str
-    total_spent: float  # En EUR
-    tax_paid_foreign: Optional[float] = None  # IVA en divisa original
-    tax_reclamable_eur: float  # IVA reclamable en EUR
+    total_spent: float
+    tax_paid_foreign: Optional[float] = None
+    tax_reclamable_eur: float
     projects_count: int
-    projects: List[ProjectSummary]  # Proyectos de ese país
+    projects: List[ProjectSummary]
 
 class StatisticsResponse(BaseModel):
-    """Respuesta completa de estadísticas"""
     overview: StatisticsOverview
     monthly_evolution: List[MonthlyDataPoint]
     currency_distribution: List[CurrencyDistribution]

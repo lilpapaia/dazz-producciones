@@ -33,12 +33,22 @@ const Users = () => {
   const handleCreate = async () => {
     try {
       await registerUser(newUser);
-      alert(`✓ Usuario creado\n✓ Email: ${newUser.email}\n✓ Contraseña temporal: ${newUser.password}`);
+      
+      // PRIMERO: Cerrar modal y limpiar form
       setShowCreate(false);
+      const tempPassword = newUser.password;
+      const tempEmail = newUser.email;
       setNewUser({ name: '', email: '', password: 'temporal123', role: 'user' });
-      loadUsers();
+      
+      // SEGUNDO: Recargar lista de usuarios
+      await loadUsers();
+      
+      // TERCERO: Mostrar confirmación (después de recargar)
+      alert(`✓ Usuario creado\n✓ Email: ${tempEmail}\n✓ Contraseña temporal: ${tempPassword}`);
+      
     } catch (error) {
-      alert('Error al crear usuario');
+      console.error('Error creating user:', error);
+      alert('Error al crear usuario: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -47,9 +57,11 @@ const Users = () => {
     
     try {
       await deleteUser(userId);
-      loadUsers();
+      await loadUsers(); // Recargar lista
+      alert('✓ Usuario eliminado correctamente');
     } catch (error) {
-      alert('Error al eliminar usuario');
+      console.error('Error deleting user:', error);
+      alert('Error al eliminar usuario: ' + (error.response?.data?.detail || error.message));
     }
   };
 
