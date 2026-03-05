@@ -35,8 +35,8 @@ export default api;
 // AUTH
 // ============================================
 
-export const login = (email, password) =>
-  api.post('/auth/login', { email, password });
+export const login = (identifier, password) =>
+  api.post('/auth/login', { identifier, password });
 
 export const registerUser = (data) =>
   api.post('/auth/register', data);
