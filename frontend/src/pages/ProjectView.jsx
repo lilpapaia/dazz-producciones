@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, deleteTicket, closeProject, reopenProject } from '../services/api';
+import { getProject, getProjectTickets, deleteTicket, deleteProject, closeProject, reopenProject } from '../services/api';
 import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const ProjectView = () => {
   const { id } = useParams();
@@ -12,6 +13,8 @@ const ProjectView = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reopeningProject, setReopeningProject] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
 
   // Búsqueda tickets
   const [ticketSearch, setTicketSearch] = useState('');
@@ -150,6 +153,18 @@ const ProjectView = () => {
     }
   };
 
+  const handleDeleteProject = async () => {
+    setDeletingProject(true);
+    try {
+      await deleteProject(id);
+      alert('✓ Proyecto eliminado correctamente');
+      navigate('/dashboard');
+    } catch (error) {
+      alert('Error al eliminar proyecto: ' + (error.response?.data?.detail || error.message));
+      setDeletingProject(false);
+    }
+  };
+
   // Filtrar tickets
   const filteredTickets = tickets.filter(t => {
     if (!ticketSearch) return true;
@@ -263,6 +278,20 @@ const ProjectView = () => {
             >
               <Unlock size={18} />
               {reopeningProject ? 'REABRIENDO...' : 'REABRIR PROYECTO'}
+            </button>
+          )}
+
+          {/* BOTÓN BORRAR PROYECTO (solo admin o owner) */}
+          {(isAdmin || project.owner_id === user?.id) && (
+            <button
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deletingProject}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 
+                text-red-400 border border-red-500/30 rounded-sm transition-colors
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={16} />
+              <span className="text-sm font-semibold">Eliminar Proyecto</span>
             </button>
           )}
 
@@ -553,6 +582,18 @@ const ProjectView = () => {
           </div>
         </div>
       </main>
+
+      {/* Modal de confirmación de borrado de proyecto */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteProject}
+        title="¿Eliminar proyecto?"
+        message={`Estás a punto de eliminar el proyecto "${project?.creative_code}" (${project?.description}). Esto eliminará también todos los tickets asociados (${project?.tickets_count} tickets). Esta acción no se puede deshacer.`}
+        confirmText="Eliminar Proyecto"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   );
 };

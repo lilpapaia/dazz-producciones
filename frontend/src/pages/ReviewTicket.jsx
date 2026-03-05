@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTicket, updateTicket } from '../services/api';
-import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getTicket, updateTicket, deleteTicket } from '../services/api';
+import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const invoiceStatusOptions = [
   "RECIBIDO", "PEDIDO", "PENDIENTE PEDIR", "RECIBIDO PERO ERRONEO",
@@ -22,6 +23,8 @@ const ReviewTicket = () => {
   const [saving, setSaving] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { 
     loadTicket(); 
@@ -53,6 +56,18 @@ const ReviewTicket = () => {
       alert('Error al actualizar ticket');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteTicket(id);
+      alert('✓ Ticket eliminado correctamente');
+      navigate(-1);
+    } catch (error) {
+      alert('Error al eliminar ticket: ' + (error.response?.data?.detail || error.message));
+      setDeleting(false);
     }
   };
 
@@ -119,14 +134,28 @@ const ReviewTicket = () => {
             <ArrowLeft size={18} />
             <span className="text-sm">Volver</span>
           </button>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
-            {ticket.is_reviewed ? <span className="text-2xl">✅</span> : <span className="text-2xl">👁️</span>}
-            {ticket.is_foreign && (
-              <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
-                🌍 Internacional
-              </span>
-            )}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
+              {ticket.is_reviewed ? <span className="text-2xl">✅</span> : <span className="text-2xl">👁️</span>}
+              {ticket.is_foreign && (
+                <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
+                  🌍 Internacional
+                </span>
+              )}
+            </div>
+            
+            {/* Botón borrar */}
+            <button
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deleting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 
+                text-red-400 border border-red-500/30 rounded-sm transition-colors
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={16} />
+              <span className="text-sm font-semibold">Eliminar</span>
+            </button>
           </div>
           <span className={`inline-block mt-2 px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
             ticket.type === 'factura' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
@@ -431,6 +460,18 @@ const ReviewTicket = () => {
 
         </div>
       </main>
+
+      {/* Modal de confirmación de borrado */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="¿Eliminar ticket?"
+        message={`Estás a punto de eliminar el ticket "${ticket?.file_name}". Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   );
 };
