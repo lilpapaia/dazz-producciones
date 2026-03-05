@@ -116,6 +116,7 @@ class TicketUpdate(BaseModel):
     provider: Optional[str] = None
     invoice_number: Optional[str] = None
     po_notes: Optional[str] = None
+    notes: Optional[str] = None  # Notas adicionales
     base_amount: Optional[float] = None
     iva_amount: Optional[float] = None
     iva_percentage: Optional[float] = None
@@ -135,6 +136,9 @@ class TicketResponse(TicketBase):
     id: int
     file_name: str
     file_path: str
+    file_pages: Optional[str] = None  # JSON array de URLs de páginas
+    pdf_url: Optional[str] = None  # URL del PDF original
+    notes: Optional[str] = None  # Notas/PO
     is_reviewed: bool
     created_at: datetime
     project_id: int
