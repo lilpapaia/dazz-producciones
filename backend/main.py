@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-# IMPORTANTE: Cambiado a database_config para Railway
 from database_config import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics
@@ -12,11 +11,10 @@ from app.routes import users, auth, projects, tickets, statistics
 app = FastAPI(
     title="Dazz Creative - Sistema Gestión Gastos",
     description="API para gestión de proyectos y tickets/facturas con IA",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False  # ✅ Evita redirects 307 que rompen auth
 )
 
-# CORS middleware actualizado para Railway + Vercel
-# CORS middleware actualizado para Railway + Vercel
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
@@ -51,7 +49,6 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Crear tablas al iniciar (importante para Railway)
 @app.on_event("startup")
 async def startup_event():
     Base.metadata.create_all(bind=engine)
@@ -59,6 +56,5 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
-    # Railway usa variable PORT, local usa 8000
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
