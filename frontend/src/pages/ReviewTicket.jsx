@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTicket, updateTicket } from '../services/api';
-import { ArrowLeft, Save, X, ZoomIn, Download, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const invoiceStatusOptions = [
   "RECIBIDO", "PEDIDO", "PENDIENTE PEDIR", "RECIBIDO PERO ERRONEO",
@@ -23,11 +23,17 @@ const ReviewTicket = () => {
   const [showLightbox, setShowLightbox] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
 
-  useEffect(() => { loadTicket(); }, [id]);
+  useEffect(() => { 
+    loadTicket(); 
+    setCurrentPage(0);
+  }, [id]);
 
   const loadTicket = async () => {
     try {
       const response = await getTicket(id);
+      console.log('Ticket recibido:', response.data);
+      console.log('file_pages tipo:', typeof response.data.file_pages);
+      console.log('file_pages valor:', response.data.file_pages);
       setTicket(response.data);
     } catch (error) {
       alert('Error al cargar ticket');
@@ -50,24 +56,38 @@ const ReviewTicket = () => {
     }
   };
 
-  // Obtener array de páginas/imágenes
+  // Obtener array de páginas - VERSION SIMPLIFICADA Y ROBUSTA
   const getPages = () => {
     if (!ticket) return [];
+    
+    // Si file_pages existe, procesarlo
     if (ticket.file_pages) {
-      try {
-        const pages = JSON.parse(ticket.file_pages);
-        if (Array.isArray(pages) && pages.length > 0) return pages;
-      } catch {}
+      // Caso 1: Ya es un array (axios lo parseó)
+      if (Array.isArray(ticket.file_pages)) {
+        console.log('file_pages es array:', ticket.file_pages.length, 'páginas');
+        return ticket.file_pages;
+      }
+      
+      // Caso 2: Es un string JSON, parsearlo
+      if (typeof ticket.file_pages === 'string') {
+        try {
+          const parsed = JSON.parse(ticket.file_pages);
+          if (Array.isArray(parsed)) {
+            console.log('file_pages parseado:', parsed.length, 'páginas');
+            return parsed;
+          }
+        } catch (e) {
+          console.error('Error parseando file_pages:', e);
+        }
+      }
     }
-    if (ticket.file_path && ticket.file_path.startsWith('http')) return [ticket.file_path];
+    
+    // Fallback: usar file_path si existe
+    if (ticket.file_path && ticket.file_path.startsWith('http')) {
+      return [ticket.file_path];
+    }
+    
     return [];
-  };
-
-  // URL de descarga: PDF original si existe, si no la imagen
-  const getDownloadUrl = () => {
-    if (ticket?.pdf_url) return ticket.pdf_url;
-    if (ticket?.file_path?.startsWith('http')) return ticket.file_path;
-    return null;
   };
 
   const getDownloadName = () => {
@@ -85,7 +105,10 @@ const ReviewTicket = () => {
 
   const pages = getPages();
   const totalPages = pages.length;
-  const downloadUrl = getDownloadUrl();
+  
+  console.log('Páginas finales:', pages);
+  console.log('Total páginas:', totalPages);
+  console.log('Página actual:', currentPage);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -145,7 +168,7 @@ const ReviewTicket = () => {
                   {/* Flechas */}
                   <button
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                    disabled={currentPage === 0}
+                    disabled={currentPage === 0 || totalPages <= 1}
                     className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft size={18} />
@@ -157,7 +180,7 @@ const ReviewTicket = () => {
 
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                    disabled={currentPage === totalPages - 1}
+                    disabled={currentPage === totalPages - 1 || totalPages <= 1}
                     className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight size={18} />
@@ -175,20 +198,6 @@ const ReviewTicket = () => {
                       />
                     ))}
                   </div>
-                )}
-
-                {/* Botón descarga */}
-                {downloadUrl && (
-                  <a
-                    href={downloadUrl}
-                    download={getDownloadName()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs rounded-sm transition-colors"
-                  >
-                    <Download size={14} />
-                    Descargar
-                  </a>
                 )}
               </div>
             </div>
