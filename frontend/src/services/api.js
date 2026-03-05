@@ -35,11 +35,11 @@ export default api;
 // AUTH
 // ============================================
 
-export const login = (email, password) => 
-  api.post('/auth/login', { email, password });
+export const login = (email, password) =>
+  api.post('/auth/login/', { email, password });
 
-export const registerUser = (data) => 
-  api.post('/auth/register', data);
+export const registerUser = (data) =>
+  api.post('/auth/register/', data);
 
 // ============================================
 // PROJECTS
@@ -57,15 +57,13 @@ export const closeProject = (id) => api.post(`/projects/${id}/close/`);
 
 export const reopenProject = (id) => api.post(`/projects/${id}/reopen/`);
 
-// Cerrar proyecto con descarga de Excel
-export const closeProjectWithDownload = (id) => 
+export const closeProjectWithDownload = (id) =>
   api.post(`/projects/${id}/close/`, {}, {
     responseType: 'blob'
   });
 
-// Cerrar proyecto con emails personalizados
-export const closeProjectWithEmails = (id, emails) => 
-  api.post(`/projects/${id}/close/`, 
+export const closeProjectWithEmails = (id, emails) =>
+  api.post(`/projects/${id}/close/`,
     { recipients: emails },
     { responseType: 'blob' }
   );
@@ -84,16 +82,16 @@ export const uploadTicket = (projectId, file) => {
   });
 };
 
-export const getProjectTickets = (projectId) => 
+export const getProjectTickets = (projectId) =>
   api.get(`/tickets/${projectId}/tickets/`);
 
-export const getTicket = (id) => 
+export const getTicket = (id) =>
   api.get(`/tickets/${id}/`);
 
-export const updateTicket = (id, data) => 
+export const updateTicket = (id, data) =>
   api.put(`/tickets/${id}/`, data);
 
-export const deleteTicket = (id) => 
+export const deleteTicket = (id) =>
   api.delete(`/tickets/${id}/`);
 
 // ============================================
@@ -116,27 +114,27 @@ export const getStatisticsOverview = (year, quarter = null, geoFilter = null) =>
   const params = { year };
   if (quarter) params.quarter = quarter;
   if (geoFilter) params.geo_filter = geoFilter;
-  return api.get('/statistics/overview', { params });
+  return api.get('/statistics/overview/', { params });
 };
 
-export const getMonthlyEvolution = (year) => 
-  api.get('/statistics/monthly-evolution', { params: { year } });
+export const getMonthlyEvolution = (year) =>
+  api.get('/statistics/monthly-evolution/', { params: { year } });
 
 export const getCurrencyDistribution = (year, quarter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
-  return api.get('/statistics/currency-distribution', { params });
+  return api.get('/statistics/currency-distribution/', { params });
 };
 
 export const getForeignBreakdown = (year, quarter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
-  return api.get('/statistics/foreign-breakdown', { params });
+  return api.get('/statistics/foreign-breakdown/', { params });
 };
 
 export const getCompleteStatistics = (year, quarter = null, geoFilter = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
   if (geoFilter) params.geo_filter = geoFilter;
-  return api.get('/statistics/complete', { params });
+  return api.get('/statistics/complete/', { params });
 };
