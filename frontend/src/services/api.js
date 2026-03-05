@@ -45,32 +45,32 @@ export const registerUser = (data) =>
 // PROJECTS
 // ============================================
 
-export const getProjects = () => api.get('/projects');
+export const getProjects = () => api.get('/projects/');
 
-export const getProject = (id) => api.get(`/projects/${id}`);
+export const getProject = (id) => api.get(`/projects/${id}/`);
 
-export const createProject = (data) => api.post('/projects', data);
+export const createProject = (data) => api.post('/projects/', data);
 
-export const updateProject = (id, data) => api.put(`/projects/${id}`, data);
+export const updateProject = (id, data) => api.put(`/projects/${id}/`, data);
 
-export const closeProject = (id) => api.post(`/projects/${id}/close`);
+export const closeProject = (id) => api.post(`/projects/${id}/close/`);
 
-export const reopenProject = (id) => api.post(`/projects/${id}/reopen`);
+export const reopenProject = (id) => api.post(`/projects/${id}/reopen/`);
 
 // Cerrar proyecto con descarga de Excel
 export const closeProjectWithDownload = (id) => 
-  api.post(`/projects/${id}/close`, {}, {
+  api.post(`/projects/${id}/close/`, {}, {
     responseType: 'blob'
   });
 
 // Cerrar proyecto con emails personalizados
 export const closeProjectWithEmails = (id, emails) => 
-  api.post(`/projects/${id}/close`, 
+  api.post(`/projects/${id}/close/`, 
     { recipients: emails },
     { responseType: 'blob' }
   );
 
-export const deleteProject = (id) => api.delete(`/projects/${id}`);
+export const deleteProject = (id) => api.delete(`/projects/${id}/`);
 
 // ============================================
 // TICKETS
@@ -79,22 +79,22 @@ export const deleteProject = (id) => api.delete(`/projects/${id}`);
 export const uploadTicket = (projectId, file) => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post(`/tickets/${projectId}/upload`, formData, {
+  return api.post(`/tickets/${projectId}/upload/`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
 
 export const getProjectTickets = (projectId) => 
-  api.get(`/tickets/${projectId}/tickets`);
+  api.get(`/tickets/${projectId}/tickets/`);
 
 export const getTicket = (id) => 
-  api.get(`/tickets/${id}`);
+  api.get(`/tickets/${id}/`);
 
 export const updateTicket = (id, data) => 
-  api.put(`/tickets/${id}`, data);
+  api.put(`/tickets/${id}/`, data);
 
 export const deleteTicket = (id) => 
-  api.delete(`/tickets/${id}`);
+  api.delete(`/tickets/${id}/`);
 
 // ============================================
 // USERS
@@ -102,11 +102,11 @@ export const deleteTicket = (id) =>
 
 export const getUsers = () => api.get('/users/');
 
-export const getUser = (id) => api.get(`/users/${id}`);
+export const getUser = (id) => api.get(`/users/${id}/`);
 
-export const updateUser = (id, data) => api.put(`/users/${id}`, data);
+export const updateUser = (id, data) => api.put(`/users/${id}/`, data);
 
-export const deleteUser = (id) => api.delete(`/users/${id}`);
+export const deleteUser = (id) => api.delete(`/users/${id}/`);
 
 // ============================================
 // ESTADÍSTICAS
