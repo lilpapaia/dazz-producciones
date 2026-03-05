@@ -20,12 +20,9 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        FRONTEND_URL,
-        "https://dazz-producciones.vercel.app",
-    ],
+    app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # TEMPORAL - permite TODO
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
