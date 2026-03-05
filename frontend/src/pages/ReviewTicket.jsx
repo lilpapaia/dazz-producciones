@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTicket, updateTicket, deleteTicket } from '../services/api';
+import { getTicket, updateTicket, deleteTicket, getProjectTickets } from '../services/api';
 import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -25,6 +25,8 @@ const ReviewTicket = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [allTickets, setAllTickets] = useState([]);
+  const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
 
   useEffect(() => { 
     loadTicket(); 
@@ -37,7 +39,20 @@ const ReviewTicket = () => {
       console.log('Ticket recibido:', response.data);
       console.log('file_pages tipo:', typeof response.data.file_pages);
       console.log('file_pages valor:', response.data.file_pages);
-      setTicket(response.data);
+      const currentTicket = response.data;
+      setTicket(currentTicket);
+      
+      // Cargar todos los tickets del proyecto para navegación
+      try {
+        const projectTickets = await getProjectTickets(currentTicket.project_id);
+        setAllTickets(projectTickets.data);
+        
+        // Encontrar el índice del ticket actual
+        const index = projectTickets.data.findIndex(t => t.id === parseInt(id));
+        setCurrentTicketIndex(index);
+      } catch (error) {
+        console.error('Error loading project tickets:', error);
+      }
     } catch (error) {
       alert('Error al cargar ticket');
       navigate(-1);
@@ -124,6 +139,24 @@ const ReviewTicket = () => {
   console.log('Páginas finales:', pages);
   console.log('Total páginas:', totalPages);
   console.log('Página actual:', currentPage);
+
+  // Funciones de navegación entre tickets
+  const hasPrevTicket = currentTicketIndex > 0;
+  const hasNextTicket = currentTicketIndex >= 0 && currentTicketIndex < allTickets.length - 1;
+
+  const goToPrevTicket = () => {
+    if (hasPrevTicket) {
+      const prevTicket = allTickets[currentTicketIndex - 1];
+      navigate(`/tickets/${prevTicket.id}/review`);
+    }
+  };
+
+  const goToNextTicket = () => {
+    if (hasNextTicket) {
+      const nextTicket = allTickets[currentTicketIndex + 1];
+      navigate(`/tickets/${nextTicket.id}/review`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -460,6 +493,39 @@ const ReviewTicket = () => {
 
         </div>
       </main>
+
+      {/* FLECHAS FLOTANTES DE NAVEGACIÓN */}
+      {hasPrevTicket && (
+        <button
+          onClick={goToPrevTicket}
+          className="fixed left-4 top-1/2 -translate-y-1/2 z-40
+            w-14 h-14 rounded-full bg-zinc-900/90 hover:bg-amber-500
+            border-2 border-zinc-700 hover:border-amber-500
+            flex items-center justify-center
+            transition-all duration-200 shadow-xl
+            hover:scale-110 active:scale-95
+            backdrop-blur-sm"
+          title="Ticket anterior"
+        >
+          <ChevronLeft size={32} className="text-zinc-100" />
+        </button>
+      )}
+
+      {hasNextTicket && (
+        <button
+          onClick={goToNextTicket}
+          className="fixed right-4 top-1/2 -translate-y-1/2 z-40
+            w-14 h-14 rounded-full bg-zinc-900/90 hover:bg-amber-500
+            border-2 border-zinc-700 hover:border-amber-500
+            flex items-center justify-center
+            transition-all duration-200 shadow-xl
+            hover:scale-110 active:scale-95
+            backdrop-blur-sm"
+          title="Siguiente ticket"
+        >
+          <ChevronRight size={32} className="text-zinc-100" />
+        </button>
+      )}
 
       {/* Modal de confirmación de borrado */}
       <ConfirmDialog
