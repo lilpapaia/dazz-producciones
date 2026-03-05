@@ -12,57 +12,42 @@ const UploadTickets = () => {
   const [compressing, setCompressing] = useState(false);
   const [results, setResults] = useState([]);
 
-  // Función para comprimir imagen si supera 5MB
   const compressImageIfNeeded = async (file) => {
-    // Solo comprimir imágenes
-    if (!file.type.startsWith('image/')) {
-      return file;
-    }
+    if (!file.type.startsWith('image/')) return file;
 
-    // Si es menor de 5MB, no comprimir
-    const maxSize = 5 * 1024 * 1024; // 5MB en bytes
-    if (file.size < maxSize) {
-      return file;
-    }
+    // Comprimir SIEMPRE si supera 3MB (margen amplio)
+    const triggerSize = 3 * 1024 * 1024;
+    if (file.size < triggerSize) return file;
 
     console.log(`🔄 Comprimiendo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)...`);
 
     try {
       const options = {
-        maxSizeMB: 4.5,          // Comprimir hasta 4.5MB (margen seguridad)
-        maxWidthOrHeight: 2048,  // Máximo ancho/alto
-        useWebWorker: true,      // Usar worker para no bloquear UI
-        fileType: file.type      // Mantener tipo original
+        maxSizeMB: 3,            // Comprimir hasta 3MB (margen amplio vs límite 5MB)
+        maxWidthOrHeight: 1920,  // Resolución suficiente para IA
+        useWebWorker: true,
+        fileType: file.type
       };
 
       const compressedFile = await imageCompression(file, options);
-      
-      console.log(`✅ ${file.name} comprimido: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
-      
+      console.log(`✅ ${file.name}: ${(file.size/1024/1024).toFixed(2)}MB → ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
       return compressedFile;
     } catch (error) {
       console.error('Error al comprimir:', error);
-      // Si falla compresión, intentar con imagen original
       return file;
     }
   };
 
-  const handleFileChange = async (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    
-    // Mostrar mensaje si hay imágenes grandes
-    const largeImages = selectedFiles.filter(f => 
-      f.type.startsWith('image/') && f.size > 5 * 1024 * 1024
+  const processFiles = async (selectedFiles) => {
+    const hasLargeImages = selectedFiles.some(f => 
+      f.type.startsWith('image/') && f.size > 3 * 1024 * 1024
     );
-    
-    if (largeImages.length > 0) {
+
+    if (hasLargeImages) {
       setCompressing(true);
-      
-      // Comprimir imágenes grandes
       const processedFiles = await Promise.all(
         selectedFiles.map(file => compressImageIfNeeded(file))
       );
-      
       setFiles(processedFiles);
       setCompressing(false);
     } else {
@@ -70,25 +55,13 @@ const UploadTickets = () => {
     }
   };
 
+  const handleFileChange = async (e) => {
+    await processFiles(Array.from(e.target.files));
+  };
+
   const handleDrop = async (e) => {
     e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    
-    // Comprimir si es necesario
-    const largeImages = droppedFiles.filter(f => 
-      f.type.startsWith('image/') && f.size > 5 * 1024 * 1024
-    );
-    
-    if (largeImages.length > 0) {
-      setCompressing(true);
-      const processedFiles = await Promise.all(
-        droppedFiles.map(file => compressImageIfNeeded(file))
-      );
-      setFiles(processedFiles);
-      setCompressing(false);
-    } else {
-      setFiles(droppedFiles);
-    }
+    await processFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleUpload = async () => {
@@ -103,11 +76,7 @@ const UploadTickets = () => {
     for (const file of files) {
       try {
         const response = await uploadTicket(id, file);
-        newResults.push({
-          file: file.name,
-          success: true,
-          data: response.data
-        });
+        newResults.push({ file: file.name, success: true, data: response.data });
       } catch (error) {
         newResults.push({
           file: file.name,
@@ -122,7 +91,6 @@ const UploadTickets = () => {
   };
 
   const successCount = results.filter(r => r.success).length;
-  const totalCount = results.length;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -141,14 +109,13 @@ const UploadTickets = () => {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-8">
-          
-          {/* Mensaje de compresión */}
+
           {compressing && (
             <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-sm">
               <div className="flex items-center gap-3">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
                 <p className="text-sm text-blue-400">
-                  🔄 Comprimiendo imágenes grandes... Esto puede tardar unos segundos
+                  🔄 Comprimiendo imágenes... Esto puede tardar unos segundos
                 </p>
               </div>
             </div>
@@ -167,49 +134,20 @@ const UploadTickets = () => {
               Acepta: JPG, PNG, PDF • Imágenes grandes se comprimen automáticamente
             </p>
 
-            {/* BOTONES: CÁMARA Y ARCHIVOS */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
-              
-              {/* BOTÓN 1: TOMAR FOTO CON CÁMARA */}
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-                id="camera-input"
-              />
-              <label
-                htmlFor="camera-input"
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/30"
-              >
+              <input type="file" accept="image/*" capture="environment" multiple onChange={handleFileChange} className="hidden" id="camera-input" />
+              <label htmlFor="camera-input" className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/30">
                 <Camera size={20} />
                 TOMAR FOTO
               </label>
 
-              {/* BOTÓN 2: ELEGIR ARCHIVOS */}
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30"
-              >
+              <input type="file" accept="image/*,.pdf" multiple onChange={handleFileChange} className="hidden" id="file-upload" />
+              <label htmlFor="file-upload" className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30">
                 <FolderOpen size={20} />
                 ELEGIR ARCHIVOS
               </label>
             </div>
-
-            {/* Hint para móvil */}
-            <p className="text-xs text-zinc-600 mt-4">
-              💡 "Tomar Foto" abre la cámara en móvil
-            </p>
+            <p className="text-xs text-zinc-600 mt-4">💡 "Tomar Foto" abre la cámara en móvil</p>
           </div>
 
           {files.length > 0 && (
@@ -220,9 +158,7 @@ const UploadTickets = () => {
                   <div key={index} className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-sm">
                     <FileText size={20} className="text-amber-500" />
                     <span className="flex-1 text-sm truncate">{file.name}</span>
-                    <span className="text-xs text-zinc-500 font-mono">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </span>
+                    <span className="text-xs text-zinc-500 font-mono">{(file.size / 1024).toFixed(1)} KB</span>
                   </div>
                 ))}
               </div>
@@ -242,27 +178,17 @@ const UploadTickets = () => {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold font-mono tracking-wider">RESULTADOS</h3>
-                <span className="text-sm text-zinc-400 font-mono">
-                  {successCount} de {totalCount} exitosos
-                </span>
+                <span className="text-sm text-zinc-400 font-mono">{successCount} de {results.length} exitosos</span>
               </div>
-              
+
               <div className="space-y-3">
                 {results.map((result, index) => (
-                  <div
-                    key={index}
-                    className={`p-4 rounded-sm border-2 ${
-                      result.success
-                        ? 'border-green-500/30 bg-green-500/10'
-                        : 'border-red-500/30 bg-red-500/10'
-                    }`}
-                  >
+                  <div key={index} className={`p-4 rounded-sm border-2 ${result.success ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
                     <div className="flex items-start gap-3">
-                      {result.success ? (
-                        <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
-                      )}
+                      {result.success
+                        ? <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
+                        : <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
+                      }
                       <div className="flex-1">
                         <p className="font-medium text-sm mb-1">{result.file}</p>
                         {result.success ? (
@@ -270,30 +196,11 @@ const UploadTickets = () => {
                             <p><span className="font-medium">Proveedor:</span> {result.data.provider}</p>
                             <p><span className="font-medium">Total:</span> {result.data.final_total}€</p>
                             <p><span className="font-medium">Tipo:</span> {result.data.type === 'factura' ? 'Factura' : 'Ticket'}</p>
-                            
-                            {/* Info si es internacional */}
                             {result.data.is_foreign && (
                               <div className="mt-2 pt-2 border-t border-blue-500/30">
-                                <p className="text-blue-400 font-bold mb-1">
-                                  🌍 Factura internacional detectada
-                                </p>
-                                <div className="space-y-1">
-                                  <p>
-                                    <span className="font-medium">Divisa:</span>{' '}
-                                    <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">
-                                      {result.data.currency}
-                                    </span>
-                                  </p>
-                                  {result.data.country_code && (
-                                    <p><span className="font-medium">País:</span> {result.data.country_code}</p>
-                                  )}
-                                  {result.data.foreign_amount && (
-                                    <p>
-                                      <span className="font-medium">Importe original:</span>{' '}
-                                      {result.data.foreign_amount} {result.data.currency}
-                                    </p>
-                                  )}
-                                </div>
+                                <p className="text-blue-400 font-bold mb-1">🌍 Factura internacional detectada</p>
+                                <p><span className="font-medium">Divisa:</span> <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">{result.data.currency}</span></p>
+                                {result.data.country_code && <p><span className="font-medium">País:</span> {result.data.country_code}</p>}
                               </div>
                             )}
                           </div>
@@ -307,10 +214,7 @@ const UploadTickets = () => {
               </div>
 
               {successCount > 0 && (
-                <button
-                  onClick={() => navigate(`/projects/${id}`)}
-                  className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors"
-                >
+                <button onClick={() => navigate(`/projects/${id}`)} className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors">
                   VER PROYECTO
                 </button>
               )}
