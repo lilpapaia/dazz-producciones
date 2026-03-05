@@ -24,7 +24,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:5173",
         FRONTEND_URL,
-        "https://*.vercel.app",
+        "https://dazz-producciones.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
