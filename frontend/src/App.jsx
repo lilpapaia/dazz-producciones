@@ -9,6 +9,7 @@ import ProjectView from './pages/ProjectView';
 import ProjectCloseReview from './pages/ProjectCloseReview';
 import UploadTickets from './pages/UploadTickets';
 import ReviewTicket from './pages/ReviewTicket';
+import Statistics from './pages/Statistics';
 import Users from './pages/Users';
 
 function App() {
@@ -41,6 +42,17 @@ function App() {
               } 
             />
             
+            {/* NUEVA RUTA: Estadísticas */}
+            <Route 
+              path="/statistics" 
+              element={
+                <ProtectedRoute>
+                  <Navbar />
+                  <Statistics />
+                </ProtectedRoute>
+              } 
+            />
+            
             {/* Projects - ORDEN CORRECTO: específicas primero */}
             <Route 
               path="/projects/create" 
@@ -62,7 +74,7 @@ function App() {
               } 
             />
             
-            {/* NUEVA RUTA - Preview antes de cerrar proyecto */}
+            {/* Preview antes de cerrar proyecto */}
             <Route 
               path="/projects/:id/close-review" 
               element={

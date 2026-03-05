@@ -4,12 +4,15 @@ from typing import List
 import os
 import shutil
 from pathlib import Path
+from datetime import datetime
 
 from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, Ticket
 from app.services.auth import get_current_active_user
 from app.services.claude_ai import extract_ticket_data
+from app.services.exchange_rate import get_historical_exchange_rate, convert_to_eur
+from app.services.geographic_classifier import classify_geography
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
@@ -68,6 +71,7 @@ async def upload_ticket(
 ):
     """
     Upload a ticket/invoice and auto-extract data with AI
+    Con soporte para moneda extranjera automático
     """
     
     # Check if project exists and user has access
@@ -120,14 +124,81 @@ async def upload_ticket(
                 total_with_iva=0.0,
                 final_total=0.0,
                 type="ticket",
-                is_reviewed=False
+                is_reviewed=False,
+                is_foreign=False,
+                currency="EUR"
             )
         else:
+            # ============================================
+            # PROCESAR FACTURA INTERNACIONAL
+            # ============================================
+            is_foreign = extracted_data.get("is_foreign", False)
+            currency = extracted_data.get("currency", "EUR")
+            country_code = extracted_data.get("country_code", "ES")
+            
+            # Clasificar geografía
+            geo_classification = classify_geography(country_code)
+            
+            # Valores por defecto (EUR nacional)
+            exchange_rate = None
+            exchange_rate_date = None
+            foreign_amount = None
+            foreign_total = None
+            foreign_tax_amount = None
+            foreign_tax_eur = None
+            
+            # Si es internacional y NO es EUR, obtener tasa
+            if is_foreign and currency != "EUR":
+                # Parse fecha de la factura para obtener tasa histórica
+                try:
+                    # Formato: DD/MM/YYYY
+                    date_str = extracted_data.get("date", "")
+                    if date_str and "/" in date_str:
+                        day, month, year = date_str.split("/")
+                        invoice_date = datetime(int(year), int(month), int(day)).date()
+                        
+                        # Obtener tasa histórica
+                        exchange_rate = get_historical_exchange_rate(
+                            from_currency=currency,
+                            to_currency="EUR",
+                            rate_date=invoice_date
+                        )
+                        
+                        if exchange_rate:
+                            exchange_rate_date = invoice_date
+                            
+                            # Guardar importes en divisa original
+                            foreign_amount = extracted_data.get("foreign_amount")
+                            foreign_total = extracted_data.get("foreign_total")
+                            foreign_tax_amount = extracted_data.get("foreign_tax_amount")
+                            
+                            # Convertir IVA extranjero a EUR para estadísticas
+                            if foreign_tax_amount:
+                                foreign_tax_eur = foreign_tax_amount * exchange_rate
+                            
+                            print(f"✅ Factura internacional: {currency} → EUR")
+                            print(f"   Tasa ({invoice_date}): {exchange_rate}")
+                            print(f"   IVA reclamable: {foreign_tax_eur}€")
+                        
+                except Exception as e:
+                    print(f"⚠️ Error procesando tasa de cambio: {str(e)}")
+            
+            # Si es EUR pero internacional (UE), también guardar IVA reclamable
+            elif is_foreign and currency == "EUR":
+                foreign_amount = extracted_data.get("base_amount", 0.0)
+                foreign_total = extracted_data.get("final_total", 0.0)
+                foreign_tax_amount = extracted_data.get("iva_amount", 0.0)
+                foreign_tax_eur = extracted_data.get("iva_amount", 0.0)
+                exchange_rate = 1.0  # EUR a EUR
+            
+            # ============================================
+            
             # Create ticket with extracted data
             ticket = Ticket(
                 project_id=project_id,
                 file_path=str(file_path),
                 file_name=file.filename,
+                # Campos básicos
                 date=extracted_data.get("date", ""),
                 provider=extracted_data.get("provider", ""),
                 invoice_number=extracted_data.get("invoice_number"),
@@ -142,6 +213,17 @@ async def upload_ticket(
                 phone=extracted_data.get("phone"),
                 email=extracted_data.get("email"),
                 contact_name=extracted_data.get("contact_name"),
+                # Campos internacionales
+                is_foreign=is_foreign,
+                currency=currency,
+                country_code=country_code,
+                geo_classification=geo_classification,
+                foreign_amount=foreign_amount,
+                foreign_total=foreign_total,
+                foreign_tax_amount=foreign_tax_amount,
+                foreign_tax_eur=foreign_tax_eur,
+                exchange_rate=exchange_rate,
+                exchange_rate_date=exchange_rate_date,
                 is_reviewed=False
             )
         
@@ -191,9 +273,6 @@ async def get_project_tickets(
     return tickets
 
 
-# ============================================
-# NUEVA RUTA - GET TICKET INDIVIDUAL
-# ============================================
 @router.get("/{ticket_id}", response_model=schemas.TicketResponse)
 async def get_ticket(
     ticket_id: int,
@@ -218,7 +297,6 @@ async def get_ticket(
         )
     
     return ticket
-# ============================================
 
 
 @router.put("/{ticket_id}", response_model=schemas.TicketResponse)

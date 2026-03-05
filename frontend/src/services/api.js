@@ -31,11 +31,19 @@ api.interceptors.response.use(
 
 export default api;
 
+// ============================================
+// AUTH
+// ============================================
+
 export const login = (email, password) => 
   api.post('/auth/login', { email, password });
 
 export const registerUser = (data) => 
   api.post('/auth/register', data);
+
+// ============================================
+// PROJECTS
+// ============================================
 
 export const getProjects = () => api.get('/projects');
 
@@ -64,6 +72,10 @@ export const closeProjectWithEmails = (id, emails) =>
 
 export const deleteProject = (id) => api.delete(`/projects/${id}`);
 
+// ============================================
+// TICKETS
+// ============================================
+
 export const uploadTicket = (projectId, file) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -84,6 +96,10 @@ export const updateTicket = (id, data) =>
 export const deleteTicket = (id) => 
   api.delete(`/tickets/${id}`);
 
+// ============================================
+// USERS
+// ============================================
+
 export const getUsers = () => api.get('/users');
 
 export const getUser = (id) => api.get(`/users/${id}`);
@@ -91,3 +107,62 @@ export const getUser = (id) => api.get(`/users/${id}`);
 export const updateUser = (id, data) => api.put(`/users/${id}`, data);
 
 export const deleteUser = (id) => api.delete(`/users/${id}`);
+
+// ============================================
+// ESTADÍSTICAS (NUEVO)
+// ============================================
+
+/**
+ * Obtiene resumen general de estadísticas
+ * @param {number} year - Año a consultar
+ * @param {number} quarter - Trimestre (1-4), opcional
+ * @param {string} geoFilter - 'NACIONAL', 'UE', 'INTERNACIONAL', opcional
+ */
+export const getStatisticsOverview = (year, quarter = null, geoFilter = null) => {
+  const params = { year };
+  if (quarter) params.quarter = quarter;
+  if (geoFilter) params.geo_filter = geoFilter;
+  return api.get('/statistics/overview', { params });
+};
+
+/**
+ * Obtiene evolución mensual de gastos
+ * @param {number} year - Año a consultar
+ */
+export const getMonthlyEvolution = (year) => 
+  api.get('/statistics/monthly-evolution', { params: { year } });
+
+/**
+ * Obtiene distribución por divisa/origen
+ * @param {number} year - Año a consultar
+ * @param {number} quarter - Trimestre opcional
+ */
+export const getCurrencyDistribution = (year, quarter = null) => {
+  const params = { year };
+  if (quarter) params.quarter = quarter;
+  return api.get('/statistics/currency-distribution', { params });
+};
+
+/**
+ * Obtiene desglose de gastos internacionales por país
+ * @param {number} year - Año a consultar
+ * @param {number} quarter - Trimestre opcional
+ */
+export const getForeignBreakdown = (year, quarter = null) => {
+  const params = { year };
+  if (quarter) params.quarter = quarter;
+  return api.get('/statistics/foreign-breakdown', { params });
+};
+
+/**
+ * Obtiene todas las estadísticas en una sola llamada
+ * @param {number} year - Año a consultar
+ * @param {number} quarter - Trimestre opcional
+ * @param {string} geoFilter - Filtro geográfico opcional
+ */
+export const getCompleteStatistics = (year, quarter = null, geoFilter = null) => {
+  const params = { year };
+  if (quarter) params.quarter = quarter;
+  if (geoFilter) params.geo_filter = geoFilter;
+  return api.get('/statistics/complete', { params });
+};

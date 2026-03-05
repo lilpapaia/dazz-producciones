@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -75,13 +75,13 @@ class Ticket(Base):
     provider = Column(String, nullable=False)  # B: Proveedor
     invoice_number = Column(String)  # C: Nº FACTURA PROVEEDOR
     po_notes = Column(Text)  # D: PO SI APLICA (notas)
-    base_amount = Column(Float, nullable=False)  # E: IMPORTE
-    iva_amount = Column(Float, nullable=False)  # F: TIPO (cantidad IVA)
+    base_amount = Column(Float, nullable=False)  # E: IMPORTE (siempre en EUR)
+    iva_amount = Column(Float, nullable=False)  # F: TIPO (cantidad IVA en EUR)
     iva_percentage = Column(Float, nullable=False)  # G: TIPO IVA (%)
-    total_with_iva = Column(Float, nullable=False)  # H: TOTAL
+    total_with_iva = Column(Float, nullable=False)  # H: TOTAL (en EUR)
     irpf_percentage = Column(Float, default=0.0)  # I: TIPO IRPF
     irpf_amount = Column(Float, default=0.0)  # J: RETENCION
-    final_total = Column(Float, nullable=False)  # K: TOTAL
+    final_total = Column(Float, nullable=False)  # K: TOTAL (en EUR)
     
     # Campos adicionales para FACTURAS (columnas N, O, P)
     phone = Column(String)  # N: TELEFONO
@@ -91,6 +91,27 @@ class Ticket(Base):
     # Campos de gestión (columnas L, M)
     invoice_status = Column(String)  # L: ESTATUS FACTURA
     payment_status = Column(String)  # M: ESTATUS PAGO
+    
+    # ============================================
+    # NUEVOS CAMPOS MONEDA EXTRANJERA
+    # ============================================
+    is_foreign = Column(Boolean, default=False)  # ¿Es factura internacional?
+    currency = Column(String, default='EUR')  # Divisa original (USD, GBP, CHF, etc.)
+    country_code = Column(String, nullable=True)  # Código país (US, GB, CH, FR, etc.)
+    geo_classification = Column(String, nullable=True)  # NACIONAL / UE / INTERNACIONAL
+    
+    # Importes en divisa original (si es extranjera)
+    foreign_amount = Column(Float, nullable=True)  # Base en divisa original
+    foreign_total = Column(Float, nullable=True)  # Total en divisa original
+    foreign_tax_amount = Column(Float, nullable=True)  # IVA en divisa original
+    
+    # Tasa de cambio histórica
+    exchange_rate = Column(Float, nullable=True)  # Tasa del día de la factura
+    exchange_rate_date = Column(Date, nullable=True)  # Fecha tasa aplicada
+    
+    # IVA extranjero convertido a EUR (para estadísticas)
+    foreign_tax_eur = Column(Float, nullable=True)  # IVA reclamable en EUR
+    # ============================================
     
     # Metadata
     type = Column(Enum(TicketType), default=TicketType.TICKET, nullable=False)

@@ -100,12 +100,18 @@ const ReviewTicket = () => {
             <ArrowLeft size={18} />
             <span className="text-sm">Volver</span>
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
             {ticket.is_reviewed ? (
               <span className="text-2xl" title="Ya revisado">✅</span>
             ) : (
               <span className="text-2xl" title="Pendiente revisión">👁️</span>
+            )}
+            {/* Badge internacional */}
+            {ticket.is_foreign && (
+              <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
+                🌍 Internacional
+              </span>
             )}
           </div>
           <span className={`inline-block mt-2 px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
@@ -247,6 +253,79 @@ const ReviewTicket = () => {
               </div>
             </div>
           </div>
+
+          {/* Info Moneda Extranjera */}
+          {ticket.is_foreign && (
+            <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🌍</span>
+                <h3 className="text-lg font-bold text-blue-400">FACTURA INTERNACIONAL</h3>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-zinc-500 text-xs mb-1">País</p>
+                  <p className="font-semibold text-zinc-100">{ticket.country_code || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-zinc-500 text-xs mb-1">Divisa</p>
+                  <p className="font-semibold">
+                    <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-sm">
+                      {ticket.currency}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-zinc-500 text-xs mb-1">Clasificación</p>
+                  <p className="font-semibold">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      ticket.geo_classification === 'UE' 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'bg-purple-500/20 text-purple-400'
+                    }`}>
+                      {ticket.geo_classification || 'N/A'}
+                    </span>
+                  </p>
+                </div>
+                {ticket.exchange_rate && (
+                  <div>
+                    <p className="text-zinc-500 text-xs mb-1">Tasa cambio</p>
+                    <p className="font-semibold text-zinc-100">{ticket.exchange_rate.toFixed(4)}</p>
+                  </div>
+                )}
+              </div>
+              
+              {ticket.foreign_amount && (
+                <div className="mt-4 pt-4 border-t border-blue-500/30">
+                  <p className="text-xs text-zinc-500 mb-2">Importes en divisa original:</p>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <p className="text-zinc-400 text-xs">Base original</p>
+                      <p className="font-semibold text-blue-400">
+                        {ticket.foreign_amount.toFixed(2)} {ticket.currency}
+                      </p>
+                    </div>
+                    {ticket.foreign_tax_amount && (
+                      <div>
+                        <p className="text-zinc-400 text-xs">IVA original</p>
+                        <p className="font-semibold text-blue-400">
+                          {ticket.foreign_tax_amount.toFixed(2)} {ticket.currency}
+                        </p>
+                      </div>
+                    )}
+                    {ticket.foreign_tax_eur && (
+                      <div>
+                        <p className="text-zinc-400 text-xs">IVA reclamable</p>
+                        <p className="font-bold text-green-400">
+                          {ticket.foreign_tax_eur.toFixed(2)}€ ✅
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Fecha y Proveedor */}
           <div className="grid grid-cols-2 gap-4">

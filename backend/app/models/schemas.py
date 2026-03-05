@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 # Enums
@@ -138,6 +138,17 @@ class TicketResponse(TicketBase):
     is_reviewed: bool
     created_at: datetime
     project_id: int
+    # Campos internacionales
+    is_foreign: bool
+    currency: str
+    country_code: Optional[str] = None
+    geo_classification: Optional[str] = None
+    foreign_amount: Optional[float] = None
+    foreign_total: Optional[float] = None
+    foreign_tax_amount: Optional[float] = None
+    foreign_tax_eur: Optional[float] = None
+    exchange_rate: Optional[float] = None
+    exchange_rate_date: Optional[date] = None
     
     class Config:
         from_attributes = True
@@ -158,4 +169,66 @@ class AIExtractionResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     contact_name: Optional[str] = None
-    confidence: float  # 0-1 score de confianza de la IA
+    confidence: float  # 0-1 score
+    # Campos internacionales
+    is_foreign: bool = False
+    currency: str = "EUR"
+    country_code: Optional[str] = None
+    foreign_amount: Optional[float] = None
+    foreign_total: Optional[float] = None
+    foreign_tax_amount: Optional[float] = None
+
+# ============================================
+# SCHEMAS ESTADÍSTICAS
+# ============================================
+
+class StatisticsOverview(BaseModel):
+    """Métricas generales para cards principales"""
+    total_spent: float  # Total gastado (nacional + internacional)
+    international_spent: float  # Solo internacional
+    iva_reclamable: float  # IVA extranjero reclamable
+    projects_total: int  # Total proyectos
+    projects_closed: int  # Proyectos cerrados
+    projects_open: int  # Proyectos en curso
+
+class MonthlyDataPoint(BaseModel):
+    """Punto de datos para gráfico mensual"""
+    month: int  # 1-12
+    month_name: str  # "Enero", "Febrero", etc.
+    total: float  # Total gastado ese mes
+
+class CurrencyDistribution(BaseModel):
+    """Distribución por divisa para pie chart"""
+    currency: str  # "EUR", "USD", "GBP", etc.
+    label: str  # "ESP Nacional", "USD", etc.
+    total: float  # Total en EUR
+    percentage: float  # % del total
+    color: str  # Color para gráfico
+
+class ProjectSummary(BaseModel):
+    """Resumen de proyecto para tabla expandible"""
+    id: int
+    creative_code: str
+    description: str
+    total_amount: float
+    foreign_amount: Optional[float] = None
+    currency: Optional[str] = None
+
+class CountryBreakdown(BaseModel):
+    """Desglose por país con proyectos"""
+    country_code: str
+    country_name: str
+    geo_classification: str  # NACIONAL / UE / INTERNACIONAL
+    currency: str
+    total_spent: float  # En EUR
+    tax_paid_foreign: Optional[float] = None  # IVA en divisa original
+    tax_reclamable_eur: float  # IVA reclamable en EUR
+    projects_count: int
+    projects: List[ProjectSummary]  # Proyectos de ese país
+
+class StatisticsResponse(BaseModel):
+    """Respuesta completa de estadísticas"""
+    overview: StatisticsOverview
+    monthly_evolution: List[MonthlyDataPoint]
+    currency_distribution: List[CurrencyDistribution]
+    foreign_breakdown: List[CountryBreakdown]

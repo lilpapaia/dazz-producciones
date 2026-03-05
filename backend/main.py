@@ -3,12 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from config.database import engine
+# IMPORTANTE: Cambiado a database_config para Railway
+from database_config import engine
 from app.models.database import Base
-from app.routes import auth, projects, tickets, users
-
-# Create database tables
-Base.metadata.create_all(bind=engine)
+from app.routes import users, auth, projects, tickets, statistics
 
 # Create FastAPI app
 app = FastAPI(
@@ -17,10 +15,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# CORS middleware actualizado para Railway + Vercel
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción: cambiar a dominio específico
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        FRONTEND_URL,
+        "https://*.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,6 +41,7 @@ app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(tickets.router)
 app.include_router(users.router)
+app.include_router(statistics.router)
 
 @app.get("/")
 async def root():
@@ -49,6 +55,14 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+# Crear tablas al iniciar (importante para Railway)
+@app.on_event("startup")
+async def startup_event():
+    Base.metadata.create_all(bind=engine)
+    print("✅ Base de datos inicializada")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Railway usa variable PORT, local usa 8000
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

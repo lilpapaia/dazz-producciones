@@ -270,6 +270,32 @@ const UploadTickets = () => {
                             <p><span className="font-medium">Proveedor:</span> {result.data.provider}</p>
                             <p><span className="font-medium">Total:</span> {result.data.final_total}€</p>
                             <p><span className="font-medium">Tipo:</span> {result.data.type === 'factura' ? 'Factura' : 'Ticket'}</p>
+                            
+                            {/* Info si es internacional */}
+                            {result.data.is_foreign && (
+                              <div className="mt-2 pt-2 border-t border-blue-500/30">
+                                <p className="text-blue-400 font-bold mb-1">
+                                  🌍 Factura internacional detectada
+                                </p>
+                                <div className="space-y-1">
+                                  <p>
+                                    <span className="font-medium">Divisa:</span>{' '}
+                                    <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">
+                                      {result.data.currency}
+                                    </span>
+                                  </p>
+                                  {result.data.country_code && (
+                                    <p><span className="font-medium">País:</span> {result.data.country_code}</p>
+                                  )}
+                                  {result.data.foreign_amount && (
+                                    <p>
+                                      <span className="font-medium">Importe original:</span>{' '}
+                                      {result.data.foreign_amount} {result.data.currency}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <p className="text-xs text-red-400">{result.error}</p>

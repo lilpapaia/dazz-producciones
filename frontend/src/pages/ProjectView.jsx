@@ -177,7 +177,7 @@ const ProjectView = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (loading) {
+  if (loading || !project) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
