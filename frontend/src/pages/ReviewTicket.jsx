@@ -66,7 +66,10 @@ const ReviewTicket = () => {
 
   const getFileUrl = () => {
     if (!ticket?.file_path) return null;
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    // Si ya es URL completa (Cloudinary), usarla directamente
+    if (ticket.file_path.startsWith('http')) return ticket.file_path;
+    // Fallback para archivos locales antiguos
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     return `${API_URL}/${ticket.file_path}`;
   };
 
