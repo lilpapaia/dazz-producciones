@@ -215,7 +215,40 @@ const ProjectView = () => {
             <span className="text-sm">Volver al Dashboard</span>
           </button>
 
-          <div className="flex items-start justify-between">
+          {/* MÓVIL: Layout vertical centrado */}
+          <div className="flex flex-col items-center text-center md:hidden">
+            {/* Código + Badge */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap justify-center">
+              <h1 className="text-2xl font-bebas tracking-wider">{project.creative_code}</h1>
+              <span className={`px-2 py-1 text-xs font-mono tracking-wider rounded-sm border whitespace-nowrap ${
+                project.status === 'en_curso'
+                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                  : 'bg-gray-100 text-gray-800 border-gray-300'
+              }`}>
+                {project.status === 'en_curso' ? 'EN CURSO' : 'CERRADO'}
+              </span>
+            </div>
+
+            {/* Título */}
+            <p className="text-base text-zinc-300 mb-4">{project.description}</p>
+
+            {/* IMPORTE DESTACADO */}
+            <div className="mb-3">
+              <p className="text-4xl font-bold text-amber-500 mb-1">{project.total_amount?.toFixed(2)}€</p>
+              <p className="text-sm text-zinc-500">{project.tickets_count} tickets</p>
+            </div>
+
+            {/* Info compacta */}
+            <div className="flex items-center gap-2 text-xs text-zinc-500 flex-wrap justify-center">
+              <span>{project.responsible}</span>
+              <span>•</span>
+              <span>{project.year}</span>
+            </div>
+            <p className="text-xs text-zinc-600 mt-1 truncate max-w-full px-4">{project.company}</p>
+          </div>
+
+          {/* DESKTOP: Layout horizontal original */}
+          <div className="hidden md:flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bebas tracking-wider">{project.creative_code}</h1>
@@ -247,56 +280,59 @@ const ProjectView = () => {
       {/* Main Content - PADDING TOP PARA NO IR DEBAJO DEL HEADER */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         {/* Actions + Búsqueda COMPACTA */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => navigate(`/projects/${id}/upload`)}
-            disabled={project.status === 'cerrado'}
-            className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Upload size={18} />
-            SUBIR TICKETS
-          </button>
-
-          {/* BOTÓN CERRAR (solo si EN CURSO) */}
-          {project.status === 'en_curso' && (
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+          {/* Botones de acción - Stack en móvil, fila en desktop */}
+          <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
             <button
-              onClick={handleCloseProject}
-              disabled={tickets.length === 0}
-              className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => navigate(`/projects/${id}/upload`)}
+              disabled={project.status === 'cerrado'}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
             >
-              <Lock size={18} />
-              CERRAR PROYECTO
+              <Upload size={16} />
+              SUBIR
             </button>
-          )}
 
-          {/* BOTÓN REABRIR (solo si CERRADO y es ADMIN) */}
-          {project.status === 'cerrado' && isAdmin && (
-            <button
-              onClick={handleReopenProject}
-              disabled={reopeningProject}
-              className="flex items-center gap-2 px-6 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Unlock size={18} />
-              {reopeningProject ? 'REABRIENDO...' : 'REABRIR PROYECTO'}
-            </button>
-          )}
+            {/* BOTÓN CERRAR (solo si EN CURSO) */}
+            {project.status === 'en_curso' && (
+              <button
+                onClick={handleCloseProject}
+                disabled={tickets.length === 0}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+              >
+                <Lock size={16} />
+                CERRAR
+              </button>
+            )}
 
-          {/* BOTÓN BORRAR PROYECTO (solo admin o owner) */}
-          {(isAdmin || project.owner_id === user?.id) && (
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={deletingProject}
-              className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 
-                text-red-400 border border-red-500/30 rounded-sm transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 size={16} />
-              <span className="text-sm font-semibold">Eliminar Proyecto</span>
-            </button>
-          )}
+            {/* BOTÓN REABRIR (solo si CERRADO y es ADMIN) */}
+            {project.status === 'cerrado' && isAdmin && (
+              <button
+                onClick={handleReopenProject}
+                disabled={reopeningProject}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+              >
+                <Unlock size={16} />
+                {reopeningProject ? 'REABRIENDO...' : 'REABRIR'}
+              </button>
+            )}
+
+            {/* BOTÓN BORRAR PROYECTO (solo admin o owner) */}
+            {(isAdmin || project.owner_id === user?.id) && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deletingProject}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 
+                  text-red-400 border border-red-500/30 rounded-sm transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+              >
+                <Trash2 size={16} />
+                ELIMINAR
+              </button>
+            )}
+          </div>
 
           {/* BÚSQUEDA TICKETS - COMPACTA */}
-          <div className="w-96 relative ml-auto" ref={searchRef}>
+          <div className="w-full md:w-96 relative md:ml-auto" ref={searchRef}>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
               <input
