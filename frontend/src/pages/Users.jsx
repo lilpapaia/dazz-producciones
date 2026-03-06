@@ -88,7 +88,20 @@ const Users = () => {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
+        {/* MÓVIL: Header centrado */}
+        <div className="flex flex-col items-center text-center gap-4 mb-8 md:hidden">
+          <h2 className="text-4xl font-bebas tracking-wider">GESTIÓN DE USUARIOS</h2>
+          <p className="text-zinc-500 font-mono text-sm">Administrar accesos al sistema</p>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 font-bebas text-lg tracking-wider flex items-center gap-2"
+          >
+            <Plus size={20} /> NUEVO USUARIO
+          </button>
+        </div>
+
+        {/* DESKTOP: Header horizontal */}
+        <div className="hidden md:flex items-center justify-between mb-8">
           <div>
             <h2 className="text-4xl font-bebas tracking-wider mb-2">GESTIÓN DE USUARIOS</h2>
             <p className="text-zinc-500 font-mono text-sm">Administrar accesos al sistema</p>
@@ -195,40 +208,42 @@ const Users = () => {
           {users.map((user) => (
             <div
               key={user.id}
-              className="bg-zinc-900 border border-zinc-800 rounded-sm p-5"
+              className="bg-zinc-900 border border-zinc-800 rounded-sm p-4"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
-                    {user.role === 'admin' ? '👑' : '👤'}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-zinc-100">{user.name}</h3>
-                      {user.username && (
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  {/* Nombre arriba */}
+                  <h3 className="text-lg font-semibold text-zinc-100 mb-2">{user.name}</h3>
+                  
+                  {/* Username + Badge en misma línea */}
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    {user.username && (
+                      <>
                         <span className="text-zinc-500 font-mono text-sm">@{user.username}</span>
-                      )}
-                      <span className={`px-3 py-1 text-xs font-mono tracking-wider rounded-sm ${
-                        user.role === 'admin'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-zinc-700/50 text-zinc-400 border border-zinc-600'
-                      }`}>
-                        {user.role === 'admin' ? 'ADMIN' : 'USUARIO'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-zinc-500 font-mono mt-1">{user.email}</p>
+                        <span className="text-zinc-600">•</span>
+                      </>
+                    )}
+                    <span className={`px-2 py-1 text-xs font-mono tracking-wider rounded-sm whitespace-nowrap ${
+                      user.role === 'admin'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : 'bg-zinc-700/50 text-zinc-400 border border-zinc-600'
+                    }`}>
+                      {user.role === 'admin' ? 'ADMIN' : 'USUARIO'}
+                    </span>
                   </div>
+                  
+                  {/* Email debajo */}
+                  <p className="text-sm text-zinc-500 font-mono">{user.email}</p>
                 </div>
                 
+                {/* Papelera a la derecha */}
                 {user.id !== currentUser?.id && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors text-sm border border-red-900/30"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleDelete(user.id)}
+                    className="p-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors border border-red-900/30 flex-shrink-0"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 )}
               </div>
             </div>
