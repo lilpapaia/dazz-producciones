@@ -232,6 +232,17 @@ class CurrencyDistribution(BaseModel):
     percentage: float
     color: str
 
+class TicketSummary(BaseModel):
+    """Resumen de ticket para estadísticas de gastos internacionales"""
+    id: int
+    date: str
+    provider: str
+    invoice_number: Optional[str] = None
+    final_total: float
+    foreign_amount: Optional[float] = None
+    foreign_tax_eur: Optional[float] = None
+    currency: str
+
 class ProjectSummary(BaseModel):
     id: int
     creative_code: str
@@ -239,6 +250,7 @@ class ProjectSummary(BaseModel):
     total_amount: float
     foreign_amount: Optional[float] = None
     currency: Optional[str] = None
+    tickets: List['TicketSummary'] = []  # Lista de tickets del proyecto
 
 class CountryBreakdown(BaseModel):
     country_code: str

@@ -297,13 +297,28 @@ async def get_foreign_breakdown(
             project_tickets = [t for t in data['tickets'] if t.project_id == project.id]
             project_foreign_total = sum(t.foreign_amount or 0.0 for t in project_tickets)
             
+            # Crear lista de TicketSummary para este proyecto
+            ticket_summaries = []
+            for ticket in project_tickets:
+                ticket_summaries.append(schemas.TicketSummary(
+                    id=ticket.id,
+                    date=ticket.date,
+                    provider=ticket.provider,
+                    invoice_number=ticket.invoice_number,
+                    final_total=ticket.final_total,
+                    foreign_amount=ticket.foreign_amount,
+                    foreign_tax_eur=ticket.foreign_tax_eur,
+                    currency=ticket.currency or 'EUR'
+                ))
+            
             project_summaries.append(schemas.ProjectSummary(
                 id=project.id,
                 creative_code=project.creative_code,
                 description=project.description,
                 total_amount=sum(t.final_total for t in project_tickets),
                 foreign_amount=project_foreign_total if project_foreign_total > 0 else None,
-                currency=data['currency']
+                currency=data['currency'],
+                tickets=ticket_summaries  # ← NUEVO: incluir tickets
             ))
         
         result.append(schemas.CountryBreakdown(

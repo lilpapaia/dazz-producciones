@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Globe, Building2, BarChart3, ChevronDown, ChevronRight, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, TrendingDown, DollarSign, Globe, Building2, BarChart3, ChevronDown, ChevronRight, Download, FileText } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getCompleteStatistics } from '../services/api';
 
 const Statistics = () => {
+  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
   
   // State
@@ -13,6 +15,7 @@ const Statistics = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [expandedCountries, setExpandedCountries] = useState(new Set());
+  const [expandedProjects, setExpandedProjects] = useState(new Set()); // ← NUEVO: para proyectos
 
   // Load data
   useEffect(() => {
@@ -58,6 +61,16 @@ const Statistics = () => {
       newExpanded.add(countryCode);
     }
     setExpandedCountries(newExpanded);
+  };
+
+  const toggleProject = (projectId) => {
+    const newExpanded = new Set(expandedProjects);
+    if (newExpanded.has(projectId)) {
+      newExpanded.delete(projectId);
+    } else {
+      newExpanded.add(projectId);
+    }
+    setExpandedProjects(newExpanded);
   };
 
   if (loading) {
@@ -439,31 +452,106 @@ const Statistics = () => {
                                   <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-3">
                                     Proyectos con gastos en {country.country_name} ({country.currency}):
                                   </p>
-                                  {country.projects.map((project) => (
-                                    <div
-                                      key={project.id}
-                                      className="bg-zinc-900 border border-zinc-800 rounded-sm p-4 hover:border-amber-500 transition-colors flex items-center justify-between"
-                                    >
-                                      <div>
-                                        <p className="font-semibold text-sm text-zinc-100 mb-1">
-                                          {project.description}
-                                        </p>
-                                        <p className="text-xs text-zinc-500 font-mono">
-                                          {project.creative_code}
-                                        </p>
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="font-bold text-amber-500">
-                                          {project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                                        </p>
-                                        {project.foreign_amount && (
-                                          <p className="text-xs text-zinc-500">
-                                            ({project.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} {project.currency})
-                                          </p>
+                                  {country.projects.map((project) => {
+                                    const isProjectExpanded = expandedProjects.has(project.id);
+                                    
+                                    return (
+                                      <div key={project.id} className="space-y-2">
+                                        {/* Card del proyecto - ahora expandible */}
+                                        <div
+                                          onClick={() => toggleProject(project.id)}
+                                          className="bg-zinc-900 border border-zinc-800 rounded-sm p-4 hover:border-amber-500 transition-colors cursor-pointer"
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 flex-1">
+                                              {isProjectExpanded ? (
+                                                <ChevronDown size={18} className="text-amber-500 flex-shrink-0" />
+                                              ) : (
+                                                <ChevronRight size={18} className="text-zinc-600 flex-shrink-0" />
+                                              )}
+                                              <div>
+                                                <p className="font-semibold text-sm text-zinc-100 mb-1">
+                                                  {project.description}
+                                                </p>
+                                                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                                                  <span className="font-mono">{project.creative_code}</span>
+                                                  <span className="bg-zinc-800 px-2 py-0.5 rounded">
+                                                    {project.tickets?.length || 0} ticket{project.tickets?.length !== 1 ? 's' : ''}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="font-bold text-amber-500">
+                                                {project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                                              </p>
+                                              {project.foreign_amount && (
+                                                <p className="text-xs text-zinc-500">
+                                                  ({project.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} {project.currency})
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Lista de tickets del proyecto (3er nivel) */}
+                                        {isProjectExpanded && project.tickets && project.tickets.length > 0 && (
+                                          <div className="ml-8 space-y-2 mt-2">
+                                            <p className="text-xs text-zinc-600 font-semibold uppercase mb-2">
+                                              📄 Tickets internacionales:
+                                            </p>
+                                            {project.tickets.map((ticket) => (
+                                              <div
+                                                key={ticket.id}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  navigate(`/tickets/${ticket.id}/review`);
+                                                }}
+                                                className="bg-zinc-900/50 border border-zinc-800 rounded-sm p-3 hover:border-blue-500 transition-colors cursor-pointer group"
+                                              >
+                                                <div className="flex items-center justify-between">
+                                                  <div className="flex items-center gap-3">
+                                                    <FileText size={16} className="text-zinc-600 group-hover:text-blue-400 transition-colors" />
+                                                    <div>
+                                                      <p className="text-sm font-medium text-zinc-300 group-hover:text-zinc-100">
+                                                        {ticket.provider}
+                                                      </p>
+                                                      <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-xs text-zinc-600">{ticket.date}</span>
+                                                        {ticket.invoice_number && (
+                                                          <>
+                                                            <span className="text-zinc-700">•</span>
+                                                            <span className="text-xs text-zinc-600 font-mono">
+                                                              {ticket.invoice_number}
+                                                            </span>
+                                                          </>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="text-right">
+                                                    <p className="text-sm font-bold text-zinc-300">
+                                                      {ticket.final_total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                                                    </p>
+                                                    {ticket.foreign_amount && (
+                                                      <p className="text-xs text-zinc-600">
+                                                        {ticket.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} {ticket.currency}
+                                                      </p>
+                                                    )}
+                                                    {ticket.foreign_tax_eur && (
+                                                      <p className="text-xs text-green-500 font-semibold mt-0.5">
+                                                        IVA: {ticket.foreign_tax_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                                                      </p>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
                                         )}
                                       </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </td>
                             </tr>
