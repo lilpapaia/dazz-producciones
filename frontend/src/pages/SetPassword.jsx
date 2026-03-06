@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { setPassword } from '../services/api';
+import { setPassword as setPasswordAPI } from '../services/api';
 
 const SetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -47,7 +47,7 @@ const SetPassword = () => {
     setLoading(true);
 
     try {
-      const response = await setPassword(token, password);
+      const response = await setPasswordAPI(token, password);
       setSuccess(true);
       
       // Redirigir al login después de 2 segundos
