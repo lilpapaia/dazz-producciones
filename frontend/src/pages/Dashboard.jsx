@@ -352,41 +352,46 @@ const Dashboard = () => {
               <div
                 key={project.id}
                 onClick={() => navigate(`/projects/${project.id}`)}
-                className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-6 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
+                className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bebas tracking-wider mb-1">{project.creative_code}</h3>
-                    <span className={`inline-block px-2 py-1 text-xs font-mono rounded-sm border ${
-                      project.status === 'en_curso'
-                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                        : 'bg-gray-100 text-gray-800 border-gray-300'
-                    }`}>
-                      {project.status === 'en_curso' ? 'EN CURSO' : 'CERRADO'}
-                    </span>
-                  </div>
+                {/* Código + Badge en la misma línea */}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="text-lg font-bebas tracking-wider">{project.creative_code}</h3>
+                  <span className={`px-2 py-1 text-xs font-mono rounded-sm border whitespace-nowrap ${
+                    project.status === 'en_curso'
+                      ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                      : 'bg-gray-100 text-gray-800 border-gray-300'
+                  }`}>
+                    {project.status === 'en_curso' ? 'EN CURSO' : 'CERRADO'}
+                  </span>
                 </div>
 
-                <p className="text-sm text-zinc-300 mb-4 line-clamp-2">{project.description}</p>
+                {/* Título del proyecto */}
+                <p className="text-sm text-zinc-300 mb-3 line-clamp-2">{project.description}</p>
 
-                <div className="space-y-2 mb-4 text-sm text-zinc-500">
-                  <div className="flex items-center gap-2">
+                {/* Info en una sola línea: Responsable • Año • Tickets */}
+                <div className="flex items-center gap-2 text-sm text-zinc-500 mb-3 flex-wrap">
+                  <div className="flex items-center gap-1">
                     <span>👤</span>
                     <span>{project.responsible}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
                     <span>📅</span>
                     <span>{project.year}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
                     <span>🎫</span>
                     <span>{project.tickets_count} tickets</span>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-800">
-                  <p className="text-xs text-zinc-500 mb-1">IMPORTE TOTAL</p>
-                  <p className="text-2xl font-bold text-amber-500">{project.total_amount?.toFixed(2)}€</p>
+                {/* Importe total */}
+                <div className="pt-3 border-t border-zinc-800">
+                  <p className="text-sm text-zinc-500">
+                    IMPORTE TOTAL <span className="text-amber-500 font-bold text-2xl ml-2">| {project.total_amount?.toFixed(2)}€</span>
+                  </p>
                 </div>
               </div>
             ))}
