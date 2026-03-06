@@ -1,37 +1,70 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+"""
+EMAIL SERVICE - BREVO API
+==========================
+Usa API REST (HTTPS) en lugar de SMTP.
+Railway bloquea SMTP, pero API funciona.
+"""
+
+import httpx
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.ionos.es")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER)
+# Brevo API
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
+# Configuración remitente
+FROM_EMAIL = os.getenv("FROM_EMAIL", "aibot2@dazzcreative.com")
+FROM_NAME = os.getenv("FROM_NAME", "DAZZ Creative")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://producciones.dazzcreative.com")
 
+
 def send_email(to_email: str, subject: str, html_content: str):
-    """Función base para enviar emails HTML"""
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = FROM_EMAIL
-    msg['To'] = to_email
-
-    html_part = MIMEText(html_content, 'html')
-    msg.attach(html_part)
-
+    """Función base para enviar emails HTML via Brevo API"""
+    
+    if not BREVO_API_KEY:
+        raise Exception("BREVO_API_KEY no configurada")
+    
+    payload = {
+        "sender": {
+            "name": FROM_NAME,
+            "email": FROM_EMAIL
+        },
+        "to": [
+            {"email": to_email}
+        ],
+        "subject": subject,
+        "htmlContent": html_content
+    }
+    
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "api-key": BREVO_API_KEY
+    }
+    
     try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:  # ← Timeout 10 seg
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(FROM_EMAIL, to_email, msg.as_string())
-        return True
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(BREVO_API_URL, json=payload, headers=headers)
+            
+            if response.status_code in [200, 201]:
+                print(f"✅ Email enviado a {to_email}")
+                return True
+            else:
+                error_data = response.json()
+                error_msg = error_data.get("message", response.text)
+                print(f"❌ Error Brevo ({response.status_code}): {error_msg}")
+                raise Exception(f"Error Brevo: {error_msg}")
+                
+    except httpx.TimeoutException:
+        print(f"❌ Timeout enviando email a {to_email}")
+        raise Exception("Timeout conectando con Brevo API")
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
+        print(f"❌ Error enviando email: {str(e)}")
         raise e
+
 
 def send_set_password_email(user_name: str, user_email: str, token: str):
     """
@@ -145,6 +178,7 @@ def send_set_password_email(user_name: str, user_email: str, token: str):
     
     return send_email(user_email, subject, html_content)
 
+
 def send_user_created_email(user_name: str, user_email: str, temporary_password: str):
     """
     Email antiguo - Ahora solo se usa si NO se genera token
@@ -176,7 +210,41 @@ def send_user_created_email(user_name: str, user_email: str, temporary_password:
     
     return send_email(user_email, subject, html_content)
 
+
 def send_project_closed_email(recipients: list, project_data: dict):
     """Enviar email cuando se cierra un proyecto"""
-    # ... (código existente de project_closed_email)
+    # TODO: Implementar si se necesita
     pass
+
+
+# ============================================
+# TEST - Para verificar que funciona
+# ============================================
+def test_brevo_connection():
+    """Prueba la conexión con Brevo API."""
+    
+    if not BREVO_API_KEY:
+        return {"success": False, "error": "BREVO_API_KEY no configurada"}
+    
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY
+    }
+    
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get("https://api.brevo.com/v3/account", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": True,
+                    "account_email": data.get("email"),
+                    "plan": data.get("plan", [{}])[0].get("type", "unknown"),
+                    "credits": data.get("plan", [{}])[0].get("credits", "unknown")
+                }
+            else:
+                return {"success": False, "error": f"API error: {response.status_code}"}
+                
+    except Exception as e:
+        return {"success": False, "error": str(e)}

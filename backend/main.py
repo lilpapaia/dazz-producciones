@@ -52,18 +52,39 @@ async def health_check():
 
 
 # ============================================
-# DIAGNÓSTICO SMTP
+# TEST BREVO (email por API)
 # ============================================
-@app.get("/test-smtp")
-async def test_smtp(email: str = Query(None, description="Email para enviar prueba")):
-    """
-    Diagnóstico completo de conexión SMTP con IONOS.
+@app.get("/test-brevo")
+async def test_brevo():
+    """Prueba la conexión con Brevo API."""
+    from app.services.email import test_brevo_connection
+    return test_brevo_connection()
+
+
+@app.get("/test-brevo/send")
+async def test_brevo_send(email_to: str = Query(..., alias="email", description="Email destino")):
+    """Envía un email de prueba con Brevo."""
+    from app.services.email import send_email
     
-    - Sin parámetros: prueba conexión y autenticación
-    - Con ?email=tu@email.com: además envía email de prueba
-    """
-    from smtp_diagnostico import run_full_diagnostic
-    return run_full_diagnostic(test_email=email)
+    try:
+        send_email(
+            to_email=email_to,
+            subject="✅ Test Brevo desde Railway",
+            html_content="""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="max-width: 500px; margin: 0 auto; border: 2px solid #4CAF50; border-radius: 10px; padding: 20px;">
+                    <h1 style="color: #4CAF50;">¡Funciona! 🎉</h1>
+                    <p>Este email se ha enviado desde Railway usando Brevo API.</p>
+                    <p>La configuración es correcta.</p>
+                </div>
+            </body>
+            </html>
+            """
+        )
+        return {"success": True, "message": "Email enviado", "to": email_to}
+    except Exception as e:
+        return {"success": False, "message": str(e), "to": email_to}
 
 
 @app.on_event("startup")
