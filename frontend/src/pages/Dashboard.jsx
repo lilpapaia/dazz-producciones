@@ -163,12 +163,12 @@ const Dashboard = () => {
           </div>
 
           {/* Búsqueda y Filtros */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
             {/* Filtros */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto">
               <button
                 onClick={() => setStatusFilter('all')}
-                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors ${
+                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors whitespace-nowrap ${
                   statusFilter === 'all'
                     ? 'bg-amber-500 text-zinc-950'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
@@ -178,7 +178,7 @@ const Dashboard = () => {
               </button>
               <button
                 onClick={() => setStatusFilter('en_curso')}
-                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors ${
+                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors whitespace-nowrap ${
                   statusFilter === 'en_curso'
                     ? 'bg-amber-500 text-zinc-950'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
@@ -188,7 +188,7 @@ const Dashboard = () => {
               </button>
               <button
                 onClick={() => setStatusFilter('cerrado')}
-                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors ${
+                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors whitespace-nowrap ${
                   statusFilter === 'cerrado'
                     ? 'bg-amber-500 text-zinc-950'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
@@ -199,7 +199,7 @@ const Dashboard = () => {
             </div>
 
             {/* BÚSQUEDA COMPACTA Y MÁS ESTRECHA */}
-            <div className="w-96 relative ml-auto" ref={searchRef}>
+            <div className="w-full md:w-96 relative md:ml-auto" ref={searchRef}>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
                 <input
