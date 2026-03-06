@@ -211,6 +211,105 @@ def send_user_created_email(user_name: str, user_email: str, temporary_password:
     return send_email(user_email, subject, html_content)
 
 
+def send_forgot_password_email(user_name: str, user_email: str, token: str):
+    """
+    Enviar email para restablecer contraseña olvidada
+    """
+    reset_url = f"{FRONTEND_URL}/set-password?token={token}"
+    
+    subject = "DAZZ Creative - Restablecer contraseña"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #18181b;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #18181b; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #27272a; border-radius: 8px; overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px; text-align: center;">
+                                <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 2px;">
+                                    DAZZ CREATIVE
+                                </h1>
+                                <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.8); font-size: 12px; letter-spacing: 3px;">
+                                    RESTABLECER CONTRASEÑA
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px;">
+                                <h2 style="margin: 0 0 20px 0; color: #f59e0b; font-size: 24px;">
+                                    Hola, {user_name}
+                                </h2>
+                                
+                                <p style="margin: 0 0 20px 0; color: #d4d4d8; font-size: 16px; line-height: 1.6;">
+                                    Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.
+                                </p>
+                                
+                                <p style="margin: 0 0 30px 0; color: #d4d4d8; font-size: 16px; line-height: 1.6;">
+                                    Haz clic en el botón de abajo para crear una nueva contraseña:
+                                </p>
+                                
+                                <!-- Button -->
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0;">
+                                            <a href="{reset_url}" 
+                                               style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000000; text-decoration: none; font-weight: bold; font-size: 16px; border-radius: 4px; letter-spacing: 1px;">
+                                                RESTABLECER CONTRASEÑA
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <p style="margin: 30px 0 10px 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">
+                                    O copia y pega este enlace en tu navegador:
+                                </p>
+                                <p style="margin: 0; padding: 12px; background-color: #18181b; border-radius: 4px; word-break: break-all;">
+                                    <a href="{reset_url}" style="color: #f59e0b; text-decoration: none; font-size: 13px;">
+                                        {reset_url}
+                                    </a>
+                                </p>
+                                
+                                <div style="margin-top: 30px; padding: 20px; background-color: #3f3f46; border-left: 4px solid #ef4444; border-radius: 4px;">
+                                    <p style="margin: 0; color: #e4e4e7; font-size: 14px; line-height: 1.6;">
+                                        <strong style="color: #ef4444;">⚠️ Importante:</strong> Este enlace expirará en <strong>1 hora</strong>. 
+                                        Si no solicitaste este cambio, ignora este email.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #18181b; padding: 30px; text-align: center; border-top: 1px solid #3f3f46;">
+                                <p style="margin: 0 0 10px 0; color: #71717a; font-size: 13px;">
+                                    Este email fue enviado desde el Sistema de Gestión de Producciones
+                                </p>
+                                <p style="margin: 0; color: #52525b; font-size: 12px;">
+                                    © 2026 DAZZ Creative. Todos los derechos reservados.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    return send_email(user_email, subject, html_content)
+
+
 def send_project_closed_email(recipients: list, project_data: dict):
     """Enviar email cuando se cierra un proyecto"""
     # TODO: Implementar si se necesita

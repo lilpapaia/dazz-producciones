@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { forgotPassword } from '../services/api';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -14,17 +15,12 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      // TODO: Implementar endpoint de backend
-      // await api.post('/auth/forgot-password', { email });
-      
-      // Por ahora, simular éxito
-      setTimeout(() => {
-        setSuccess(true);
-        setLoading(false);
-      }, 1000);
-      
+      await forgotPassword(email);
+      setSuccess(true);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error al enviar el email');
+      // Siempre mostramos éxito por seguridad (no revelar si email existe)
+      setSuccess(true);
+    } finally {
       setLoading(false);
     }
   };
@@ -41,7 +37,7 @@ const ForgotPassword = () => {
             </div>
             <h2 className="text-2xl font-bebas tracking-wider mb-3">EMAIL ENVIADO</h2>
             <p className="text-zinc-400 mb-6">
-              Hemos enviado un email a <span className="text-amber-500 font-mono">{email}</span> con instrucciones para restablecer tu contraseña.
+              Si existe una cuenta con <span className="text-amber-500 font-mono">{email}</span>, recibirás un email con instrucciones para restablecer tu contraseña.
             </p>
             <p className="text-sm text-zinc-500 mb-6">
               Si no recibes el email en unos minutos, revisa tu carpeta de spam.
@@ -121,12 +117,6 @@ const ForgotPassword = () => {
               {loading ? 'ENVIANDO...' : 'ENVIAR EMAIL'}
             </button>
           </form>
-
-          <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-sm">
-            <p className="text-xs text-blue-400">
-              💡 <strong>Nota:</strong> Esta función estará disponible próximamente. Por ahora, contacta con tu administrador para resetear tu contraseña.
-            </p>
-          </div>
         </div>
       </div>
     </div>

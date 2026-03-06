@@ -44,6 +44,9 @@ export const registerUser = (data) =>
 export const setPassword = (token, newPassword) =>
   api.post('/auth/set-password', { token, new_password: newPassword });
 
+export const forgotPassword = (email) =>
+  api.post('/auth/forgot-password', { email });
+
 // ============================================
 // PROJECTS
 // ============================================

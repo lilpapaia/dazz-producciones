@@ -14,7 +14,7 @@ from app.services.auth import (
     get_current_admin_user,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
-from app.services.email import send_set_password_email
+from app.services.email import send_set_password_email, send_forgot_password_email
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -202,6 +202,64 @@ async def set_password(request: schemas.SetPasswordRequest, db: Session = Depend
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al actualizar contraseña: {str(e)}"
         )
+
+
+@router.post("/forgot-password")
+async def forgot_password(request: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Endpoint para solicitar reset de contraseña.
+    Siempre devuelve éxito (por seguridad, no revelar si el email existe)
+    """
+    print(f"🔐 Solicitud de reset password para: {request.email}")
+    
+    # Buscar usuario
+    user = db.query(User).filter(User.email == request.email).first()
+    
+    if not user:
+        # Por seguridad, no revelar que el email no existe
+        print(f"⚠️ Email no encontrado: {request.email} (no revelamos al usuario)")
+        return {"message": "Si el email existe, recibirás un enlace para restablecer tu contraseña."}
+    
+    try:
+        # Invalidar tokens anteriores de este usuario
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used_at == None
+        ).update({"used_at": datetime.utcnow()})
+        
+        # Generar nuevo token
+        token = generate_token()
+        expires_at = datetime.utcnow() + timedelta(hours=1)  # 1 hora para reset
+        
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=expires_at
+        )
+        
+        db.add(reset_token)
+        db.commit()
+        
+        print(f"✅ Token de reset generado para: {user.email}")
+        
+        # Enviar email
+        try:
+            send_forgot_password_email(
+                user_name=user.name,
+                user_email=user.email,
+                token=token
+            )
+            print(f"✅ Email de reset enviado a: {user.email}")
+        except Exception as email_error:
+            print(f"⚠️ Error enviando email de reset: {str(email_error)}")
+            # No fallar - el usuario puede intentar de nuevo
+        
+    except Exception as e:
+        print(f"❌ Error en forgot-password: {str(e)}")
+        # No revelar el error al usuario
+    
+    return {"message": "Si el email existe, recibirás un enlace para restablecer tu contraseña."}
+
 
 @router.post("/register-first-admin", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_first_admin(user: schemas.UserCreate, db: Session = Depends(get_db)):

@@ -10,6 +10,7 @@ const Users = () => {
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
+    username: '',
     password: 'temporal123',
     role: 'user'
   });
@@ -36,15 +37,14 @@ const Users = () => {
       
       // PRIMERO: Cerrar modal y limpiar form
       setShowCreate(false);
-      const tempPassword = newUser.password;
       const tempEmail = newUser.email;
-      setNewUser({ name: '', email: '', password: 'temporal123', role: 'user' });
+      setNewUser({ name: '', email: '', username: '', password: 'temporal123', role: 'user' });
       
       // SEGUNDO: Recargar lista de usuarios
       await loadUsers();
       
       // TERCERO: Mostrar confirmación (después de recargar)
-      alert(`✓ Usuario creado\n✓ Email: ${tempEmail}\n✓ Contraseña temporal: ${tempPassword}`);
+      alert(`✓ Usuario creado correctamente\n✓ Se ha enviado un email a ${tempEmail} para configurar su contraseña`);
       
     } catch (error) {
       console.error('Error creating user:', error);
@@ -63,6 +63,26 @@ const Users = () => {
       console.error('Error deleting user:', error);
       alert('Error al eliminar usuario: ' + (error.response?.data?.detail || error.message));
     }
+  };
+
+  // Generar username automático del nombre
+  const generateUsername = (name) => {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+      .replace(/[^a-z0-9]/g, '') // Solo letras y números
+      .slice(0, 15); // Max 15 chars
+  };
+
+  const handleNameChange = (name) => {
+    const autoUsername = generateUsername(name);
+    setNewUser({
+      ...newUser, 
+      name,
+      username: newUser.username || autoUsername // Solo auto-rellenar si está vacío
+    });
   };
 
   return (
@@ -91,21 +111,34 @@ const Users = () => {
                   <input
                     type="text"
                     value={newUser.name}
-                    onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
                     placeholder="Julieta García"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
+                  <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">USERNAME</label>
                   <input
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    type="text"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({...newUser, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')})}
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                    placeholder="usuario@dazzle-agency.com"
+                    placeholder="julietagarcia"
                   />
+                  <p className="text-xs text-zinc-500 mt-1">Para iniciar sesión (solo letras, números y _)</p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                  placeholder="usuario@dazzle-agency.com"
+                />
+                <p className="text-xs text-zinc-500 mt-1">Recibirá email para configurar contraseña</p>
               </div>
 
               <div>
@@ -148,7 +181,8 @@ const Users = () => {
                 </button>
                 <button
                   onClick={handleCreate}
-                  className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30"
+                  disabled={!newUser.name || !newUser.email || !newUser.username}
+                  className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Crear Usuario
                 </button>
@@ -171,6 +205,9 @@ const Users = () => {
                   <div>
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold text-zinc-100">{user.name}</h3>
+                      {user.username && (
+                        <span className="text-zinc-500 font-mono text-sm">@{user.username}</span>
+                      )}
                       <span className={`px-3 py-1 text-xs font-mono tracking-wider rounded-sm ${
                         user.role === 'admin'
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'

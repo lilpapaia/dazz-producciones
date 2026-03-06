@@ -58,6 +58,9 @@ class SetPasswordResponse(BaseModel):
     message: str
     success: bool
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
 # ============================================
 # PROJECT SCHEMAS
 # ============================================
