@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createProject } from '../services/api';
 import { ArrowLeft, Save } from 'lucide-react';
+import UserAutocomplete from '../components/UserAutocomplete';
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
@@ -23,6 +24,10 @@ const ProjectCreate = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleResponsibleChange = (name) => {
+    setFormData({ ...formData, responsible: name });
   };
 
   const handleSubmit = async (e) => {
@@ -116,21 +121,13 @@ const ProjectCreate = () => {
 
           {/* Responsable y Tipo Factura */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">RESPONSABLE *</label>
-              <select
-                name="responsible"
-                value={formData.responsible}
-                onChange={handleChange}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                required
-              >
-                <option value="">Seleccionar...</option>
-                <option value="MIGUEL">MIGUEL</option>
-                <option value="JULIETA">JULIETA</option>
-                <option value="ANTONIO">ANTONIO</option>
-              </select>
-            </div>
+            {/* NUEVO: Autocompletado de usuarios */}
+            <UserAutocomplete
+              value={formData.responsible}
+              onChange={handleResponsibleChange}
+              label="RESPONSABLE"
+              required={true}
+            />
 
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TIPO FACTURA *</label>
@@ -235,7 +232,7 @@ const ProjectCreate = () => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !formData.responsible}
               className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save size={18} />

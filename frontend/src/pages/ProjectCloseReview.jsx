@@ -1,21 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, closeProjectWithEmails } from '../services/api';
+import { getProject, getProjectTickets, closeProjectWithEmails, getUsers } from '../services/api';
 import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import EmailChipsInput from '../components/EmailChipsInput';
-
-// Mapeo emails responsables
-const RESPONSIBLE_EMAILS = {
-  'MIGUEL': 'miguel@dazzcreative.com',
-  'JULIETA': 'julieta@dazzcreative.com',
-  'ANTONIO': 'antonio@dazzcreative.com'
-};
 
 const ProjectCloseReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [tickets, setTickets] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState([]);
@@ -26,17 +20,23 @@ const ProjectCloseReview = () => {
 
   const loadData = async () => {
     try {
-      const [projectRes, ticketsRes] = await Promise.all([
+      const [projectRes, ticketsRes, usersRes] = await Promise.all([
         getProject(id),
-        getProjectTickets(id)
+        getProjectTickets(id),
+        getUsers()
       ]);
+      
       setProject(projectRes.data);
       setTickets(ticketsRes.data);
+      setUsers(usersRes.data);
       
-      // Inicializar con email del responsable por defecto
-      const responsibleEmail = RESPONSIBLE_EMAILS[projectRes.data.responsible];
-      if (responsibleEmail) {
-        setEmailRecipients([responsibleEmail]);
+      // Buscar email del responsable en la lista de usuarios
+      const responsibleUser = usersRes.data.find(
+        u => u.name.toLowerCase() === projectRes.data.responsible.toLowerCase()
+      );
+      
+      if (responsibleUser) {
+        setEmailRecipients([responsibleUser.email]);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -45,6 +45,13 @@ const ProjectCloseReview = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Obtener email del responsable para mostrar info
+  const getResponsibleEmail = () => {
+    if (!project || users.length === 0) return null;
+    const user = users.find(u => u.name.toLowerCase() === project.responsible.toLowerCase());
+    return user?.email || null;
   };
 
   const handleConfirmClose = async () => {
@@ -93,6 +100,7 @@ const ProjectCloseReview = () => {
   }
 
   const totalAmount = tickets.reduce((sum, t) => sum + (t.final_total || 0), 0);
+  const responsibleEmail = getResponsibleEmail();
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -244,6 +252,12 @@ const ProjectCloseReview = () => {
               <div>
                 <p className="text-zinc-500 text-sm mb-1">Responsable Proyecto</p>
                 <p className="text-zinc-100 font-semibold">{project.responsible}</p>
+                {responsibleEmail && (
+                  <p className="text-xs text-zinc-500 mt-1">📧 {responsibleEmail}</p>
+                )}
+                {!responsibleEmail && (
+                  <p className="text-xs text-amber-500 mt-1">⚠️ Usuario no encontrado en el sistema</p>
+                )}
               </div>
 
               <div>

@@ -12,14 +12,18 @@ from app.services.auth import get_current_active_user
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
-RESPONSIBLE_EMAILS = {
-    'MIGUEL': 'miguel@dazzcreative.com',
-    'JULIETA': 'julieta@dazzcreative.com',
-    'ANTONIO': 'antonio@dazzcreative.com'
-}
 
 class CloseProjectRequest(BaseModel):
     recipients: Optional[List[EmailStr]] = None
+
+
+def get_user_email_by_name(db: Session, name: str) -> Optional[str]:
+    """Buscar email de usuario por nombre (case-insensitive)"""
+    user = db.query(User).filter(User.name.ilike(name)).first()
+    if user:
+        return user.email
+    return None
+
 
 @router.post("", response_model=schemas.ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
@@ -33,6 +37,7 @@ async def create_project(
     db.refresh(db_project)
     return db_project
 
+
 @router.get("", response_model=List[schemas.ProjectResponse])
 async def get_projects(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user), status: str = None):
     query = db.query(Project)
@@ -43,6 +48,7 @@ async def get_projects(db: Session = Depends(get_db), current_user: User = Depen
     projects = query.order_by(Project.created_at.desc()).all()
     return projects
 
+
 @router.get("/{project_id}", response_model=schemas.ProjectResponse)
 async def get_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -51,6 +57,7 @@ async def get_project(project_id: int, db: Session = Depends(get_db), current_us
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return project
+
 
 @router.put("/{project_id}", response_model=schemas.ProjectResponse)
 async def update_project(project_id: int, project_update: schemas.ProjectUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
@@ -65,6 +72,7 @@ async def update_project(project_id: int, project_update: schemas.ProjectUpdate,
     db.commit()
     db.refresh(project)
     return project
+
 
 @router.post("/{project_id}/close")
 async def close_project(
@@ -85,6 +93,7 @@ async def close_project(
     if not tickets:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot close project without tickets")
     
+    # Generar Excel
     excel_bytes = None
     try:
         from app.services.excel_generator import create_project_excel_bytes
@@ -92,15 +101,23 @@ async def close_project(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Excel generation failed: {str(e)}")
     
+    # Determinar destinatarios
     recipients = []
     if request.recipients and len(request.recipients) > 0:
-        recipients = request.recipients
+        # Usar los emails proporcionados en la request
+        recipients = list(request.recipients)
     else:
-        recipients.append('miguel@dazzcreative.com')
-        responsible_email = RESPONSIBLE_EMAILS.get(project.responsible)
-        if responsible_email and responsible_email not in recipients:
+        # Buscar email del responsable en la tabla users
+        responsible_email = get_user_email_by_name(db, project.responsible)
+        if responsible_email:
             recipients.append(responsible_email)
+        else:
+            # Fallback: email del usuario actual
+            recipients.append(current_user.email)
     
+    print(f"📧 Enviando proyecto cerrado a: {recipients}")
+    
+    # Enviar email
     if excel_bytes and recipients:
         try:
             from app.services.email import send_project_closed_email_multi
@@ -115,13 +132,17 @@ async def close_project(
                 excel_bytes=excel_bytes,
                 excel_filename=filename
             )
+            print(f"✅ Email enviado correctamente")
         except Exception as e:
-            print(f"Warning: Email sending failed: {str(e)}")
+            print(f"⚠️ Warning: Email sending failed: {str(e)}")
+            # No fallar el cierre si el email falla
     
+    # Marcar proyecto como cerrado
     project.status = ProjectStatus.CERRADO
     project.closed_at = datetime.utcnow()
     db.commit()
     
+    # Devolver Excel para descarga
     if excel_bytes:
         return Response(
             content=excel_bytes,
@@ -130,6 +151,7 @@ async def close_project(
         )
     else:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate Excel")
+
 
 @router.post("/{project_id}/reopen")
 async def reopen_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
@@ -142,6 +164,7 @@ async def reopen_project(project_id: int, db: Session = Depends(get_db), current
     project.closed_at = None
     db.commit()
     return {"message": "Project reopened successfully", "project_id": project_id}
+
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):

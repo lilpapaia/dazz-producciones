@@ -316,6 +316,164 @@ def send_project_closed_email(recipients: list, project_data: dict):
     pass
 
 
+def send_project_closed_email_multi(
+    recipients: list,
+    project_name: str,
+    project_code: str,
+    responsible_name: str,
+    tickets_count: int,
+    total_amount: float,
+    excel_bytes: bytes,
+    excel_filename: str
+):
+    """
+    Enviar email de proyecto cerrado con Excel adjunto a múltiples destinatarios.
+    Usa Brevo API.
+    """
+    import base64
+    
+    if not BREVO_API_KEY:
+        raise Exception("BREVO_API_KEY no configurada")
+    
+    subject = f"📊 Proyecto Cerrado: {project_code}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #18181b;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #18181b; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #27272a; border-radius: 8px; overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; text-align: center;">
+                                <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 2px;">
+                                    DAZZ CREATIVE
+                                </h1>
+                                <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px; letter-spacing: 3px;">
+                                    ✅ PROYECTO CERRADO
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px;">
+                                <h2 style="margin: 0 0 20px 0; color: #22c55e; font-size: 24px;">
+                                    {project_code}
+                                </h2>
+                                
+                                <p style="margin: 0 0 20px 0; color: #d4d4d8; font-size: 16px; line-height: 1.6;">
+                                    {project_name}
+                                </p>
+                                
+                                <!-- Resumen -->
+                                <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #3f3f46; border-radius: 4px;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="padding: 10px 0; border-bottom: 1px solid #52525b;">
+                                                        <span style="color: #a1a1aa; font-size: 12px;">RESPONSABLE</span><br>
+                                                        <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{responsible_name}</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 10px 0; border-bottom: 1px solid #52525b;">
+                                                        <span style="color: #a1a1aa; font-size: 12px;">TICKETS</span><br>
+                                                        <span style="color: #ffffff; font-size: 16px; font-weight: bold;">{tickets_count} tickets</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 10px 0;">
+                                                        <span style="color: #a1a1aa; font-size: 12px;">IMPORTE TOTAL</span><br>
+                                                        <span style="color: #f59e0b; font-size: 24px; font-weight: bold;">{total_amount:.2f}€</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <p style="margin: 20px 0; color: #a1a1aa; font-size: 14px;">
+                                    📎 Se adjunta el archivo Excel con el desglose completo de gastos.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #18181b; padding: 30px; text-align: center; border-top: 1px solid #3f3f46;">
+                                <p style="margin: 0 0 10px 0; color: #71717a; font-size: 13px;">
+                                    Este email fue enviado desde el Sistema de Gestión de Producciones
+                                </p>
+                                <p style="margin: 0; color: #52525b; font-size: 12px;">
+                                    © 2026 DAZZ Creative. Todos los derechos reservados.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    # Convertir Excel a base64 para adjunto
+    excel_base64 = base64.b64encode(excel_bytes).decode('utf-8')
+    
+    # Preparar lista de destinatarios
+    to_list = [{"email": email} for email in recipients]
+    
+    payload = {
+        "sender": {
+            "name": FROM_NAME,
+            "email": FROM_EMAIL
+        },
+        "to": to_list,
+        "subject": subject,
+        "htmlContent": html_content,
+        "attachment": [
+            {
+                "content": excel_base64,
+                "name": excel_filename
+            }
+        ]
+    }
+    
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "api-key": BREVO_API_KEY
+    }
+    
+    try:
+        with httpx.Client(timeout=60.0) as client:  # Más tiempo para adjuntos
+            response = client.post(BREVO_API_URL, json=payload, headers=headers)
+            
+            if response.status_code in [200, 201]:
+                print(f"✅ Email proyecto cerrado enviado a {len(recipients)} destinatarios")
+                return True
+            else:
+                error_data = response.json()
+                error_msg = error_data.get("message", response.text)
+                print(f"❌ Error Brevo ({response.status_code}): {error_msg}")
+                raise Exception(f"Error Brevo: {error_msg}")
+                
+    except httpx.TimeoutException:
+        print(f"❌ Timeout enviando email de proyecto cerrado")
+        raise Exception("Timeout conectando con Brevo API")
+    except Exception as e:
+        print(f"❌ Error enviando email proyecto cerrado: {str(e)}")
+        raise e
+
+
 # ============================================
 # TEST - Para verificar que funciona
 # ============================================
