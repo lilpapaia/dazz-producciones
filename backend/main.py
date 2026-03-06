@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -50,6 +50,22 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+
+# ============================================
+# DIAGNÓSTICO SMTP
+# ============================================
+@app.get("/test-smtp")
+async def test_smtp(email: str = Query(None, description="Email para enviar prueba")):
+    """
+    Diagnóstico completo de conexión SMTP con IONOS.
+    
+    - Sin parámetros: prueba conexión y autenticación
+    - Con ?email=tu@email.com: además envía email de prueba
+    """
+    from smtp_diagnostico import run_full_diagnostic
+    return run_full_diagnostic(test_email=email)
+
+
 @app.on_event("startup")
 async def startup_event():
     Base.metadata.create_all(bind=engine)
@@ -59,4 +75,3 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
-
