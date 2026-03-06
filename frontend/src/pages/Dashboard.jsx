@@ -143,11 +143,25 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden">
       {/* Header OPACO Y STICKY */}
       <div className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex items-start justify-between mb-6">
+          {/* MÓVIL: Layout centrado vertical */}
+          <div className="flex flex-col items-center text-center gap-4 md:hidden mb-6">
+            <h1 className="text-4xl font-bebas tracking-wider">MIS PROYECTOS</h1>
+            <p className="text-zinc-400 text-sm">Gestión de producciones activas</p>
+            <button
+              onClick={() => navigate('/projects/create')}
+              className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30"
+            >
+              <Plus size={18} />
+              NUEVO PROYECTO
+            </button>
+          </div>
+
+          {/* DESKTOP: Layout horizontal (como antes) */}
+          <div className="hidden md:flex items-start justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bebas tracking-wider mb-2">MIS PROYECTOS</h1>
               <p className="text-zinc-400">Gestión de producciones activas</p>

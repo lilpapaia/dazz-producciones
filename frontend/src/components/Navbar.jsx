@@ -16,23 +16,23 @@ const Navbar = () => {
 
   return (
     <nav className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
         <div className="flex justify-between items-center h-16">
-          {/* Logo DAZZ CREATIVE - Completo en blanco */}
+          {/* Logo DAZZ CREATIVE - Solo asterisco en móvil */}
           <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             {/* Logo asterisco SVG */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 66 69" fill="none" className="text-amber-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 66 69" fill="none" className="text-amber-500 flex-shrink-0">
               <path d="M58.7442 59.5633L46.4651 68.332L32.7907 50.377L19.5349 68.332L6.97674 59.5633L20.3721 40.634L0 34.2314L4.60465 20.1736L24.5581 26.5761V3.33203H41.0233V26.5761L60.9767 20.1736L66 34.2314L45.3488 40.634L58.7442 59.5633Z" fill="currentColor"/>
             </svg>
-            {/* Texto DAZZ CREATIVE en blanco */}
-            <span className="text-xl font-bold tracking-wider text-white uppercase">DAZZ CREATIVE</span>
+            {/* Texto DAZZ CREATIVE - Oculto en móvil */}
+            <span className="hidden sm:inline text-xl font-bold tracking-wider text-white uppercase">DAZZ CREATIVE</span>
           </Link>
 
           {/* Navigation */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link
               to="/dashboard"
-              className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
                 isActive('/dashboard')
                   ? 'bg-amber-500 text-zinc-950'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
@@ -45,7 +45,7 @@ const Navbar = () => {
             {/* CAMBIADO: Proyectos → Estadísticas */}
             <Link
               to="/statistics"
-              className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
                 isActive('/statistics')
                   ? 'bg-amber-500 text-zinc-950'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
@@ -58,7 +58,7 @@ const Navbar = () => {
             {user.role === 'admin' && (
               <Link
                 to="/users"
-                className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
                   isActive('/users')
                     ? 'bg-amber-500 text-zinc-950'
                     : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
@@ -69,8 +69,8 @@ const Navbar = () => {
               </Link>
             )}
 
-            {/* User Info & Logout */}
-            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-zinc-800">
+            {/* User Info & Logout - Más separado en móvil */}
+            <div className="flex items-center gap-2 sm:gap-3 ml-2 sm:ml-4 pl-2 sm:pl-4 border-l border-zinc-800">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-zinc-100">{user.name}</p>
                 <p className="text-xs text-zinc-500">{user.role}</p>
@@ -78,7 +78,7 @@ const Navbar = () => {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-sm transition-colors"
+                className="flex items-center gap-2 px-2 sm:px-3 py-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-sm transition-colors"
                 title="Cerrar sesión"
               >
                 <LogOut size={18} />
