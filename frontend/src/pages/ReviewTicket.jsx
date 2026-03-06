@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTicket, updateTicket, deleteTicket, getProjectTickets } from '../services/api';
 import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -18,6 +18,12 @@ const paymentStatusOptions = [
 const ReviewTicket = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Detectar si venimos desde estadísticas
+  const isFromStatistics = searchParams.get('filter') === 'international';
+  const projectIdFromUrl = searchParams.get('project');
+  
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,10 +51,18 @@ const ReviewTicket = () => {
       // Cargar todos los tickets del proyecto para navegación
       try {
         const projectTickets = await getProjectTickets(currentTicket.project_id);
-        setAllTickets(projectTickets.data);
+        let ticketsToShow = projectTickets.data;
         
-        // Encontrar el índice del ticket actual
-        const index = projectTickets.data.findIndex(t => t.id === parseInt(id));
+        // Si venimos de estadísticas, filtrar solo tickets internacionales
+        if (isFromStatistics) {
+          ticketsToShow = projectTickets.data.filter(t => t.is_foreign === true);
+          console.log('🌍 Filtrando solo tickets internacionales:', ticketsToShow.length);
+        }
+        
+        setAllTickets(ticketsToShow);
+        
+        // Encontrar el índice del ticket actual en la lista filtrada
+        const index = ticketsToShow.findIndex(t => t.id === parseInt(id));
         setCurrentTicketIndex(index);
       } catch (error) {
         console.error('Error loading project tickets:', error);
@@ -66,7 +80,7 @@ const ReviewTicket = () => {
     try {
       await updateTicket(id, {...ticket, is_reviewed: true});
       alert('✓ Ticket actualizado y marcado como revisado');
-      navigate(`/projects/${ticket.project_id}`);
+      navigate(isFromStatistics ? '/statistics' : `/projects/${ticket.project_id}`);
     } catch (error) {
       alert('Error al actualizar ticket');
     } finally {
@@ -79,7 +93,7 @@ const ReviewTicket = () => {
     try {
       await deleteTicket(id);
       alert('✓ Ticket eliminado correctamente');
-      navigate(`/projects/${ticket.project_id}`);
+      navigate(isFromStatistics ? '/statistics' : `/projects/${ticket.project_id}`);
     } catch (error) {
       alert('Error al eliminar ticket: ' + (error.response?.data?.detail || error.message));
       setDeleting(false);
@@ -147,14 +161,20 @@ const ReviewTicket = () => {
   const goToPrevTicket = () => {
     if (hasPrevTicket) {
       const prevTicket = allTickets[currentTicketIndex - 1];
-      navigate(`/tickets/${prevTicket.id}/review`);
+      const url = isFromStatistics 
+        ? `/tickets/${prevTicket.id}/review?filter=international&project=${ticket.project_id}`
+        : `/tickets/${prevTicket.id}/review`;
+      navigate(url);
     }
   };
 
   const goToNextTicket = () => {
     if (hasNextTicket) {
       const nextTicket = allTickets[currentTicketIndex + 1];
-      navigate(`/tickets/${nextTicket.id}/review`);
+      const url = isFromStatistics 
+        ? `/tickets/${nextTicket.id}/review?filter=international&project=${ticket.project_id}`
+        : `/tickets/${nextTicket.id}/review`;
+      navigate(url);
     }
   };
 
@@ -163,9 +183,12 @@ const ReviewTicket = () => {
       {/* Header */}
       <div className="border-b border-zinc-800 bg-zinc-900 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <button onClick={() => navigate(`/projects/${ticket.project_id}`)} className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3">
+          <button 
+            onClick={() => navigate(isFromStatistics ? '/statistics' : `/projects/${ticket.project_id}`)} 
+            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3"
+          >
             <ArrowLeft size={18} />
-            <span className="text-sm">Volver al Proyecto</span>
+            <span className="text-sm">{isFromStatistics ? 'Volver a Estadísticas' : 'Volver al Proyecto'}</span>
           </button>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
@@ -481,7 +504,10 @@ const ReviewTicket = () => {
 
           {/* Botones */}
           <div className="flex gap-3 pt-4">
-            <button onClick={() => navigate(`/projects/${ticket.project_id}`)} className="flex-1 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold">
+            <button 
+              onClick={() => navigate(isFromStatistics ? '/statistics' : `/projects/${ticket.project_id}`)} 
+              className="flex-1 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold"
+            >
               Cancelar
             </button>
             <button onClick={handleSave} disabled={saving}

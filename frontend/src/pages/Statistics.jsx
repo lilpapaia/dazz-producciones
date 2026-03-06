@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, DollarSign, Globe, Building2, BarChart3, ChevronDown, ChevronRight, Download, FileText } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getCompleteStatistics } from '../services/api';
+import { getCompleteStatistics, getAvailableYears } from '../services/api';
 
 const Statistics = () => {
   const navigate = useNavigate();
@@ -16,6 +16,26 @@ const Statistics = () => {
   const [data, setData] = useState(null);
   const [expandedCountries, setExpandedCountries] = useState(new Set());
   const [expandedProjects, setExpandedProjects] = useState(new Set()); // ← NUEVO: para proyectos
+  const [availableYears, setAvailableYears] = useState([currentYear]); // ← NUEVO: años con datos
+
+  // Load available years on mount
+  useEffect(() => {
+    const loadYears = async () => {
+      try {
+        const response = await getAvailableYears();
+        if (response.data && response.data.length > 0) {
+          setAvailableYears(response.data);
+          // Si el año actual no está en la lista, usar el más reciente
+          if (!response.data.includes(currentYear)) {
+            setYear(response.data[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading available years:', error);
+      }
+    };
+    loadYears();
+  }, []);
 
   // Load data
   useEffect(() => {
@@ -132,9 +152,9 @@ const Statistics = () => {
                 onChange={(e) => setYear(parseInt(e.target.value))}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2 text-zinc-100 focus:border-amber-500 focus:outline-none"
               >
-                <option value={currentYear}>{currentYear}</option>
-                <option value={currentYear - 1}>{currentYear - 1}</option>
-                <option value={currentYear - 2}>{currentYear - 2}</option>
+                {availableYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
               </select>
             </div>
 
@@ -505,7 +525,7 @@ const Statistics = () => {
                                                 key={ticket.id}
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  navigate(`/tickets/${ticket.id}/review`);
+                                                  navigate(`/tickets/${ticket.id}/review?filter=international&project=${project.id}`);
                                                 }}
                                                 className="bg-zinc-900/50 border border-zinc-800 rounded-sm p-3 hover:border-blue-500 transition-colors cursor-pointer group"
                                               >

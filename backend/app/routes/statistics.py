@@ -17,6 +17,55 @@ MONTH_NAMES_ES = [
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ]
 
+def filter_tickets_by_quarter(tickets: List[Ticket], quarter: int) -> List[Ticket]:
+    """
+    Filtra tickets por trimestre basándose en el campo date (formato DD/MM/YYYY)
+    
+    Args:
+        tickets: Lista de tickets a filtrar
+        quarter: Trimestre (1-4)
+    
+    Returns:
+        Lista de tickets filtrados
+    """
+    start_month = (quarter - 1) * 3 + 1
+    end_month = quarter * 3
+    
+    filtered = []
+    for ticket in tickets:
+        if not ticket.date or '/' not in ticket.date:
+            continue
+        
+        try:
+            # Parsear fecha DD/MM/YYYY
+            parts = ticket.date.split('/')
+            if len(parts) >= 2:
+                month = int(parts[1])  # Mes está en la posición 1
+                if start_month <= month <= end_month:
+                    filtered.append(ticket)
+        except (ValueError, IndexError):
+            continue
+    
+    return filtered
+
+@router.get("/available-years", response_model=List[int])
+async def get_available_years(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Obtiene la lista de años que tienen proyectos o tickets
+    
+    Retorna años ordenados de más reciente a más antiguo
+    """
+    # Obtener años únicos de proyectos
+    years = db.query(Project.year).distinct().all()
+    
+    # Convertir a lista de enteros y ordenar descendente
+    year_list = sorted([int(y[0]) for y in years if y[0]], reverse=True)
+    
+    return year_list
+
 @router.get("/overview", response_model=schemas.StatisticsOverview)
 async def get_statistics_overview(
     year: int = Query(..., description="Año a consultar"),
@@ -39,21 +88,15 @@ async def get_statistics_overview(
         Project.year == str(year)
     )
     
-    # Filtrar por trimestre si se especifica
-    if quarter:
-        start_month = (quarter - 1) * 3 + 1
-        end_month = quarter * 3
-        # Filtrar por rango de meses (asumiendo formato DD/MM/YYYY)
-        # Nota: esto es una aproximación, idealmente date debería ser Date no String
-        query = query.filter(
-            func.substr(Ticket.date, 4, 2).cast(db.bind.dialect.NUMERIC).between(start_month, end_month)
-        )
-    
     # Filtrar por geografía si se especifica
     if geo_filter:
         query = query.filter(Ticket.geo_classification == geo_filter)
     
     tickets = query.all()
+    
+    # Filtrar por trimestre si se especifica (en memoria, porque date es string DD/MM/YYYY)
+    if quarter:
+        tickets = filter_tickets_by_quarter(tickets, quarter)
     
     # Calcular totales
     total_spent = sum(ticket.final_total for ticket in tickets)
@@ -155,15 +198,11 @@ async def get_currency_distribution(
         Project.year == str(year)
     )
     
-    # Filtrar por trimestre si aplica
-    if quarter:
-        start_month = (quarter - 1) * 3 + 1
-        end_month = quarter * 3
-        query = query.filter(
-            func.substr(Ticket.date, 4, 2).cast(db.bind.dialect.NUMERIC).between(start_month, end_month)
-        )
-    
     tickets = query.all()
+    
+    # Filtrar por trimestre si aplica (en memoria)
+    if quarter:
+        tickets = filter_tickets_by_quarter(tickets, quarter)
     
     # Calcular total general
     total_general = sum(ticket.final_total for ticket in tickets)
@@ -245,15 +284,11 @@ async def get_foreign_breakdown(
         Ticket.is_foreign == True  # Solo internacionales
     )
     
-    # Filtrar por trimestre si aplica
-    if quarter:
-        start_month = (quarter - 1) * 3 + 1
-        end_month = quarter * 3
-        query = query.filter(
-            func.substr(Ticket.date, 4, 2).cast(db.bind.dialect.NUMERIC).between(start_month, end_month)
-        )
-    
     tickets = query.all()
+    
+    # Filtrar por trimestre si aplica (en memoria)
+    if quarter:
+        tickets = filter_tickets_by_quarter(tickets, quarter)
     
     # Agrupar por país
     countries = {}
