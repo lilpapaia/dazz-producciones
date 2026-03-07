@@ -33,6 +33,20 @@ const ReviewTicket = () => {
   const [deleting, setDeleting] = useState(false);
   const [allTickets, setAllTickets] = useState([]);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
+  
+  // Estados para swipe y animación
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  // Detectar primera vez para animación
+  useEffect(() => {
+    const hasSeenHint = localStorage.getItem('reviewTicketSwipeHint');
+    if (!hasSeenHint) {
+      setShowSwipeHint(true);
+      localStorage.setItem('reviewTicketSwipeHint', 'true');
+    }
+  }, []);
 
   useEffect(() => { 
     loadTicket(); 
@@ -178,6 +192,33 @@ const ReviewTicket = () => {
     }
   };
 
+  // Swipe handlers para móvil
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && hasNextTicket) {
+      goToNextTicket();
+    }
+    if (isRightSwipe && hasPrevTicket) {
+      goToPrevTicket();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
@@ -190,18 +231,30 @@ const ReviewTicket = () => {
             <ArrowLeft size={18} />
             <span className="text-sm">{isFromStatistics ? 'Volver a Estadísticas' : 'Volver al Proyecto'}</span>
           </button>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
-              {ticket.is_reviewed ? <span className="text-2xl">✅</span> : <span className="text-2xl">👁️</span>}
-              {ticket.is_foreign && (
-                <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-xs font-bold uppercase border border-blue-500/30">
-                  🌍 Internacional
-                </span>
-              )}
-            </div>
-            
-            {/* Botón borrar */}
+          
+          {/* Título con separador y emoji */}
+          <div className="flex items-center gap-3 mb-3">
+            <h1 className="text-3xl font-bebas tracking-wider">REVISAR TICKET</h1>
+            <span className="text-zinc-600 text-2xl">|</span>
+            {ticket.is_reviewed ? <span className="text-2xl">✅</span> : <span className="text-2xl">👁️</span>}
+          </div>
+
+          {/* Badges en su propia fila */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`inline-block px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
+              ticket.type === 'factura' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
+            }`}>
+              {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
+            </span>
+            {ticket.is_foreign && (
+              <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-sm text-xs font-bold uppercase border border-blue-500/30 flex items-center gap-1">
+                🌍 INTERNACIONAL
+              </span>
+            )}
+          </div>
+
+          {/* Botón eliminar en su propia fila */}
+          <div>
             <button
               onClick={() => setShowDeleteDialog(true)}
               disabled={deleting}
@@ -213,16 +266,37 @@ const ReviewTicket = () => {
               <span className="text-sm font-semibold">Eliminar</span>
             </button>
           </div>
-          <span className={`inline-block mt-2 px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
-            ticket.type === 'factura' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
-          }`}>
-            {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
-          </span>
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">
+      <main 
+        className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8 relative"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Gradientes laterales sutiles para indicar swipe */}
+        {hasPrevTicket && (
+          <div className="hidden md:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
+        )}
+        {hasNextTicket && (
+          <div className="hidden md:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-amber-500/5 to-transparent pointer-events-none" />
+        )}
+
+        <style>
+          {`
+            @keyframes swipeHint {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-12px); }
+              75% { transform: translateX(12px); }
+            }
+            .swipe-hint-animation {
+              animation: swipeHint 0.8s ease-in-out;
+            }
+          `}
+        </style>
+
+        <div className={`bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6 ${showSwipeHint ? 'swipe-hint-animation' : ''}`}>
 
           {/* VISOR GALERÍA */}
           {pages.length > 0 && (
@@ -247,44 +321,46 @@ const ReviewTicket = () => {
                 </div>
               </div>
 
-              {/* Controles navegación */}
-              <div className="px-4 py-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-between">
+              {/* Controles navegación - DEBAJO de la imagen, centrado */}
+              <div className="px-4 py-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-center">
                 <div className="flex items-center gap-3">
-                  {/* Flechas */}
+                  {/* Flecha izquierda - siempre visible */}
                   <button
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                     disabled={currentPage === 0 || totalPages <= 1}
-                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                   >
                     <ChevronLeft size={18} />
                   </button>
 
-                  <span className="text-sm font-mono text-zinc-300">
-                    {totalPages > 1 ? `${currentPage + 1} / ${totalPages}` : ticket.file_name}
+                  {/* Nombre del archivo - centrado, truncado si es muy largo */}
+                  <span className="text-sm font-mono text-zinc-300 truncate max-w-xs text-center">
+                    {totalPages > 1 ? `${currentPage + 1}/${totalPages} - ${ticket.file_name}` : ticket.file_name}
                   </span>
 
+                  {/* Flecha derecha - siempre visible */}
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
                     disabled={currentPage === totalPages - 1 || totalPages <= 1}
-                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                   >
                     <ChevronRight size={18} />
                   </button>
                 </div>
-
-                {/* Dots indicadores */}
-                {totalPages > 1 && (
-                  <div className="flex gap-1.5">
-                    {pages.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentPage(i)}
-                        className={`w-2 h-2 rounded-full transition-colors ${i === currentPage ? 'bg-amber-500' : 'bg-zinc-600 hover:bg-zinc-400'}`}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
+
+              {/* Dots indicadores (solo si hay más de 1 página) */}
+              {totalPages > 1 && (
+                <div className="px-4 pb-3 bg-zinc-900/80 flex justify-center gap-1.5">
+                  {pages.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i)}
+                      className={`w-2 h-2 rounded-full transition-colors ${i === currentPage ? 'bg-amber-500' : 'bg-zinc-600 hover:bg-zinc-400'}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -519,39 +595,6 @@ const ReviewTicket = () => {
 
         </div>
       </main>
-
-      {/* FLECHAS FLOTANTES DE NAVEGACIÓN */}
-      {hasPrevTicket && (
-        <button
-          onClick={goToPrevTicket}
-          className="fixed left-4 top-1/2 -translate-y-1/2 z-40
-            w-14 h-14 rounded-full bg-zinc-900/90 hover:bg-amber-500
-            border-2 border-zinc-700 hover:border-amber-500
-            flex items-center justify-center
-            transition-all duration-200 shadow-xl
-            hover:scale-110 active:scale-95
-            backdrop-blur-sm"
-          title="Ticket anterior"
-        >
-          <ChevronLeft size={32} className="text-zinc-100" />
-        </button>
-      )}
-
-      {hasNextTicket && (
-        <button
-          onClick={goToNextTicket}
-          className="fixed right-4 top-1/2 -translate-y-1/2 z-40
-            w-14 h-14 rounded-full bg-zinc-900/90 hover:bg-amber-500
-            border-2 border-zinc-700 hover:border-amber-500
-            flex items-center justify-center
-            transition-all duration-200 shadow-xl
-            hover:scale-110 active:scale-95
-            backdrop-blur-sm"
-          title="Siguiente ticket"
-        >
-          <ChevronRight size={32} className="text-zinc-100" />
-        </button>
-      )}
 
       {/* Modal de confirmación de borrado */}
       <ConfirmDialog
