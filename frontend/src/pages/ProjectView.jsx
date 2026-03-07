@@ -281,8 +281,8 @@ const ProjectView = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         {/* Actions + Búsqueda COMPACTA */}
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
-          {/* Botones de acción - Stack en móvil, fila en desktop */}
-          <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+          {/* Botones de acción - En fila en móvil y desktop */}
+          <div className="flex flex-row gap-2 flex-wrap">
             <button
               onClick={() => navigate(`/projects/${id}/upload`)}
               disabled={project.status === 'cerrado'}
@@ -326,7 +326,8 @@ const ProjectView = () => {
                   disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
                 <Trash2 size={16} />
-                ELIMINAR
+                <span className="hidden sm:inline">ELIMINAR</span>
+                <span className="sm:hidden">BORRAR</span>
               </button>
             )}
           </div>
@@ -499,7 +500,7 @@ const ProjectView = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       {/* EMOJI ESTADO REVISADO + BADGE */}
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-2 mb-5">
                         {ticket.is_reviewed ? (
                           <span className="text-lg flex-shrink-0" title="Revisado">✅</span>
                         ) : (
@@ -517,8 +518,8 @@ const ProjectView = () => {
                         </span>
                       </div>
 
-                      {/* NOMBRE PROVEEDOR - Más ancho, permite wrap */}
-                      <h3 className="font-semibold mb-1 pr-2 leading-tight">{ticket.provider}</h3>
+                      {/* NOMBRE PROVEEDOR - Ocupa TODO el ancho */}
+                      <h3 className="font-semibold mb-1 leading-tight">{ticket.provider}</h3>
                       <p className="text-sm text-zinc-400">
                         {ticket.date} • Nº {ticket.invoice_number || 'N/A'}
                       </p>
