@@ -286,7 +286,7 @@ const ProjectView = () => {
             <button
               onClick={() => navigate(`/projects/${id}/upload`)}
               disabled={project.status === 'cerrado'}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
             >
               <Upload size={16} />
               SUBIR
@@ -297,7 +297,7 @@ const ProjectView = () => {
               <button
                 onClick={handleCloseProject}
                 disabled={tickets.length === 0}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
                 <Lock size={16} />
                 CERRAR
@@ -309,7 +309,7 @@ const ProjectView = () => {
               <button
                 onClick={handleReopenProject}
                 disabled={reopeningProject}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
                 <Unlock size={16} />
                 {reopeningProject ? 'REABRIENDO...' : 'REABRIR'}
@@ -321,7 +321,7 @@ const ProjectView = () => {
               <button
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deletingProject}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 
                   text-red-400 border border-red-500/30 rounded-sm transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
@@ -397,6 +397,9 @@ const ProjectView = () => {
                                 <span className="text-sm">✅</span>
                               ) : (
                                 <span className="text-sm">👁️</span>
+                              )}
+                              {ticket.is_foreign && (
+                                <span className="text-sm">🌍</span>
                               )}
                               <span className={`px-2 py-0.5 text-xs font-mono rounded-sm border ${
                                 ticket.type === 'factura'
@@ -493,16 +496,19 @@ const ProjectView = () => {
                   onClick={() => navigate(`/tickets/${ticket.id}/review`)}
                   className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      {/* EMOJI ESTADO REVISADO */}
-                      <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      {/* EMOJI ESTADO REVISADO + BADGE */}
+                      <div className="flex items-center gap-2 mb-3">
                         {ticket.is_reviewed ? (
-                          <span className="text-lg" title="Revisado">✅</span>
+                          <span className="text-lg flex-shrink-0" title="Revisado">✅</span>
                         ) : (
-                          <span className="text-lg" title="Pendiente revisión">👁️</span>
+                          <span className="text-lg flex-shrink-0" title="Pendiente revisión">👁️</span>
                         )}
-                        <span className={`px-2 py-1 text-xs font-mono rounded-sm border ${
+                        {ticket.is_foreign && (
+                          <span className="text-lg flex-shrink-0" title="Internacional">🌍</span>
+                        )}
+                        <span className={`px-2 py-1 text-xs font-mono rounded-sm border whitespace-nowrap ${
                           ticket.type === 'factura'
                             ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
                             : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
@@ -511,13 +517,14 @@ const ProjectView = () => {
                         </span>
                       </div>
 
-                      <h3 className="font-semibold mb-1">{ticket.provider}</h3>
+                      {/* NOMBRE PROVEEDOR - Más ancho, permite wrap */}
+                      <h3 className="font-semibold mb-1 pr-2 leading-tight">{ticket.provider}</h3>
                       <p className="text-sm text-zinc-400">
                         {ticket.date} • Nº {ticket.invoice_number || 'N/A'}
                       </p>
                     </div>
 
-                    <div className="text-right flex items-start gap-3">
+                    <div className="text-right flex items-start gap-3 flex-shrink-0">
                       <div>
                         <p className="text-xl font-bold text-amber-500">
                           {ticket.final_total?.toFixed(2)}€
