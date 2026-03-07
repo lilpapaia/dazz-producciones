@@ -34,19 +34,9 @@ const ReviewTicket = () => {
   const [allTickets, setAllTickets] = useState([]);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
   
-  // Estados para swipe y animación
-  const [showSwipeHint, setShowSwipeHint] = useState(false);
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
-
-  // Detectar primera vez para animación
-  useEffect(() => {
-    const hasSeenHint = localStorage.getItem('reviewTicketSwipeHint');
-    if (!hasSeenHint) {
-      setShowSwipeHint(true);
-      localStorage.setItem('reviewTicketSwipeHint', 'true');
-    }
-  }, []);
+  // Estados para navegación con animación
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState(null); // 'left' o 'right'
 
   useEffect(() => { 
     loadTicket(); 
@@ -173,49 +163,52 @@ const ReviewTicket = () => {
   const hasNextTicket = currentTicketIndex >= 0 && currentTicketIndex < allTickets.length - 1;
 
   const goToPrevTicket = () => {
-    if (hasPrevTicket) {
-      const prevTicket = allTickets[currentTicketIndex - 1];
-      const url = isFromStatistics 
-        ? `/tickets/${prevTicket.id}/review?filter=international&project=${ticket.project_id}`
-        : `/tickets/${prevTicket.id}/review`;
-      navigate(url);
+    if (hasPrevTicket && !isTransitioning) {
+      setIsTransitioning(true);
+      setTransitionDirection('right'); // Sale por derecha, entra por izquierda
+      
+      setTimeout(() => {
+        const prevTicket = allTickets[currentTicketIndex - 1];
+        const url = isFromStatistics 
+          ? `/tickets/${prevTicket.id}/review?filter=international&project=${ticket.project_id}`
+          : `/tickets/${prevTicket.id}/review`;
+        navigate(url);
+      }, 300);
     }
   };
 
   const goToNextTicket = () => {
-    if (hasNextTicket) {
-      const nextTicket = allTickets[currentTicketIndex + 1];
-      const url = isFromStatistics 
-        ? `/tickets/${nextTicket.id}/review?filter=international&project=${ticket.project_id}`
-        : `/tickets/${nextTicket.id}/review`;
-      navigate(url);
+    if (hasNextTicket && !isTransitioning) {
+      setIsTransitioning(true);
+      setTransitionDirection('left'); // Sale por izquierda, entra por derecha
+      
+      setTimeout(() => {
+        const nextTicket = allTickets[currentTicketIndex + 1];
+        const url = isFromStatistics 
+          ? `/tickets/${nextTicket.id}/review?filter=international&project=${ticket.project_id}`
+          : `/tickets/${nextTicket.id}/review`;
+        navigate(url);
+      }, 300);
     }
   };
 
-  // Swipe handlers para móvil
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+  // Función para truncar nombre de archivo inteligentemente
+  const getTruncatedFileName = (fileName) => {
+    if (!fileName) return 'archivo';
     
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
+    const maxLength = 20;
+    if (fileName.length <= maxLength) return fileName;
+    
+    // Primeros 12 + "..." + últimos 8
+    return `${fileName.slice(0, 12)}...${fileName.slice(-8)}`;
+  };
 
-    if (isLeftSwipe && hasNextTicket) {
-      goToNextTicket();
-    }
-    if (isRightSwipe && hasPrevTicket) {
+  // Handler para doble click en zonas laterales
+  const handleLateralDoubleClick = (side) => {
+    if (side === 'left' && hasPrevTicket) {
       goToPrevTicket();
+    } else if (side === 'right' && hasNextTicket) {
+      goToNextTicket();
     }
   };
 
@@ -269,34 +262,61 @@ const ReviewTicket = () => {
         </div>
       </div>
 
-      <main 
-        className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8 relative"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {/* Gradientes laterales sutiles para indicar swipe */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8 relative">
+        {/* Zonas laterales para doble click */}
         {hasPrevTicket && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
+          <div 
+            onDoubleClick={() => handleLateralDoubleClick('left')}
+            className="fixed left-0 top-0 bottom-0 w-10 z-30 cursor-pointer hover:bg-amber-500/5 transition-colors"
+            title="Doble click para ticket anterior"
+          />
         )}
         {hasNextTicket && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-amber-500/5 to-transparent pointer-events-none" />
+          <div 
+            onDoubleClick={() => handleLateralDoubleClick('right')}
+            className="fixed right-0 top-0 bottom-0 w-10 z-30 cursor-pointer hover:bg-amber-500/5 transition-colors"
+            title="Doble click para siguiente ticket"
+          />
         )}
 
         <style>
           {`
-            @keyframes swipeHint {
-              0%, 100% { transform: translateX(0); }
-              25% { transform: translateX(-12px); }
-              75% { transform: translateX(12px); }
+            @keyframes slideOutLeft {
+              from { transform: translateX(0); opacity: 1; }
+              to { transform: translateX(-100%); opacity: 0; }
             }
-            .swipe-hint-animation {
-              animation: swipeHint 0.8s ease-in-out;
+            @keyframes slideInRight {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+              from { transform: translateX(0); opacity: 1; }
+              to { transform: translateX(100%); opacity: 0; }
+            }
+            @keyframes slideInLeft {
+              from { transform: translateX(-100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            .slide-out-left {
+              animation: slideOutLeft 0.3s ease-in-out forwards;
+            }
+            .slide-in-right {
+              animation: slideInRight 0.3s ease-in-out forwards;
+            }
+            .slide-out-right {
+              animation: slideOutRight 0.3s ease-in-out forwards;
+            }
+            .slide-in-left {
+              animation: slideInLeft 0.3s ease-in-out forwards;
             }
           `}
         </style>
 
-        <div className={`bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6 ${showSwipeHint ? 'swipe-hint-animation' : ''}`}>
+        <div className={`bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6 ${
+          isTransitioning 
+            ? transitionDirection === 'left' ? 'slide-out-left' : 'slide-out-right'
+            : ''
+        }`}>
 
           {/* VISOR GALERÍA */}
           {pages.length > 0 && (
@@ -324,7 +344,7 @@ const ReviewTicket = () => {
               {/* Controles navegación - DEBAJO de la imagen, centrado */}
               <div className="px-4 py-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-center">
                 <div className="flex items-center gap-3">
-                  {/* Flecha izquierda - siempre visible */}
+                  {/* Flecha izquierda - SIEMPRE visible */}
                   <button
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                     disabled={currentPage === 0 || totalPages <= 1}
@@ -333,12 +353,15 @@ const ReviewTicket = () => {
                     <ChevronLeft size={18} />
                   </button>
 
-                  {/* Nombre del archivo - centrado, truncado si es muy largo */}
-                  <span className="text-sm font-mono text-zinc-300 truncate max-w-xs text-center">
-                    {totalPages > 1 ? `${currentPage + 1}/${totalPages} - ${ticket.file_name}` : ticket.file_name}
+                  {/* Nombre del archivo - truncado inteligentemente */}
+                  <span className="text-sm font-mono text-zinc-300 text-center">
+                    {totalPages > 1 
+                      ? `${currentPage + 1}/${totalPages} - ${getTruncatedFileName(ticket.file_name)}` 
+                      : getTruncatedFileName(ticket.file_name)
+                    }
                   </span>
 
-                  {/* Flecha derecha - siempre visible */}
+                  {/* Flecha derecha - SIEMPRE visible */}
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
                     disabled={currentPage === totalPages - 1 || totalPages <= 1}
@@ -413,8 +436,8 @@ const ReviewTicket = () => {
             </div>
           )}
 
-          {/* Alerta IA */}
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-sm p-4">
+          {/* Alerta IA - Solo en desktop */}
+          <div className="hidden md:block bg-blue-500/10 border border-blue-500/30 rounded-sm p-4">
             <div className="flex items-start gap-3">
               <div className="text-blue-400 mt-0.5">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -443,7 +466,12 @@ const ReviewTicket = () => {
                 <div>
                   <p className="text-zinc-500 text-xs mb-1">Divisa</p>
                   <p className="font-semibold">
-                    <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-sm">{ticket.currency}</span>
+                    <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-sm">
+                      {ticket.currency === 'USD' ? '$ USD' : 
+                       ticket.currency === 'GBP' ? '£ GBP' :
+                       ticket.currency === 'JPY' ? '¥ JPY' :
+                       ticket.currency}
+                    </span>
                   </p>
                 </div>
                 <div>
@@ -461,23 +489,39 @@ const ReviewTicket = () => {
               </div>
               {ticket.foreign_amount && (
                 <div className="mt-4 pt-4 border-t border-blue-500/30">
-                  <p className="text-xs text-zinc-500 mb-2">Importes en divisa original:</p>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
+                  <p className="text-xs text-zinc-500 mb-3">Importes en divisa original:</p>
+                  <div className="flex flex-wrap gap-4 text-sm">
                     <div>
-                      <p className="text-zinc-400 text-xs">Base original</p>
-                      <p className="font-semibold text-blue-400">{ticket.foreign_amount.toFixed(2)} {ticket.currency}</p>
+                      <span className="text-zinc-400 text-xs">Base: </span>
+                      <span className="font-semibold text-blue-400">
+                        {ticket.currency === 'USD' ? '$' : 
+                         ticket.currency === 'GBP' ? '£' :
+                         ticket.currency === 'JPY' ? '¥' : ''}
+                        {ticket.foreign_amount.toFixed(2)}
+                      </span>
                     </div>
                     {ticket.foreign_tax_amount && (
-                      <div>
-                        <p className="text-zinc-400 text-xs">IVA original</p>
-                        <p className="font-semibold text-blue-400">{ticket.foreign_tax_amount.toFixed(2)} {ticket.currency}</p>
-                      </div>
+                      <>
+                        <span className="text-zinc-600">|</span>
+                        <div>
+                          <span className="text-zinc-400 text-xs">IVA: </span>
+                          <span className="font-semibold text-blue-400">
+                            {ticket.currency === 'USD' ? '$' : 
+                             ticket.currency === 'GBP' ? '£' :
+                             ticket.currency === 'JPY' ? '¥' : ''}
+                            {ticket.foreign_tax_amount.toFixed(2)}
+                          </span>
+                        </div>
+                      </>
                     )}
                     {ticket.foreign_tax_eur && (
-                      <div>
-                        <p className="text-zinc-400 text-xs">IVA reclamable</p>
-                        <p className="font-bold text-green-400">{ticket.foreign_tax_eur.toFixed(2)}€ ✅</p>
-                      </div>
+                      <>
+                        <span className="text-zinc-600">|</span>
+                        <div>
+                          <span className="text-zinc-400 text-xs">IVA reclamable: </span>
+                          <span className="font-bold text-green-400">{ticket.foreign_tax_eur.toFixed(2)}€ ✅</span>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -485,37 +529,44 @@ const ReviewTicket = () => {
             </div>
           )}
 
-          {/* Fecha y Proveedor */}
+          {/* Fecha y Nº Factura en misma línea */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">FECHA FACTURA</label>
               <input type="text" value={ticket.date || ''} onChange={(e) => setTicket({...ticket, date: e.target.value})}
                 placeholder="DD/MM/AAAA" className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
             </div>
-            <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">PROVEEDOR *</label>
-              <input type="text" value={ticket.provider || ''} onChange={(e) => setTicket({...ticket, provider: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
-            </div>
-          </div>
-
-          {ticket.type === 'factura' && (
-            <div className="grid grid-cols-3 gap-4">
+            {ticket.type === 'factura' && (
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">Nº FACTURA</label>
                 <input type="text" value={ticket.invoice_number || ''} onChange={(e) => setTicket({...ticket, invoice_number: e.target.value})}
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
               </div>
-              <div>
-                <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TELÉFONO</label>
-                <input type="text" value={ticket.phone || ''} onChange={(e) => setTicket({...ticket, phone: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
-                <input type="email" value={ticket.email || ''} onChange={(e) => setTicket({...ticket, email: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
-              </div>
+            )}
+          </div>
+
+          {/* Proveedor solo */}
+          <div>
+            <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">PROVEEDOR *</label>
+            <input type="text" value={ticket.provider || ''} onChange={(e) => setTicket({...ticket, provider: e.target.value})}
+              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+          </div>
+
+          {/* Teléfono solo */}
+          {ticket.type === 'factura' && (
+            <div>
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TELÉFONO</label>
+              <input type="text" value={ticket.phone || ''} onChange={(e) => setTicket({...ticket, phone: e.target.value})}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+            </div>
+          )}
+
+          {/* Email solo */}
+          {ticket.type === 'factura' && (
+            <div>
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
+              <input type="email" value={ticket.email || ''} onChange={(e) => setTicket({...ticket, email: e.target.value})}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
             </div>
           )}
 
@@ -530,7 +581,9 @@ const ReviewTicket = () => {
           {/* Desglose importes */}
           <div className="bg-zinc-950 border border-zinc-700 rounded-sm p-4">
             <p className="text-xs text-zinc-500 font-mono mb-3 tracking-wider">DESGLOSE IMPORTES</p>
-            <div className="grid grid-cols-4 gap-4 text-sm">
+            
+            {/* Base, % IVA, IVA en la misma línea */}
+            <div className="flex items-center gap-6 mb-4">
               <div>
                 <p className="text-zinc-400 mb-1 text-xs">Base</p>
                 <p className="font-semibold">{ticket.base_amount?.toFixed(2)}€</p>
@@ -543,10 +596,12 @@ const ReviewTicket = () => {
                 <p className="text-zinc-400 mb-1 text-xs">IVA</p>
                 <p className="font-semibold">{ticket.iva_amount?.toFixed(2)}€</p>
               </div>
-              <div>
-                <p className="text-zinc-400 mb-1 text-xs">Total</p>
-                <p className="text-xl font-bold text-amber-500">{ticket.final_total?.toFixed(2)}€</p>
-              </div>
+            </div>
+
+            {/* Total alineado a la izquierda */}
+            <div className="pt-3 border-t border-zinc-700">
+              <p className="text-zinc-400 mb-1 text-xs">Total</p>
+              <p className="text-xl font-bold text-amber-500">{ticket.final_total?.toFixed(2)}€</p>
             </div>
           </div>
 
@@ -589,7 +644,7 @@ const ReviewTicket = () => {
             <button onClick={handleSave} disabled={saving}
               className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2">
               <Save size={18} />
-              {saving ? 'GUARDANDO...' : 'MARCAR REVISADO ✓'}
+              {saving ? 'GUARDANDO...' : 'REVISADO ✓'}
             </button>
           </div>
 
