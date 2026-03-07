@@ -281,12 +281,12 @@ const ProjectView = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
         {/* Actions + Búsqueda COMPACTA */}
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
-          {/* Botones de acción - En fila en móvil y desktop */}
-          <div className="flex flex-row gap-2 flex-wrap">
+          {/* Botones de acción - Ancho completo en móvil, los 3 iguales */}
+          <div className="w-full md:w-auto flex gap-2">
             <button
               onClick={() => navigate(`/projects/${id}/upload`)}
               disabled={project.status === 'cerrado'}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
             >
               <Upload size={16} />
               SUBIR
@@ -297,7 +297,7 @@ const ProjectView = () => {
               <button
                 onClick={handleCloseProject}
                 disabled={tickets.length === 0}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
                 <Lock size={16} />
                 CERRAR
@@ -309,7 +309,7 @@ const ProjectView = () => {
               <button
                 onClick={handleReopenProject}
                 disabled={reopeningProject}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 font-semibold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
                 <Unlock size={16} />
                 {reopeningProject ? 'REABRIENDO...' : 'REABRIR'}
@@ -321,7 +321,7 @@ const ProjectView = () => {
               <button
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deletingProject}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 
                   text-red-400 border border-red-500/30 rounded-sm transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
@@ -497,9 +497,11 @@ const ProjectView = () => {
                   onClick={() => navigate(`/tickets/${ticket.id}/review`)}
                   className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      {/* EMOJI ESTADO REVISADO + BADGE */}
+                  {/* Flex container con wrap para que nombre use todo el ancho */}
+                  <div className="flex items-start gap-3 flex-wrap">
+                    {/* Primera fila: Emojis + Badge | Precio + Papelera */}
+                    <div className="w-full flex items-start justify-between">
+                      {/* Lado izquierdo: emojis y badge */}
                       <div className="flex items-center gap-2 mb-5">
                         {ticket.is_reviewed ? (
                           <span className="text-lg flex-shrink-0" title="Revisado">✅</span>
@@ -518,33 +520,36 @@ const ProjectView = () => {
                         </span>
                       </div>
 
-                      {/* NOMBRE PROVEEDOR - Ocupa TODO el ancho */}
+                      {/* Lado derecho: precio y papelera */}
+                      <div className="flex items-start gap-3 flex-shrink-0">
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-amber-500">
+                            {ticket.final_total?.toFixed(2)}€
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            Base: {ticket.base_amount?.toFixed(2)}€
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTicket(ticket.id);
+                          }}
+                          className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-sm transition-colors"
+                          title="Eliminar ticket"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Segunda fila: Nombre (ocupa TODO el ancho) */}
+                    <div className="w-full">
                       <h3 className="font-semibold mb-1 leading-tight">{ticket.provider}</h3>
                       <p className="text-sm text-zinc-400">
                         {ticket.date} • Nº {ticket.invoice_number || 'N/A'}
                       </p>
-                    </div>
-
-                    <div className="text-right flex items-start gap-3 flex-shrink-0">
-                      <div>
-                        <p className="text-xl font-bold text-amber-500">
-                          {ticket.final_total?.toFixed(2)}€
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Base: {ticket.base_amount?.toFixed(2)}€
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTicket(ticket.id);
-                        }}
-                        className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-sm transition-colors"
-                        title="Eliminar ticket"
-                      >
-                        <Trash2 size={18} />
-                      </button>
                     </div>
                   </div>
 
