@@ -33,10 +33,6 @@ const ReviewTicket = () => {
   const [deleting, setDeleting] = useState(false);
   const [allTickets, setAllTickets] = useState([]);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
-  
-  // Estados para navegación con animación
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionDirection, setTransitionDirection] = useState(null); // 'left' o 'right'
 
   useEffect(() => { 
     loadTicket(); 
@@ -163,32 +159,22 @@ const ReviewTicket = () => {
   const hasNextTicket = currentTicketIndex >= 0 && currentTicketIndex < allTickets.length - 1;
 
   const goToPrevTicket = () => {
-    if (hasPrevTicket && !isTransitioning) {
-      setIsTransitioning(true);
-      setTransitionDirection('right'); // Sale por derecha, entra por izquierda
-      
-      setTimeout(() => {
-        const prevTicket = allTickets[currentTicketIndex - 1];
-        const url = isFromStatistics 
-          ? `/tickets/${prevTicket.id}/review?filter=international&project=${ticket.project_id}`
-          : `/tickets/${prevTicket.id}/review`;
-        navigate(url);
-      }, 300);
+    if (hasPrevTicket) {
+      const prevTicket = allTickets[currentTicketIndex - 1];
+      const url = isFromStatistics 
+        ? `/tickets/${prevTicket.id}/review?filter=international&project=${ticket.project_id}`
+        : `/tickets/${prevTicket.id}/review`;
+      navigate(url);
     }
   };
 
   const goToNextTicket = () => {
-    if (hasNextTicket && !isTransitioning) {
-      setIsTransitioning(true);
-      setTransitionDirection('left'); // Sale por izquierda, entra por derecha
-      
-      setTimeout(() => {
-        const nextTicket = allTickets[currentTicketIndex + 1];
-        const url = isFromStatistics 
-          ? `/tickets/${nextTicket.id}/review?filter=international&project=${ticket.project_id}`
-          : `/tickets/${nextTicket.id}/review`;
-        navigate(url);
-      }, 300);
+    if (hasNextTicket) {
+      const nextTicket = allTickets[currentTicketIndex + 1];
+      const url = isFromStatistics 
+        ? `/tickets/${nextTicket.id}/review?filter=international&project=${ticket.project_id}`
+        : `/tickets/${nextTicket.id}/review`;
+      navigate(url);
     }
   };
 
@@ -263,60 +249,23 @@ const ReviewTicket = () => {
       </div>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-8 relative">
-        {/* Zonas laterales para doble click */}
+        {/* Zonas laterales para doble click - SIN hover visible para no confundir */}
         {hasPrevTicket && (
           <div 
             onDoubleClick={() => handleLateralDoubleClick('left')}
-            className="fixed left-0 top-0 bottom-0 w-10 z-30 cursor-pointer hover:bg-amber-500/5 transition-colors"
+            className="fixed left-0 top-0 bottom-0 w-10 z-30 cursor-pointer"
             title="Doble click para ticket anterior"
           />
         )}
         {hasNextTicket && (
           <div 
             onDoubleClick={() => handleLateralDoubleClick('right')}
-            className="fixed right-0 top-0 bottom-0 w-10 z-30 cursor-pointer hover:bg-amber-500/5 transition-colors"
+            className="fixed right-0 top-0 bottom-0 w-10 z-30 cursor-pointer"
             title="Doble click para siguiente ticket"
           />
         )}
 
-        <style>
-          {`
-            @keyframes slideOutLeft {
-              from { transform: translateX(0); opacity: 1; }
-              to { transform: translateX(-100%); opacity: 0; }
-            }
-            @keyframes slideInRight {
-              from { transform: translateX(100%); opacity: 0; }
-              to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOutRight {
-              from { transform: translateX(0); opacity: 1; }
-              to { transform: translateX(100%); opacity: 0; }
-            }
-            @keyframes slideInLeft {
-              from { transform: translateX(-100%); opacity: 0; }
-              to { transform: translateX(0); opacity: 1; }
-            }
-            .slide-out-left {
-              animation: slideOutLeft 0.3s ease-in-out forwards;
-            }
-            .slide-in-right {
-              animation: slideInRight 0.3s ease-in-out forwards;
-            }
-            .slide-out-right {
-              animation: slideOutRight 0.3s ease-in-out forwards;
-            }
-            .slide-in-left {
-              animation: slideInLeft 0.3s ease-in-out forwards;
-            }
-          `}
-        </style>
-
-        <div className={`bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6 ${
-          isTransitioning 
-            ? transitionDirection === 'left' ? 'slide-out-left' : 'slide-out-right'
-            : ''
-        }`}>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">
 
           {/* VISOR GALERÍA */}
           {pages.length > 0 && (
@@ -552,21 +501,19 @@ const ReviewTicket = () => {
               className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
           </div>
 
-          {/* Teléfono solo */}
+          {/* Teléfono y Email juntos - SIN GAP */}
           {ticket.type === 'factura' && (
-            <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TELÉFONO</label>
-              <input type="text" value={ticket.phone || ''} onChange={(e) => setTicket({...ticket, phone: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
-            </div>
-          )}
-
-          {/* Email solo */}
-          {ticket.type === 'factura' && (
-            <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
-              <input type="email" value={ticket.email || ''} onChange={(e) => setTicket({...ticket, email: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TELÉFONO</label>
+                <input type="text" value={ticket.phone || ''} onChange={(e) => setTicket({...ticket, phone: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
+                <input type="email" value={ticket.email || ''} onChange={(e) => setTicket({...ticket, email: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+              </div>
             </div>
           )}
 
