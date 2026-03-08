@@ -286,14 +286,15 @@ const ReviewTicket = () => {
               <div></div>
             )}
 
-            {/* Botón Eliminar - DERECHA */}
+            {/* Botón Eliminar - DERECHA - Responsive */}
             <button
               onClick={() => setShowDeleteDialog(true)}
               disabled={deleting}
-              className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Eliminar ticket"
             >
-              <Trash2 size={20} />
+              <Trash2 size={18} />
+              <span className="hidden md:inline text-sm font-semibold">Eliminar</span>
             </button>
           </div>
         </div>
@@ -314,6 +315,26 @@ const ReviewTicket = () => {
             className="fixed right-0 top-0 bottom-0 w-10 z-30 cursor-pointer"
             title="Doble click para siguiente ticket"
           />
+        )}
+
+        {/* Flechas flotantes de navegación - SOLO DESKTOP */}
+        {hasPrevTicket && (
+          <button
+            onClick={goToPrevTicket}
+            className="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-40 bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 hover:text-white p-3 rounded-full border border-zinc-600 items-center justify-center transition-all shadow-lg"
+            title="Ticket anterior"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        )}
+        {hasNextTicket && (
+          <button
+            onClick={goToNextTicket}
+            className="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 z-40 bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 hover:text-white p-3 rounded-full border border-zinc-600 items-center justify-center transition-all shadow-lg"
+            title="Siguiente ticket"
+          >
+            <ChevronRight size={24} />
+          </button>
         )}
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">
