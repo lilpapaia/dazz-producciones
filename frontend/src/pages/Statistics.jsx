@@ -108,13 +108,8 @@ const Statistics = () => {
     
     // Helper para obtener símbolo de moneda
     const getCurrencySymbol = (currency) => {
-      const symbols = {
-        'USD': '$',
-        'GBP': '£',
-        'JPY': '¥',
-        'EUR': '€'
-      };
-      return symbols[currency] || currency;
+      // Usar símbolos ASCII simples para evitar problemas de encoding
+      return ''; // No usar símbolos, solo el código de moneda
     };
 
     // Colores
@@ -206,7 +201,7 @@ const Statistics = () => {
       doc.setFontSize(13);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...colors.secondary);
-      doc.text(`🌍 ${country.country_name} (${country.currency})`, 20, yPos + 2);
+      doc.text(`${country.country_name} (${country.currency})`, 20, yPos + 2);
       yPos += 12;
 
       doc.setFontSize(9);
@@ -236,14 +231,15 @@ const Statistics = () => {
         doc.text(`Total Proyecto: ${project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
         yPos += 8;
 
-        // TICKETS - SOLO INTERNACIONALES
-        const internationalTickets = project.tickets || [];        
-        console.log(`📋 Proyecto ${project.creative_code}: ${internationalTickets.length} tickets internacionales de ${project.tickets?.length || 0} totales`);
+        // TICKETS - Ya vienen filtrados por is_foreign=true del backend
+        const internationalTickets = project.tickets || [];
+        
+        console.log(`📋 Proyecto ${project.creative_code}: ${internationalTickets.length} tickets internacionales`);
         
         if (internationalTickets.length > 0) {
           doc.setFont(undefined, 'bold');
           doc.setTextColor(...colors.success);
-          doc.text(`✓ TICKETS INTERNACIONALES (${internationalTickets.length}):`, 25, yPos);
+          doc.text(`> TICKETS INTERNACIONALES (${internationalTickets.length}):`, 25, yPos);
           yPos += 7;
           doc.setTextColor(0, 0, 0);
 
@@ -264,10 +260,10 @@ const Statistics = () => {
             doc.setFontSize(8);
             
             const ticketInfo = [
-              `📅 Fecha: ${ticket.date || 'N/A'}`,
-              `📎 Archivo: ${(ticket.file_name || 'N/A').substring(0, 35)}${(ticket.file_name?.length > 35) ? '...' : ''}`,
-              `💰 Total: ${currSymbol}${(ticket.foreign_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`,
-              `💵 Tax: ${currSymbol}${(ticket.foreign_tax_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`,
+              `  Fecha: ${ticket.date || 'N/A'}`,
+              `  Archivo: ${(ticket.file_name || 'N/A').substring(0, 35)}${(ticket.file_name?.length > 35) ? '...' : ''}`,
+              `  Total: ${(ticket.foreign_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`,
+              `  Tax: ${(ticket.foreign_tax_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`,
             ];
             
             ticketInfo.forEach(info => {
@@ -278,7 +274,7 @@ const Statistics = () => {
             // IVA reclamable destacado
             doc.setFont(undefined, 'bold');
             doc.setTextColor(...colors.success);
-            doc.text(`✓ IVA Reclamable: ${(ticket.foreign_tax_eur || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 35, yPos);
+            doc.text(`> IVA Reclamable: ${(ticket.foreign_tax_eur || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 35, yPos);
             yPos += 8;
             doc.setTextColor(0, 0, 0);
           });
