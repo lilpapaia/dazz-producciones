@@ -103,6 +103,9 @@ const Statistics = () => {
     const doc = new jsPDF();
     const { overview, foreign_breakdown } = data;
     
+    // Debug
+    console.log('📄 Exportando PDF con:', { overview, foreign_breakdown });
+    
     // Helper para obtener símbolo de moneda
     const getCurrencySymbol = (currency) => {
       const symbols = {
@@ -114,9 +117,19 @@ const Statistics = () => {
       return symbols[currency] || currency;
     };
 
+    // Colores
+    const colors = {
+      primary: [245, 158, 11], // amber-500
+      secondary: [59, 130, 246], // blue-500
+      success: [34, 197, 94], // green-500
+      gray: [161, 161, 170], // zinc-400
+      darkGray: [82, 82, 91], // zinc-600
+    };
+
     let yPos = 20;
-    const lineHeight = 7;
+    const lineHeight = 6;
     const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.width;
 
     // Función para verificar si necesitamos nueva página
     const checkPageBreak = (requiredSpace) => {
@@ -128,137 +141,185 @@ const Statistics = () => {
       return false;
     };
 
-    // TÍTULO
-    doc.setFontSize(18);
-    doc.setFont(undefined, 'bold');
-    doc.text('INFORME IVA RECLAMABLE', 105, yPos, { align: 'center' });
-    yPos += 10;
-    
-    doc.setFontSize(12);
-    doc.text(`Año ${year}${quarter ? ` - Q${quarter}` : ''}`, 105, yPos, { align: 'center' });
-    yPos += 15;
+    // Función para dibujar caja con fondo
+    const drawBox = (x, y, w, h, fillColor) => {
+      doc.setFillColor(...fillColor);
+      doc.rect(x, y, w, h, 'F');
+    };
 
-    // RESUMEN
+    // =============== HEADER CON FONDO ===============
+    drawBox(0, 0, pageWidth, 45, [24, 24, 27]); // zinc-900
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.text('INFORME IVA RECLAMABLE', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Año ${year}${quarter ? ` - Q${quarter}` : ''}`, pageWidth / 2, 30, { align: 'center' });
+    
+    // Fecha generación
+    doc.setFontSize(9);
+    doc.setTextColor(...colors.gray);
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, pageWidth / 2, 38, { align: 'center' });
+    
+    yPos = 55;
+    doc.setTextColor(0, 0, 0);
+
+    // =============== RESUMEN CON CAJA ===============
+    checkPageBreak(45);
+    
+    // Caja fondo
+    drawBox(15, yPos - 5, pageWidth - 30, 40, [254, 243, 199]); // amber-100
+    
     doc.setFontSize(14);
     doc.setFont(undefined, 'bold');
-    doc.text('RESUMEN', 20, yPos);
-    yPos += 2;
+    doc.setTextColor(...colors.primary);
+    doc.text('RESUMEN', 20, yPos + 3);
+    yPos += 10;
     
-    doc.setLineWidth(0.5);
-    doc.line(20, yPos, 190, yPos);
-    yPos += 8;
-
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text(`Total Internacional: ${overview.international_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
-    yPos += lineHeight;
-    doc.text(`IVA Reclamable Total: ${overview.iva_reclamable.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
-    yPos += lineHeight;
-    doc.text(`Países/Regiones: ${foreign_breakdown.length}`, 25, yPos);
-    yPos += lineHeight;
-    doc.text(`Proyectos Afectados: ${foreign_breakdown.reduce((sum, c) => sum + c.projects_count, 0)}`, 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    
+    const resumeItems = [
+      `Total Internacional: ${overview.international_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`,
+      `IVA Reclamable: ${overview.iva_reclamable.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`,
+      `Países: ${foreign_breakdown.length}  |  Proyectos: ${foreign_breakdown.reduce((sum, c) => sum + c.projects_count, 0)}`
+    ];
+    
+    resumeItems.forEach(item => {
+      doc.text(item, 25, yPos);
+      yPos += lineHeight + 1;
+    });
+    
     yPos += 15;
 
-    // DESGLOSE POR PAÍS
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text('DESGLOSE POR PAÍS', 20, yPos);
-    yPos += 2;
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
+    // =============== DESGLOSE POR PAÍS ===============
+    foreign_breakdown.forEach((country, countryIndex) => {
+      checkPageBreak(60);
 
-    foreign_breakdown.forEach((country) => {
-      checkPageBreak(40);
-
-      // NOMBRE DEL PAÍS
-      doc.setFontSize(12);
+      // Caja país
+      drawBox(15, yPos - 5, pageWidth - 30, 12, [219, 234, 254]); // blue-100
+      
+      doc.setFontSize(13);
       doc.setFont(undefined, 'bold');
-      doc.text(`${country.country_name} (${country.currency})`, 20, yPos);
-      yPos += lineHeight;
+      doc.setTextColor(...colors.secondary);
+      doc.text(`🌍 ${country.country_name} (${country.currency})`, 20, yPos + 2);
+      yPos += 12;
 
       doc.setFontSize(9);
       doc.setFont(undefined, 'normal');
-      doc.text(`Clasificación: ${country.geo_classification}`, 25, yPos);
-      yPos += lineHeight - 1;
-      doc.text(`Total Gastado: ${country.total_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
-      yPos += lineHeight - 1;
-      doc.text(`IVA Reclamable: ${country.tax_reclamable_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
+      doc.setTextColor(...colors.darkGray);
+      doc.text(`Clasificación: ${country.geo_classification}  |  Total: ${country.total_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€  |  IVA Reclamable: ${country.tax_reclamable_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 20, yPos);
       yPos += 10;
+      doc.setTextColor(0, 0, 0);
 
       // PROYECTOS
-      country.projects.forEach((project) => {
-        checkPageBreak(30);
+      country.projects.forEach((project, projIndex) => {
+        checkPageBreak(40);
 
-        doc.setFontSize(10);
+        // Línea separadora
+        doc.setDrawColor(...colors.gray);
+        doc.setLineWidth(0.3);
+        doc.line(20, yPos, pageWidth - 20, yPos);
+        yPos += 6;
+
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text(`PROYECTO: ${project.creative_code} - ${project.description}`, 25, yPos);
-        yPos += lineHeight;
+        doc.text(`PROYECTO: ${project.creative_code} - ${project.description}`, 20, yPos);
+        yPos += 7;
 
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
-        doc.text(`Total Proyecto: ${project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 30, yPos);
+        doc.text(`Total Proyecto: ${project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
         yPos += 8;
 
         // TICKETS - SOLO INTERNACIONALES
         const internationalTickets = project.tickets ? project.tickets.filter(t => t.is_foreign === true) : [];
         
+        console.log(`📋 Proyecto ${project.creative_code}: ${internationalTickets.length} tickets internacionales de ${project.tickets?.length || 0} totales`);
+        
         if (internationalTickets.length > 0) {
           doc.setFont(undefined, 'bold');
-          doc.text(`TICKETS INTERNACIONALES (${internationalTickets.length}):`, 30, yPos);
-          yPos += lineHeight;
-          doc.setLineWidth(0.3);
-          doc.line(30, yPos, 190, yPos);
-          yPos += 5;
+          doc.setTextColor(...colors.success);
+          doc.text(`✓ TICKETS INTERNACIONALES (${internationalTickets.length}):`, 25, yPos);
+          yPos += 7;
+          doc.setTextColor(0, 0, 0);
 
           internationalTickets.forEach((ticket, index) => {
-            checkPageBreak(25);
+            checkPageBreak(30);
 
             const currSymbol = getCurrencySymbol(ticket.currency);
 
+            // Caja ticket
+            drawBox(28, yPos - 3, pageWidth - 56, 25, [249, 250, 251]); // gray-50
+            
+            doc.setFontSize(9);
             doc.setFont(undefined, 'bold');
-            doc.text(`${index + 1}. ${ticket.provider}`, 35, yPos);
-            yPos += lineHeight - 1;
+            doc.text(`${index + 1}. ${ticket.provider}`, 32, yPos + 2);
+            yPos += 6;
 
             doc.setFont(undefined, 'normal');
-            doc.text(`Fecha: ${ticket.date}`, 40, yPos);
-            yPos += lineHeight - 2;
+            doc.setFontSize(8);
             
-            // Archivo (truncar si es muy largo)
-            const fileName = ticket.file_name || 'N/A';
-            const truncatedFileName = fileName.length > 50 ? fileName.substring(0, 47) + '...' : fileName;
-            doc.text(`Archivo: ${truncatedFileName}`, 40, yPos);
-            yPos += lineHeight - 2;
+            const ticketInfo = [
+              `📅 Fecha: ${ticket.date || 'N/A'}`,
+              `📎 Archivo: ${(ticket.file_name || 'N/A').substring(0, 35)}${(ticket.file_name?.length > 35) ? '...' : ''}`,
+              `💰 Total: ${currSymbol}${(ticket.foreign_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`,
+              `💵 Tax: ${currSymbol}${(ticket.foreign_tax_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`,
+            ];
             
-            // Datos en moneda original (todos los tickets internacionales deberían tenerlos)
-            doc.text(`Total: ${currSymbol}${(ticket.foreign_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
-            yPos += lineHeight - 2;
-            doc.text(`Tax: ${currSymbol}${(ticket.foreign_tax_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
-            yPos += lineHeight - 2;
-            doc.text(`IVA Reclamable: ${(ticket.foreign_tax_eur || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 40, yPos);
-            yPos += lineHeight - 2;
+            ticketInfo.forEach(info => {
+              doc.text(info, 35, yPos);
+              yPos += 5;
+            });
             
-            yPos += 6;
+            // IVA reclamable destacado
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(...colors.success);
+            doc.text(`✓ IVA Reclamable: ${(ticket.foreign_tax_eur || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 35, yPos);
+            yPos += 8;
+            doc.setTextColor(0, 0, 0);
           });
+        } else {
+          doc.setFontSize(8);
+          doc.setTextColor(...colors.gray);
+          doc.text(`(No hay tickets internacionales en este proyecto)`, 25, yPos);
+          yPos += 6;
+          doc.setTextColor(0, 0, 0);
         }
 
-        yPos += 3;
+        yPos += 5;
       });
 
-      yPos += 5;
+      yPos += 8;
     });
 
-    // FOOTER en última página
+    // =============== FOOTER EN TODAS LAS PÁGINAS ===============
     const totalPages = doc.internal.getNumberOfPages();
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'italic');
+    
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} - Página ${i} de ${totalPages}`, 105, pageHeight - 10, { align: 'center' });
+      
+      // Línea superior footer
+      doc.setDrawColor(...colors.gray);
+      doc.setLineWidth(0.5);
+      doc.line(20, pageHeight - 15, pageWidth - 20, pageHeight - 15);
+      
+      // Texto footer
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'italic');
+      doc.setTextColor(...colors.darkGray);
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
     }
 
-    // Guardar PDF
+    // =============== GUARDAR PDF ===============
     const fileName = `Informe_IVA_${year}${quarter ? `_Q${quarter}` : ''}_${new Date().getTime()}.pdf`;
     doc.save(fileName);
+    
+    console.log('✅ PDF generado:', fileName);
   };
 
   if (loading) {
