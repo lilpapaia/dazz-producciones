@@ -275,17 +275,25 @@ const ReviewTicket = () => {
             )}
           </div>
 
-          {/* Botón eliminar en su propia fila */}
-          <div>
+          {/* Fila: Contador izquierda + Eliminar derecha */}
+          <div className="flex items-center justify-between">
+            {/* Contador de tickets - IZQUIERDA */}
+            {allTickets.length > 1 && currentTicketIndex >= 0 ? (
+              <span className="inline-flex items-center px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-sm text-xs font-mono text-amber-400">
+                Ticket {currentTicketIndex + 1}/{allTickets.length}
+              </span>
+            ) : (
+              <div></div>
+            )}
+
+            {/* Botón Eliminar - DERECHA */}
             <button
               onClick={() => setShowDeleteDialog(true)}
               disabled={deleting}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 
-                text-red-400 border border-red-500/30 rounded-sm transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Eliminar ticket"
             >
-              <Trash2 size={16} />
-              <span className="text-sm font-semibold">Eliminar</span>
+              <Trash2 size={20} />
             </button>
           </div>
         </div>
@@ -382,9 +390,17 @@ const ReviewTicket = () => {
           {/* LIGHTBOX */}
           {showLightbox && pages.length > 0 && (
             <div
-              className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+              className="fixed top-0 left-0 right-0 bottom-0 bg-black/95 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+              style={{ minHeight: '100vh', minHeight: '100dvh' }}
               onClick={() => setShowLightbox(false)}
             >
+              {/* Contador de tickets - Superior izquierda */}
+              {allTickets.length > 1 && currentTicketIndex >= 0 && (
+                <div className="absolute top-4 left-4 bg-zinc-900/80 px-4 py-2 rounded-full text-sm font-mono text-zinc-300 border border-zinc-700">
+                  Ticket {currentTicketIndex + 1} / {allTickets.length}
+                </div>
+              )}
+
               <button
                 onClick={(e) => { e.stopPropagation(); setShowLightbox(false); }}
                 className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
@@ -421,10 +437,10 @@ const ReviewTicket = () => {
                 </button>
               )}
 
-              {/* Contador lightbox */}
+              {/* Contador de páginas - Abajo centro */}
               {totalPages > 1 && (
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900/80 px-4 py-2 rounded-full text-sm font-mono text-zinc-300 border border-zinc-700">
-                  {currentPage + 1} / {totalPages}
+                  Página {currentPage + 1} / {totalPages}
                 </div>
               )}
             </div>
