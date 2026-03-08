@@ -199,16 +199,18 @@ const Statistics = () => {
         doc.text(`Total Proyecto: ${project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 30, yPos);
         yPos += 8;
 
-        // TICKETS
-        if (project.tickets && project.tickets.length > 0) {
+        // TICKETS - SOLO INTERNACIONALES
+        const internationalTickets = project.tickets ? project.tickets.filter(t => t.is_foreign === true) : [];
+        
+        if (internationalTickets.length > 0) {
           doc.setFont(undefined, 'bold');
-          doc.text(`TICKETS (${project.tickets.length}):`, 30, yPos);
+          doc.text(`TICKETS INTERNACIONALES (${internationalTickets.length}):`, 30, yPos);
           yPos += lineHeight;
           doc.setLineWidth(0.3);
           doc.line(30, yPos, 190, yPos);
           yPos += 5;
 
-          project.tickets.forEach((ticket, index) => {
+          internationalTickets.forEach((ticket, index) => {
             checkPageBreak(25);
 
             const currSymbol = getCurrencySymbol(ticket.currency);
@@ -227,12 +229,15 @@ const Statistics = () => {
             doc.text(`Archivo: ${truncatedFileName}`, 40, yPos);
             yPos += lineHeight - 2;
             
-            doc.text(`Total: ${currSymbol}${ticket.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
+            // Datos en moneda original (todos los tickets internacionales deberían tenerlos)
+            doc.text(`Total: ${currSymbol}${(ticket.foreign_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
             yPos += lineHeight - 2;
-            doc.text(`Tax: ${currSymbol}${ticket.foreign_tax_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
+            doc.text(`Tax: ${currSymbol}${(ticket.foreign_tax_amount || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
             yPos += lineHeight - 2;
-            doc.text(`IVA Reclamable: ${ticket.foreign_tax_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 40, yPos);
-            yPos += 8;
+            doc.text(`IVA Reclamable: ${(ticket.foreign_tax_eur || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 40, yPos);
+            yPos += lineHeight - 2;
+            
+            yPos += 6;
           });
         }
 
