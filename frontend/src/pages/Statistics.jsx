@@ -237,8 +237,7 @@ const Statistics = () => {
         yPos += 8;
 
         // TICKETS - SOLO INTERNACIONALES
-        const internationalTickets = project.tickets ? project.tickets.filter(t => t.is_foreign === true) : [];
-        
+        const internationalTickets = project.tickets || [];        
         console.log(`📋 Proyecto ${project.creative_code}: ${internationalTickets.length} tickets internacionales de ${project.tickets?.length || 0} totales`);
         
         if (internationalTickets.length > 0) {
