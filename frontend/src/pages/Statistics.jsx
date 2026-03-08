@@ -342,49 +342,203 @@ const Statistics = () => {
 
         {/* Sección Gastos Internacionales */}
         {foreign_breakdown.length > 0 && (
-          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-sm p-8">
+          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-sm p-4 sm:p-8">
             
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Globe size={28} className="text-blue-400" />
-                <h2 className="text-2xl font-bold text-blue-400">GASTOS INTERNACIONALES</h2>
+            {/* Header - Responsive */}
+            <div className="mb-6">
+              {/* Móvil: Centrado y compacto */}
+              <div className="flex flex-col items-center text-center sm:hidden gap-2">
+                <div className="flex items-center gap-2">
+                  <Globe size={20} className="text-blue-400" />
+                  <h2 className="text-lg font-bold text-blue-400">Gastos Internacionales</h2>
+                </div>
                 <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
                   IVA RECLAMABLE
                 </span>
               </div>
+              
+              {/* Desktop: Layout original */}
+              <div className="hidden sm:flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Globe size={28} className="text-blue-400" />
+                  <h2 className="text-2xl font-bold text-blue-400">GASTOS INTERNACIONALES</h2>
+                  <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
+                    IVA RECLAMABLE
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Mini stats */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
-              <div className="bg-zinc-900 border border-blue-500/30 rounded-sm p-4">
+            {/* Mini stats - 2x2 en móvil, 4 en fila en desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="bg-zinc-900 border border-blue-500/30 rounded-sm p-3 sm:p-4">
                 <p className="text-xs text-blue-300 font-semibold uppercase mb-1">Total Internacional</p>
-                <p className="text-2xl font-bold text-blue-400">
+                <p className="text-xl sm:text-2xl font-bold text-blue-400">
                   {overview.international_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
                 </p>
               </div>
-              <div className="bg-zinc-900 border border-green-500/30 rounded-sm p-4">
+              <div className="bg-zinc-900 border border-green-500/30 rounded-sm p-3 sm:p-4">
                 <p className="text-xs text-green-300 font-semibold uppercase mb-1">IVA Reclamable</p>
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-xl sm:text-2xl font-bold text-green-400">
                   {overview.iva_reclamable.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
                 </p>
               </div>
-              <div className="bg-zinc-900 border border-purple-500/30 rounded-sm p-4">
-                <p className="text-xs text-purple-300 font-semibold uppercase mb-1">Proyectos Afectados</p>
-                <p className="text-2xl font-bold text-purple-400">
+              <div className="bg-zinc-900 border border-purple-500/30 rounded-sm p-3 sm:p-4">
+                <p className="text-xs text-purple-300 font-semibold uppercase mb-1">Proyectos</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-400">
                   {foreign_breakdown.reduce((sum, country) => sum + country.projects_count, 0)}
                 </p>
               </div>
-              <div className="bg-zinc-900 border border-amber-500/30 rounded-sm p-4">
-                <p className="text-xs text-amber-300 font-semibold uppercase mb-1">Países/Regiones</p>
-                <p className="text-2xl font-bold text-amber-400">
+              <div className="bg-zinc-900 border border-amber-500/30 rounded-sm p-3 sm:p-4">
+                <p className="text-xs text-amber-300 font-semibold uppercase mb-1">Países</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-400">
                   {foreign_breakdown.length}
                 </p>
               </div>
             </div>
 
-            {/* Tabla expandible */}
-            <div className="bg-zinc-900 border border-zinc-700 rounded-sm overflow-hidden">
+            {/* Vista MÓVIL: Chips horizontales */}
+            <div className="sm:hidden space-y-4">
+              {foreign_breakdown.map((country) => {
+                const isExpanded = expandedCountries.has(country.country_code);
+                
+                return (
+                  <div key={country.country_code} className="bg-zinc-900 border border-zinc-700 rounded-sm overflow-hidden">
+                    {/* Chip del país - clickeable */}
+                    <div
+                      onClick={() => toggleCountry(country.country_code)}
+                      className="p-4 cursor-pointer active:bg-zinc-800 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? (
+                            <ChevronDown size={18} className="text-amber-500" />
+                          ) : (
+                            <ChevronRight size={18} className="text-zinc-600" />
+                          )}
+                          <span className="font-semibold text-lg">{country.country_name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            country.geo_classification === 'UE' 
+                              ? 'bg-blue-500/20 text-blue-400' 
+                              : 'bg-purple-500/20 text-purple-400'
+                          }`}>
+                            {country.geo_classification}
+                          </span>
+                        </div>
+                        <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-xs font-semibold">
+                          {country.currency}
+                        </span>
+                      </div>
+                      
+                      {/* Info resumida */}
+                      <div className="flex items-center justify-between text-sm">
+                        <div>
+                          <p className="text-zinc-500 text-xs">Total</p>
+                          <p className="font-semibold">{country.total_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-zinc-500 text-xs">IVA Reclamable</p>
+                          <p className="text-green-400 font-bold">{country.tax_reclamable_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-zinc-500 text-xs">Proyectos</p>
+                          <p className="font-semibold">{country.projects_count}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contenido expandido - Proyectos */}
+                    {isExpanded && (
+                      <div className="border-t border-zinc-800 bg-zinc-950 p-4 space-y-3">
+                        <p className="text-xs text-zinc-500 font-semibold uppercase">
+                          Proyectos ({country.projects_count}):
+                        </p>
+                        
+                        {country.projects.map((project) => {
+                          const isProjectExpanded = expandedProjects.has(project.id);
+                          
+                          return (
+                            <div key={project.id} className="space-y-2">
+                              {/* Card del proyecto */}
+                              <div
+                                onClick={() => toggleProject(project.id)}
+                                className="bg-zinc-900 border border-zinc-800 rounded-sm p-3 active:bg-zinc-800 transition-colors"
+                              >
+                                <div className="flex items-start gap-2">
+                                  {isProjectExpanded ? (
+                                    <ChevronDown size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                                  ) : (
+                                    <ChevronRight size={16} className="text-zinc-600 mt-0.5 flex-shrink-0" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm">{project.description}</p>
+                                    <p className="text-xs text-zinc-500 font-mono mt-1">{project.creative_code}</p>
+                                    <div className="flex items-center justify-between mt-2">
+                                      <span className="text-xs bg-zinc-800 px-2 py-0.5 rounded">
+                                        {project.tickets?.length || 0} ticket{project.tickets?.length !== 1 ? 's' : ''}
+                                      </span>
+                                      <div className="text-right">
+                                        <p className="font-bold text-amber-500">{project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</p>
+                                        {project.foreign_amount && (
+                                          <p className="text-xs text-zinc-500">
+                                            ({project.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} {project.currency})
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Tickets del proyecto */}
+                              {isProjectExpanded && project.tickets && project.tickets.length > 0 && (
+                                <div className="ml-4 space-y-2">
+                                  <p className="text-xs text-zinc-600 font-semibold uppercase">
+                                    📄 Tickets ({project.tickets.length}):
+                                  </p>
+                                  {project.tickets.map((ticket) => (
+                                    <div
+                                      key={ticket.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/tickets/${ticket.id}/review?filter=international&project=${project.id}`);
+                                      }}
+                                      className="bg-zinc-900/50 border border-zinc-800 rounded-sm p-3 active:border-blue-500 transition-colors"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0 pr-2">
+                                          <p className="text-sm font-medium truncate">{ticket.provider}</p>
+                                          <p className="text-xs text-zinc-500 mt-0.5">
+                                            {ticket.date} • {ticket.invoice_number || 'N/A'}
+                                          </p>
+                                        </div>
+                                        <div className="text-right flex-shrink-0">
+                                          <p className="text-sm font-bold text-blue-400">
+                                            {ticket.final_total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                                          </p>
+                                          {ticket.foreign_amount && (
+                                            <p className="text-xs text-zinc-500">
+                                              {ticket.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} {ticket.currency}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Vista DESKTOP: Tabla (original) - Oculta en móvil */}
+            <div className="hidden sm:block bg-zinc-900 border border-zinc-700 rounded-sm overflow-hidden">
               
               {/* Header tabla */}
               <div className="bg-zinc-800 px-6 py-4 flex items-center justify-between border-b border-zinc-700">
