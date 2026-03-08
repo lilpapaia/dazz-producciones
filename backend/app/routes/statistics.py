@@ -83,34 +83,36 @@ async def get_statistics_overview(
     - geo_filter: Filtrar por geografía (NACIONAL, UE, INTERNACIONAL)
     """
     
-    # Base query para tickets del año
-    query = db.query(Ticket).join(Project).filter(
+    # Base query para tickets del año (SIN geo_filter para calcular internacionales)
+    all_tickets_query = db.query(Ticket).join(Project).filter(
         Project.year == str(year)
     )
     
-    # Filtrar por geografía si se especifica
-    if geo_filter:
-        query = query.filter(Ticket.geo_classification == geo_filter)
-    
-    tickets = query.all()
+    all_tickets = all_tickets_query.all()
     
     # Filtrar por trimestre si se especifica (en memoria, porque date es string DD/MM/YYYY)
     if quarter:
-        tickets = filter_tickets_by_quarter(tickets, quarter)
+        all_tickets = filter_tickets_by_quarter(all_tickets, quarter)
     
-    # Calcular totales
-    total_spent = sum(ticket.final_total for ticket in tickets)
-    
-    # Gastos internacionales (UE + INTERNACIONAL)
-    international_tickets = [t for t in tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
+    # Calcular gastos internacionales (UE + INTERNACIONAL) - SIEMPRE de todos los tickets
+    international_tickets = [t for t in all_tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
     international_spent = sum(ticket.final_total for ticket in international_tickets)
     
-    # IVA reclamable (solo tickets internacionales con foreign_tax_eur)
+    # IVA reclamable (solo tickets internacionales con foreign_tax_eur) - SIEMPRE de todos
     iva_reclamable = sum(
         ticket.foreign_tax_eur or 0.0 
         for ticket in international_tickets 
         if ticket.foreign_tax_eur
     )
+    
+    # AHORA SÍ aplicar geo_filter solo para total_spent
+    if geo_filter:
+        filtered_tickets = [t for t in all_tickets if t.geo_classification == geo_filter]
+    else:
+        filtered_tickets = all_tickets
+    
+    # Calcular total_spent con filtro geo aplicado
+    total_spent = sum(ticket.final_total for ticket in filtered_tickets)
     
     # Contar proyectos
     projects_query = db.query(Project).filter(Project.year == str(year))
