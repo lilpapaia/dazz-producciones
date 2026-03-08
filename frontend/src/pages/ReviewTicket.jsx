@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTicket, updateTicket, deleteTicket, getProjectTickets } from '../services/api';
 import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
@@ -34,10 +34,28 @@ const ReviewTicket = () => {
   const [allTickets, setAllTickets] = useState([]);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
 
+  // Refs para detección de swipe
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
   useEffect(() => { 
     loadTicket(); 
     setCurrentPage(0);
   }, [id]);
+
+  // Bloquear scroll cuando se abre el lightbox
+  useEffect(() => {
+    if (showLightbox) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup al desmontar
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showLightbox]);
 
   const loadTicket = async () => {
     try {
@@ -153,6 +171,31 @@ const ReviewTicket = () => {
   console.log('Páginas finales:', pages);
   console.log('Total páginas:', totalPages);
   console.log('Página actual:', currentPage);
+
+  // Detectar swipe en móvil para cambiar de foto
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    handleSwipe();
+  };
+
+  const handleSwipe = () => {
+    const swipeThreshold = 50; // mínimo 50px para considerar swipe
+    const diff = touchStartX.current - touchEndX.current;
+
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0 && currentPage < totalPages - 1) {
+        // Swipe izquierda → siguiente foto
+        setCurrentPage(p => p + 1);
+      } else if (diff < 0 && currentPage > 0) {
+        // Swipe derecha → foto anterior
+        setCurrentPage(p => p - 1);
+      }
+    }
+  };
 
   // Funciones de navegación entre tickets
   const hasPrevTicket = currentTicketIndex > 0;
@@ -344,16 +387,16 @@ const ReviewTicket = () => {
             >
               <button
                 onClick={(e) => { e.stopPropagation(); setShowLightbox(false); }}
-                className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700"
+                className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
               >
                 <X size={32} />
               </button>
 
-              {/* Flecha izquierda lightbox */}
+              {/* Flecha izquierda lightbox - SOLO DESKTOP */}
               {totalPages > 1 && currentPage > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setCurrentPage(p => p - 1); }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700"
+                  className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center"
                 >
                   <ChevronLeft size={28} />
                 </button>
@@ -362,15 +405,17 @@ const ReviewTicket = () => {
               <img
                 src={pages[currentPage]}
                 alt={`Página ${currentPage + 1}`}
-                className="max-w-full max-h-[90vh] object-contain shadow-2xl"
+                className="max-w-full max-h-[90vh] object-contain shadow-2xl select-none"
                 onClick={(e) => e.stopPropagation()}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
               />
 
-              {/* Flecha derecha lightbox */}
+              {/* Flecha derecha lightbox - SOLO DESKTOP */}
               {totalPages > 1 && currentPage < totalPages - 1 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setCurrentPage(p => p + 1); }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700"
+                  className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center"
                 >
                   <ChevronRight size={28} />
                 </button>
