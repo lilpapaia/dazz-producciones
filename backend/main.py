@@ -1,12 +1,25 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import os
 
 
 from database_config import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics
+
+# ============================================
+# 🔒 RATE LIMITING
+# ============================================
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    headers_enabled=True
+)
 
 # Create FastAPI app
 app = FastAPI(
@@ -15,6 +28,10 @@ app = FastAPI(
     version="1.0.0",
     redirect_slashes=False
 )
+
+# Añadir limiter al state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ============================================
 # 🔒 CONFIGURACIÓN SEGURA DE CORS
@@ -37,7 +54,7 @@ if ENVIRONMENT == "development":
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # ✅ Solo dominios específicos
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,7 +73,8 @@ app.include_router(users.router)
 app.include_router(statistics.router)
 
 @app.get("/")
-async def root():
+@limiter.limit("10 per minute")  # Límite específico para este endpoint
+async def root(request: Request):
     return {
         "message": "Dazz Creative - API Sistema Gestión Gastos",
         "version": "1.0.0",
@@ -65,7 +83,8 @@ async def root():
     }
 
 @app.get("/health")
-async def health_check():
+@limiter.limit("30 per minute")
+async def health_check(request: Request):
     return {"status": "healthy"}
 
 
@@ -74,13 +93,18 @@ async def health_check():
 # ============================================
 if ENVIRONMENT == "development":
     @app.get("/test-brevo")
-    async def test_brevo():
+    @limiter.limit("5 per hour")
+    async def test_brevo(request: Request):
         """Prueba la conexión con Brevo API."""
         from app.services.email import test_brevo_connection
         return test_brevo_connection()
 
     @app.get("/test-brevo/send")
-    async def test_brevo_send(email_to: str = Query(..., alias="email", description="Email destino")):
+    @limiter.limit("3 per hour")
+    async def test_brevo_send(
+        request: Request,
+        email_to: str = Query(..., alias="email", description="Email destino")
+    ):
         """Envía un email de prueba con Brevo."""
         from app.services.email import send_email
         
@@ -111,6 +135,7 @@ async def startup_event():
     print("✅ Base de datos inicializada")
     print(f"🔒 Modo: {ENVIRONMENT}")
     print(f"🌐 CORS permitido para: {ALLOWED_ORIGINS}")
+    print(f"🛡️ Rate limiting: Activo (200/día, 50/hora)")
 
 if __name__ == "__main__":
     import uvicorn
