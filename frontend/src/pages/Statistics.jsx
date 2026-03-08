@@ -397,6 +397,14 @@ const Statistics = () => {
               </div>
             </div>
 
+            {/* Botón Exportar - Solo en móvil, debajo de las stats */}
+            <div className="sm:hidden mb-6">
+              <button className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-4 py-3 rounded-sm text-sm font-bold transition-colors">
+                <Download size={16} />
+                Exportar Informe IVA
+              </button>
+            </div>
+
             {/* Vista MÓVIL: Chips horizontales */}
             <div className="sm:hidden space-y-4">
               {foreign_breakdown.map((country) => {
@@ -409,28 +417,31 @@ const Statistics = () => {
                       onClick={() => toggleCountry(country.country_code)}
                       className="p-4 cursor-pointer active:bg-zinc-800 transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {isExpanded ? (
-                            <ChevronDown size={18} className="text-amber-500" />
-                          ) : (
-                            <ChevronRight size={18} className="text-zinc-600" />
-                          )}
-                          <span className="font-semibold text-lg">{country.country_name}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            country.geo_classification === 'UE' 
-                              ? 'bg-blue-500/20 text-blue-400' 
-                              : 'bg-purple-500/20 text-purple-400'
-                          }`}>
-                            {country.geo_classification}
-                          </span>
-                        </div>
+                      {/* Línea 1: Chevron + Nombre del país */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {isExpanded ? (
+                          <ChevronDown size={18} className="text-amber-500" />
+                        ) : (
+                          <ChevronRight size={18} className="text-zinc-600" />
+                        )}
+                        <span className="font-semibold text-lg">{country.country_name}</span>
+                      </div>
+
+                      {/* Línea 2: Badges (Clasificación + Divisa) */}
+                      <div className="flex items-center gap-2 mb-3 ml-6">
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          country.geo_classification === 'UE' 
+                            ? 'bg-blue-500/20 text-blue-400' 
+                            : 'bg-purple-500/20 text-purple-400'
+                        }`}>
+                          {country.geo_classification}
+                        </span>
                         <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-xs font-semibold">
                           {country.currency}
                         </span>
                       </div>
                       
-                      {/* Info resumida */}
+                      {/* Línea 3: Info resumida */}
                       <div className="flex items-center justify-between text-sm">
                         <div>
                           <p className="text-zinc-500 text-xs">Total</p>
