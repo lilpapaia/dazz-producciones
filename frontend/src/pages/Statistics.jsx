@@ -571,24 +571,38 @@ const Statistics = () => {
             {/* Header - Responsive */}
             <div className="mb-6">
               {/* Móvil: Centrado y compacto */}
-              <div className="flex flex-col items-center text-center sm:hidden gap-2">
-                <div className="flex items-center gap-2">
-                  <Globe size={20} className="text-blue-400" />
-                  <h2 className="text-lg font-bold text-blue-400">Gastos Internacionales</h2>
-                </div>
-                <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
-                  IVA RECLAMABLE
-                </span>
-              </div>
-              
-              {/* Desktop: Layout original */}
-              <div className="hidden sm:flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Globe size={28} className="text-blue-400" />
-                  <h2 className="text-2xl font-bold text-blue-400">GASTOS INTERNACIONALES</h2>
-                  <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
+              <div className="flex flex-col items-center text-center sm:hidden gap-3">
+                <h2 className="text-lg font-bold text-blue-400">GASTOS INTERNACIONALES</h2>
+                <div className="flex items-center gap-2 flex-wrap justify-center">
+                  <span className="bg-amber-500 text-zinc-950 text-xs font-bold px-3 py-1 rounded">
                     IVA RECLAMABLE
                   </span>
+                  <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
+                    {year}
+                  </span>
+                  {quarter && quarter !== '' && (
+                    <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
+                      Q{quarter}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Desktop: Layout con badges */}
+              <div className="hidden sm:block">
+                <h2 className="text-2xl font-bold text-blue-400 mb-3">GASTOS INTERNACIONALES</h2>
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-500 text-zinc-950 text-xs font-bold px-3 py-1 rounded">
+                    IVA RECLAMABLE
+                  </span>
+                  <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
+                    {year}
+                  </span>
+                  {quarter && quarter !== '' && (
+                    <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded">
+                      Q{quarter}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
