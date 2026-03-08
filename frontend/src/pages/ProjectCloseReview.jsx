@@ -109,13 +109,43 @@ const ProjectCloseReview = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate(`/projects/${id}`)}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3"
+            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-4"
           >
             <ArrowLeft size={18} />
             <span className="text-sm">Volver al Proyecto</span>
           </button>
 
-          <div className="flex items-center justify-between">
+          {/* Layout Móvil: Todo vertical */}
+          <div className="sm:hidden">
+            {/* Título */}
+            <h1 className="text-2xl font-bebas tracking-wider mb-4">
+              REVISAR ANTES DE CERRAR
+            </h1>
+            
+            {/* Código */}
+            <p className="text-sm text-zinc-400 font-mono mb-1">
+              {project.creative_code}
+            </p>
+            
+            {/* Nombre */}
+            <p className="text-zinc-300 mb-6">
+              • {project.description}
+            </p>
+            
+            {/* Total */}
+            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-sm p-4">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet size={20} className="text-green-400" />
+                <span className="text-sm text-zinc-400 uppercase">Total Proyecto</span>
+              </div>
+              <span className="text-2xl font-bold text-amber-500">
+                {totalAmount.toFixed(2)}€
+              </span>
+            </div>
+          </div>
+
+          {/* Layout Desktop: Original mejorado */}
+          <div className="hidden sm:flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bebas tracking-wider mb-2">REVISAR ANTES DE CERRAR</h1>
               <p className="text-zinc-400">{project.creative_code} • {project.description}</p>
