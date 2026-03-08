@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, DollarSign, Globe, Building2, BarChart3, ChevronDown, ChevronRight, Download, FileText } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getCompleteStatistics, getAvailableYears } from '../services/api';
+import jsPDF from 'jspdf';
 
 const Statistics = () => {
   const navigate = useNavigate();
@@ -91,6 +92,168 @@ const Statistics = () => {
       newExpanded.add(projectId);
     }
     setExpandedProjects(newExpanded);
+  };
+
+  const exportPDFReport = () => {
+    if (!data || !data.foreign_breakdown || data.foreign_breakdown.length === 0) {
+      alert('No hay datos internacionales para exportar');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { overview, foreign_breakdown } = data;
+    
+    // Helper para obtener símbolo de moneda
+    const getCurrencySymbol = (currency) => {
+      const symbols = {
+        'USD': '$',
+        'GBP': '£',
+        'JPY': '¥',
+        'EUR': '€'
+      };
+      return symbols[currency] || currency;
+    };
+
+    let yPos = 20;
+    const lineHeight = 7;
+    const pageHeight = doc.internal.pageSize.height;
+
+    // Función para verificar si necesitamos nueva página
+    const checkPageBreak = (requiredSpace) => {
+      if (yPos + requiredSpace > pageHeight - 20) {
+        doc.addPage();
+        yPos = 20;
+        return true;
+      }
+      return false;
+    };
+
+    // TÍTULO
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text('INFORME IVA RECLAMABLE', 105, yPos, { align: 'center' });
+    yPos += 10;
+    
+    doc.setFontSize(12);
+    doc.text(`Año ${year}${quarter ? ` - Q${quarter}` : ''}`, 105, yPos, { align: 'center' });
+    yPos += 15;
+
+    // RESUMEN
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('RESUMEN', 20, yPos);
+    yPos += 2;
+    
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, 190, yPos);
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Total Internacional: ${overview.international_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
+    yPos += lineHeight;
+    doc.text(`IVA Reclamable Total: ${overview.iva_reclamable.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
+    yPos += lineHeight;
+    doc.text(`Países/Regiones: ${foreign_breakdown.length}`, 25, yPos);
+    yPos += lineHeight;
+    doc.text(`Proyectos Afectados: ${foreign_breakdown.reduce((sum, c) => sum + c.projects_count, 0)}`, 25, yPos);
+    yPos += 15;
+
+    // DESGLOSE POR PAÍS
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('DESGLOSE POR PAÍS', 20, yPos);
+    yPos += 2;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+
+    foreign_breakdown.forEach((country) => {
+      checkPageBreak(40);
+
+      // NOMBRE DEL PAÍS
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${country.country_name} (${country.currency})`, 20, yPos);
+      yPos += lineHeight;
+
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Clasificación: ${country.geo_classification}`, 25, yPos);
+      yPos += lineHeight - 1;
+      doc.text(`Total Gastado: ${country.total_spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
+      yPos += lineHeight - 1;
+      doc.text(`IVA Reclamable: ${country.tax_reclamable_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 25, yPos);
+      yPos += 10;
+
+      // PROYECTOS
+      country.projects.forEach((project) => {
+        checkPageBreak(30);
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(`PROYECTO: ${project.creative_code} - ${project.description}`, 25, yPos);
+        yPos += lineHeight;
+
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Total Proyecto: ${project.total_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 30, yPos);
+        yPos += 8;
+
+        // TICKETS
+        if (project.tickets && project.tickets.length > 0) {
+          doc.setFont(undefined, 'bold');
+          doc.text(`TICKETS (${project.tickets.length}):`, 30, yPos);
+          yPos += lineHeight;
+          doc.setLineWidth(0.3);
+          doc.line(30, yPos, 190, yPos);
+          yPos += 5;
+
+          project.tickets.forEach((ticket, index) => {
+            checkPageBreak(25);
+
+            const currSymbol = getCurrencySymbol(ticket.currency);
+
+            doc.setFont(undefined, 'bold');
+            doc.text(`${index + 1}. ${ticket.provider}`, 35, yPos);
+            yPos += lineHeight - 1;
+
+            doc.setFont(undefined, 'normal');
+            doc.text(`Fecha: ${ticket.date}`, 40, yPos);
+            yPos += lineHeight - 2;
+            
+            // Archivo (truncar si es muy largo)
+            const fileName = ticket.file_name || 'N/A';
+            const truncatedFileName = fileName.length > 50 ? fileName.substring(0, 47) + '...' : fileName;
+            doc.text(`Archivo: ${truncatedFileName}`, 40, yPos);
+            yPos += lineHeight - 2;
+            
+            doc.text(`Total: ${currSymbol}${ticket.foreign_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
+            yPos += lineHeight - 2;
+            doc.text(`Tax: ${currSymbol}${ticket.foreign_tax_amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${ticket.currency}`, 40, yPos);
+            yPos += lineHeight - 2;
+            doc.text(`IVA Reclamable: ${ticket.foreign_tax_eur.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 40, yPos);
+            yPos += 8;
+          });
+        }
+
+        yPos += 3;
+      });
+
+      yPos += 5;
+    });
+
+    // FOOTER en última página
+    const totalPages = doc.internal.getNumberOfPages();
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'italic');
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} - Página ${i} de ${totalPages}`, 105, pageHeight - 10, { align: 'center' });
+    }
+
+    // Guardar PDF
+    const fileName = `Informe_IVA_${year}${quarter ? `_Q${quarter}` : ''}_${new Date().getTime()}.pdf`;
+    doc.save(fileName);
   };
 
   if (loading) {
@@ -399,7 +562,10 @@ const Statistics = () => {
 
             {/* Botón Exportar - Solo en móvil, debajo de las stats */}
             <div className="sm:hidden mb-6">
-              <button className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-4 py-3 rounded-sm text-sm font-bold transition-colors">
+              <button 
+                onClick={exportPDFReport}
+                className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-4 py-3 rounded-sm text-sm font-bold transition-colors"
+              >
                 <Download size={16} />
                 Exportar Informe IVA
               </button>
@@ -554,7 +720,10 @@ const Statistics = () => {
               {/* Header tabla */}
               <div className="bg-zinc-800 px-6 py-4 flex items-center justify-between border-b border-zinc-700">
                 <h3 className="font-semibold">Desglose por País/Divisa (Click para ver proyectos)</h3>
-                <button className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-4 py-2 rounded-sm text-sm font-bold transition-colors">
+                <button 
+                  onClick={exportPDFReport}
+                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-4 py-2 rounded-sm text-sm font-bold transition-colors"
+                >
                   <Download size={16} />
                   Exportar Informe IVA
                 </button>
