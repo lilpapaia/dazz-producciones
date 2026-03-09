@@ -4,7 +4,7 @@ from typing import List
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import User, Project
+from app.models.database import User, Project, Company, UserCompany  # ← AÑADIDO Company, UserCompany
 from app.services.auth import get_current_admin_user, get_password_hash
 
 # LOGGING CRÍTICO
@@ -12,12 +12,12 @@ from app.services.critical_logger import log_user_deleted, log_role_changed
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.get("", response_model=List[schemas.UserResponse])  # ← Sin "/" 
+@router.get("", response_model=List[schemas.UserResponse])
 async def get_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    """Get all users (admin only)"""
+    """Get all users (admin only) - Ahora incluye sus empresas"""
     users = db.query(User).all()
     return users
 
@@ -27,7 +27,7 @@ async def get_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    """Get user by ID (admin only)"""
+    """Get user by ID (admin only) - Ahora incluye sus empresas"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -40,10 +40,24 @@ async def update_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    """Update user (admin only)"""
+    """
+    Update user (admin only)
+    
+    NUEVO: Ahora gestiona las empresas asignadas al usuario
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Validar que las empresas existan
+    if user_update.company_ids:
+        for company_id in user_update.company_ids:
+            company = db.query(Company).filter(Company.id == company_id).first()
+            if not company:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Empresa con ID {company_id} no encontrada"
+                )
     
     # Detectar cambio de rol
     role_changed = False
@@ -55,12 +69,29 @@ async def update_user(
         old_role = user.role
         new_role = user_update.role
     
+    # Actualizar datos básicos
     user.name = user_update.name
     user.email = user_update.email
     user.role = user_update.role
     
     if user_update.password:
         user.hashed_password = get_password_hash(user_update.password)
+    
+    # Actualizar empresas asignadas
+    # 1. Borrar todas las relaciones actuales
+    db.query(UserCompany).filter(UserCompany.user_id == user_id).delete()
+    
+    # 2. Crear nuevas relaciones
+    if user_update.company_ids:
+        for company_id in user_update.company_ids:
+            user_company = UserCompany(
+                user_id=user_id,
+                company_id=company_id
+            )
+            db.add(user_company)
+        print(f"✅ {len(user_update.company_ids)} empresa(s) asignada(s) a {user.email}")
+    else:
+        print(f"⚠️ Usuario {user.email} actualizado SIN empresas asignadas")
     
     db.commit()
     db.refresh(user)
@@ -87,6 +118,9 @@ async def delete_user(
     
     OPCIÓN 2: Impedir borrar si tiene proyectos
     El usuario debe borrar/reasignar proyectos primero
+    
+    NOTA: Las relaciones en user_companies se borrarán automáticamente
+    gracias a ON DELETE CASCADE
     """
     # Verificar que no sea el propio admin
     if user_id == current_user.id:
@@ -123,6 +157,7 @@ async def delete_user(
     user_role = user.role
     
     # Si no tiene proyectos, borrar usuario
+    # Las relaciones en user_companies se borrarán automáticamente (ON DELETE CASCADE)
     db.delete(user)
     db.commit()
     
@@ -134,7 +169,7 @@ async def delete_user(
         admin_email=current_user.email
     )
     
-    print(f"✅ Usuario {user_email} eliminado correctamente")
+    print(f"✅ Usuario {user_email} eliminado correctamente (y sus asignaciones de empresas)")
     
     return {
         "message": f"Usuario {user_email} eliminado correctamente"

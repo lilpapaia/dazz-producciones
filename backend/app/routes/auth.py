@@ -6,7 +6,7 @@ import string
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import User, PasswordResetToken
+from app.models.database import User, PasswordResetToken, Company, UserCompany  # ← AÑADIDO Company, UserCompany
 from app.services.auth import (
     authenticate_user,
     create_access_token,
@@ -37,8 +37,10 @@ async def register(
     
     IMPORTANTE: Este endpoint SIEMPRE devuelve el usuario creado,
     incluso si falla el envío del email. El admin puede reenviar el email manualmente.
+    
+    NUEVO: Ahora asigna empresas al usuario según company_ids
     """
-    print(f"📝 Intentando crear usuario: {user.email}, role: {user.role}")
+    print(f"📝 Intentando crear usuario: {user.email}, role: {user.role}, empresas: {user.company_ids}")
     
     # Verificar si el email ya existe
     db_user = db.query(User).filter(User.email == user.email).first()
@@ -59,6 +61,16 @@ async def register(
                 detail="Username already taken"
             )
     
+    # Validar que las empresas existan
+    if user.company_ids:
+        for company_id in user.company_ids:
+            company = db.query(Company).filter(Company.id == company_id).first()
+            if not company:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Empresa con ID {company_id} no encontrada"
+                )
+    
     # Crear usuario en BD
     try:
         hashed_password = get_password_hash(user.password)
@@ -77,6 +89,20 @@ async def register(
         db.refresh(db_user)
         
         print(f"✅ Usuario creado exitosamente: {user.email} (ID: {db_user.id})")
+        
+        # Asignar empresas al usuario
+        if user.company_ids:
+            for company_id in user.company_ids:
+                user_company = UserCompany(
+                    user_id=db_user.id,
+                    company_id=company_id
+                )
+                db.add(user_company)
+            
+            db.commit()
+            print(f"✅ {len(user.company_ids)} empresa(s) asignada(s) al usuario {user.email}")
+        else:
+            print(f"⚠️ Usuario creado SIN empresas asignadas: {user.email}")
         
     except Exception as e:
         db.rollback()
@@ -138,6 +164,9 @@ async def register(
         print(f"⚠️ Usuario creado + Token generado, pero email NO enviado: {user.email}")
     else:
         print(f"⚠️ Usuario creado pero sin token/email: {user.email}")
+    
+    # Refrescar para obtener las relaciones (empresas)
+    db.refresh(db_user)
     
     # SIEMPRE devolver el usuario creado (esto es lo importante)
     return db_user
@@ -306,7 +335,7 @@ async def register_first_admin(user: schemas.UserCreate, db: Session = Depends(g
         email=user.email,
         username=user.username,
         hashed_password=hashed_password, 
-        role="admin"
+        role="ADMIN"  # ← En mayúsculas
     )
     db.add(db_user)
     db.commit()
