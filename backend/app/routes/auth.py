@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
 import secrets
 import string
-
 
 from config.database import get_db
 from app.models import schemas
@@ -16,6 +15,9 @@ from app.services.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from app.services.email import send_set_password_email, send_forgot_password_email
+
+# LOGGING CRÍTICO
+from app.services.critical_logger import log_login_failed
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -140,18 +142,44 @@ async def register(
     # SIEMPRE devolver el usuario creado (esto es lo importante)
     return db_user
 
+
 @router.post("/login", response_model=schemas.Token)
-async def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+async def login(
+    user_credentials: schemas.UserLogin,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Login con logging crítico de intentos fallidos"""
+    
+    # Intentar autenticar
     user = authenticate_user(db, user_credentials.identifier, user_credentials.password)
+    
     if not user:
+        # Obtener IP del cliente
+        client_ip = request.client.host if request.client else "unknown"
+        
+        # LOGGING CRÍTICO AMARILLO - Login fallido
+        log_login_failed(
+            identifier=user_credentials.identifier,
+            ip_address=client_ip,
+            reason="Credenciales inválidas"
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Login exitoso - crear token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
+    access_token = create_access_token(
+        data={"sub": user.email},
+        expires_delta=access_token_expires
+    )
+    
     return {"access_token": access_token, "token_type": "bearer", "user": user}
+
 
 @router.post("/set-password", response_model=schemas.SetPasswordResponse)
 async def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_db)):
@@ -264,12 +292,14 @@ async def forgot_password(request: schemas.ForgotPasswordRequest, db: Session = 
 
 @router.post("/register-first-admin", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_first_admin(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """Crear primer admin (solo funciona si no hay usuarios)"""
     existing_users = db.query(User).count()
     if existing_users > 0:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Users already exist. Use regular registration."
         )
+    
     hashed_password = get_password_hash(user.password)
     db_user = User(
         name=user.name, 

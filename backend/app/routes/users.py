@@ -7,6 +7,9 @@ from app.models import schemas
 from app.models.database import User, Project
 from app.services.auth import get_current_admin_user, get_password_hash
 
+# LOGGING CRÍTICO
+from app.services.critical_logger import log_user_deleted, log_role_changed
+
 router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("", response_model=List[schemas.UserResponse])  # ← Sin "/" 
@@ -42,6 +45,16 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Detectar cambio de rol
+    role_changed = False
+    old_role = None
+    new_role = None
+    
+    if user.role != user_update.role:
+        role_changed = True
+        old_role = user.role
+        new_role = user_update.role
+    
     user.name = user_update.name
     user.email = user_update.email
     user.role = user_update.role
@@ -51,6 +64,16 @@ async def update_user(
     
     db.commit()
     db.refresh(user)
+    
+    # LOGGING CRÍTICO AMARILLO - Cambio de rol (si hubo)
+    if role_changed:
+        log_role_changed(
+            target_user_email=user.email,
+            old_role=old_role,
+            new_role=new_role,
+            admin_email=current_user.email
+        )
+    
     return user
 
 @router.delete("/{user_id}")
@@ -95,12 +118,24 @@ async def delete_user(
             detail=f"No se puede borrar este usuario porque tiene {len(user_projects)} proyecto(s) asignado(s).\n\nPrimero debes borrar o reasignar sus proyectos:\n{projects_text}"
         )
     
+    # Guardar info ANTES de eliminar (para logging)
+    user_email = user.email
+    user_role = user.role
+    
     # Si no tiene proyectos, borrar usuario
     db.delete(user)
     db.commit()
     
-    print(f"✅ Usuario {user.email} eliminado correctamente")
+    # LOGGING CRÍTICO AMARILLO - Usuario eliminado
+    log_user_deleted(
+        user_id=user_id,
+        user_email=user_email,
+        user_role=user_role,
+        admin_email=current_user.email
+    )
+    
+    print(f"✅ Usuario {user_email} eliminado correctamente")
     
     return {
-        "message": f"Usuario {user.email} eliminado correctamente"
+        "message": f"Usuario {user_email} eliminado correctamente"
     }
