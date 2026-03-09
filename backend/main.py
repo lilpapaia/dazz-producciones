@@ -9,7 +9,7 @@ import os
 
 from database_config import engine
 from app.models.database import Base
-from app.routes import users, auth, projects, tickets, statistics
+from app.routes import users, auth, projects, tickets, statistics, companies  # ← AÑADIDO companies
 
 # ============================================
 # 🔒 RATE LIMITING
@@ -25,7 +25,7 @@ limiter = Limiter(
 app = FastAPI(
     title="Dazz Creative - Sistema Gestión Gastos",
     description="API para gestión de proyectos y tickets/facturas con IA",
-    version="1.0.0",
+    version="2.0.0",  # ← ACTUALIZADO versión
     redirect_slashes=False
 )
 
@@ -71,13 +71,14 @@ app.include_router(projects.router)
 app.include_router(tickets.router)
 app.include_router(users.router)
 app.include_router(statistics.router)
+app.include_router(companies.router)  # ← AÑADIDO router companies
 
 @app.get("/")
 @limiter.limit("10 per minute")  # Límite específico para este endpoint
 async def root(request: Request):
     return {
         "message": "Dazz Creative - API Sistema Gestión Gastos",
-        "version": "1.0.0",
+        "version": "2.0.0",  # ← ACTUALIZADO versión
         "status": "running",
         "environment": ENVIRONMENT
     }
