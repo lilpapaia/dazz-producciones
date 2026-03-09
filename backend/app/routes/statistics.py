@@ -511,13 +511,20 @@ async def get_all_companies_statistics(
     # Foreign breakdown agrupado por empresa
     breakdown = await get_foreign_breakdown_all_companies(year, quarter, db)
     
+    # Calcular monthly_evolution y currency_distribution para TODAS las empresas
+    all_projects = db.query(Project).filter(Project.year == str(year)).all()
+    all_project_ids = [p.id for p in all_projects] if all_projects else []
+    
+    monthly = await get_monthly_evolution_filtered(year, all_project_ids, geo_filter, db, current_user)
+    distribution = await get_currency_distribution_filtered(year, quarter, all_project_ids, db, current_user)
+    
     # Retornar con modo "all_companies"
     return {
         "mode": "all_companies",
         "overview": overview,
         "companies": companies_stats,
-        "monthly_evolution": [],  # Opcional
-        "currency_distribution": [],  # Opcional
+        "monthly_evolution": monthly,
+        "currency_distribution": distribution,
         "foreign_breakdown": breakdown
     }
 
