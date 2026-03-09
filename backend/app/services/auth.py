@@ -104,7 +104,8 @@ async def get_current_admin_user(
     current_user: User = Depends(get_current_active_user)
 ) -> User:
     """Get current admin user"""
-    if current_user.role != "admin":
+    # ← CAMBIADO: "admin" → "ADMIN"
+    if current_user.role != "ADMIN":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
