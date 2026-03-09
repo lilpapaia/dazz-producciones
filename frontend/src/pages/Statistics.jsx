@@ -601,44 +601,57 @@ const Statistics = () => {
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          {/* Evolución mensual */}
+         {/* Evolución mensual */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6">
             <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
               <TrendingUp size={20} className="text-amber-500" />
               Evolución Gastos Mensual
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthly_evolution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-                <XAxis 
-                  dataKey="month_name" 
-                  stroke="#71717a"
-                  tick={{ fill: '#a1a1aa', fontSize: 12 }}
-                />
-                <YAxis 
-                  stroke="#71717a"
-                  tick={{ fill: '#a1a1aa', fontSize: 12 }}
-                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#18181b', 
-                    border: '1px solid #3f3f46',
-                    borderRadius: '4px',
-                    color: '#f4f4f5'
-                  }}
-                  formatter={(value) => [`${value.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 'Total']}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke="#f59e0b" 
-                  strokeWidth={3}
-                  dot={{ fill: '#f59e0b', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            
+            {monthly_evolution && monthly_evolution.length > 0 && monthly_evolution.some(m => m.total > 0) ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthly_evolution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                  <XAxis 
+                    dataKey="month_name" 
+                    stroke="#71717a"
+                    tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                  />
+                  <YAxis 
+                    stroke="#71717a"
+                    tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#18181b', 
+                      border: '1px solid #3f3f46',
+                      borderRadius: '4px',
+                      color: '#f4f4f5'
+                    }}
+                    formatter={(value) => [`${value.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 'Total']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="#f59e0b" 
+                    strokeWidth={3}
+                    dot={{ fill: '#f59e0b', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-zinc-500 text-lg mb-2">📊</p>
+                  <p className="text-zinc-500">No hay datos de gastos{quarter ? ` en el Q${quarter}` : ''} de {year}</p>
+                  <p className="text-zinc-600 text-sm mt-1">
+                    {companyId ? 'para esta empresa' : 'en el período seleccionado'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Distribución por origen */}
@@ -647,33 +660,46 @@ const Statistics = () => {
               <Globe size={20} className="text-amber-500" />
               Distribución por Origen
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={currency_distribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ label, percentage }) => `${label} (${percentage}%)`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="total"
-                >
-                  {currency_distribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#18181b', 
-                    border: '1px solid #3f3f46',
-                    borderRadius: '4px',
-                    color: '#f4f4f5'
-                  }}
-                  formatter={(value) => [`${value.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 'Total']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            
+            {currency_distribution && currency_distribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={currency_distribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ label, percentage }) => `${label} (${percentage}%)`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="total"
+                  >
+                    {currency_distribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#18181b', 
+                      border: '1px solid #3f3f46',
+                      borderRadius: '4px',
+                      color: '#f4f4f5'
+                    }}
+                    formatter={(value) => [`${value.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€`, 'Total']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-zinc-500 text-lg mb-2">🌍</p>
+                  <p className="text-zinc-500">No hay gastos registrados{quarter ? ` en el Q${quarter}` : ''} de {year}</p>
+                  <p className="text-zinc-600 text-sm mt-1">
+                    {companyId ? 'para esta empresa' : 'en el período seleccionado'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
