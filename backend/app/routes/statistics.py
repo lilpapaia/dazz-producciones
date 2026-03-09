@@ -509,7 +509,7 @@ async def get_all_companies_statistics(
     )
     
     # Foreign breakdown agrupado por empresa
-    breakdown = await get_foreign_breakdown_all_companies(year, quarter, db)
+    breakdown = await get_foreign_breakdown_all_companies(year, quarter, geo_filter, db)
     
     # Calcular monthly_evolution y currency_distribution para TODAS las empresas
     all_projects = db.query(Project).filter(Project.year == str(year)).all()
@@ -580,6 +580,7 @@ async def get_single_company_statistics(
 async def get_foreign_breakdown_all_companies(
     year: int,
     quarter: Optional[int],
+    geo_filter: Optional[str],
     db: Session
 ):
     """
@@ -594,6 +595,10 @@ async def get_foreign_breakdown_all_companies(
         Project.year == str(year),
         Ticket.is_foreign == True
     )
+    
+    # Aplicar filtro geo si existe
+    if geo_filter:
+        query = query.filter(Ticket.geo_classification == geo_filter)
     
     tickets = query.all()
     
@@ -697,6 +702,7 @@ async def get_foreign_breakdown_all_companies(
             'total_spent': country_data['total_spent'],
             'tax_reclamable_eur': country_data['tax_reclamable_eur'],
             'projects_count': sum(len(c['projects']) for c in companies_list),
+            'projects': [],  # ← Vacío cuando hay companies (para schema Pydantic)
             'companies': companies_list  # ← NUEVO: Agrupado por empresa
         })
     
