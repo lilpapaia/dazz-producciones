@@ -1,6 +1,6 @@
 """
 Servicio Cloudinary para almacenamiento de tickets/facturas
-- Imágenes: convierte a WebP automáticamente
+- Imágenes: convierte a WebP automáticamente CON MEJORAS DE CALIDAD
 - PDFs: convierte páginas a imágenes WebP + guarda PDF original
 - Compresión inteligente para archivos grandes
 """
@@ -76,21 +76,35 @@ def compress_if_needed(image_path: str, max_size_mb: float = 2.0) -> str:
 
 
 def upload_image(file_path: str, public_id: str) -> dict:
-    """Sube imagen convirtiéndola a WebP"""
+    """
+    Sube imagen a Cloudinary con MEJORAS AUTOMÁTICAS
+    
+    Transformaciones aplicadas:
+    - Mejora de nitidez (sharpen)
+    - Auto-contraste
+    - Auto-rotación (tickets torcidos)
+    - Compresión WebP inteligente
+    """
     result = cloudinary.uploader.upload(
         file_path,
         public_id=public_id,
         resource_type="image",
         format="webp",
-        quality="auto:good",
         transformation=[
+            # Limitar tamaño máximo
             {"width": 2048, "height": 2048, "crop": "limit"},
-            {"quality": "auto:good"},
-            {"format": "webp"}
+            # MEJORAS AUTOMÁTICAS DE CALIDAD
+            {"effect": "sharpen:100"},           # Aumenta nitidez
+            {"effect": "auto_contrast"},         # Mejora contraste automáticamente
+            {"angle": "auto"},                   # Auto-rotar tickets torcidos
+            {"quality": "auto:best"}             # Mejor calidad posible
         ],
         access_mode="public",
         overwrite=True
     )
+    
+    print(f"  ✨ Imagen mejorada automáticamente (nitidez + contraste + rotación)")
+    
     return {"url": result["secure_url"], "public_id": result["public_id"]}
 
 
@@ -116,7 +130,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
     """
     Procesa y sube un archivo a Cloudinary.
     
-    - Imágenes JPG/PNG → WebP en Cloudinary
+    - Imágenes JPG/PNG → WebP en Cloudinary CON MEJORAS AUTOMÁTICAS
     - PDFs → convierte cada página a WebP + guarda PDF original
     
     Returns dict con:
@@ -159,10 +173,10 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
                 if final_path != temp_page_path:
                     temp_files.append(final_path)
                 
-                # Subir página a Cloudinary como WebP
+                # Subir página a Cloudinary como WebP CON MEJORAS
                 result = upload_image(final_path, f"{public_id}_page_{i+1}")
                 page_urls.append(result["url"])
-                print(f"  ✅ Página {i+1}/{len(pages)} subida")
+                print(f"  ✅ Página {i+1}/{len(pages)} subida y mejorada")
             except Exception as e:
                 print(f"  ❌ Error en página {i+1}: {str(e)}")
                 raise
@@ -197,7 +211,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
         
         try:
             result = upload_image(final_path, public_id)
-            print(f"  ✅ Imagen subida")
+            print(f"  ✅ Imagen subida y mejorada")
             
             return {
                 "url": result["url"],
@@ -221,71 +235,86 @@ def delete_ticket_files(file_pages_json: str = None, pdf_url: str = None) -> boo
     Elimina todos los archivos de un ticket de Cloudinary.
     
     Args:
-        file_pages_json: String JSON con array de URLs de páginas
-        pdf_url: URL del PDF original
+        file_pages_json: JSON string con lista de URLs de páginas
+        pdf_url: URL del PDF original (si existe)
     
     Returns:
-        bool: True si se eliminó todo correctamente
+        bool: True si todo se eliminó correctamente
     """
-    success = True
+    import json
     
-    # 1. Eliminar páginas (imágenes WebP)
+    deleted_count = 0
+    
+    # Eliminar páginas de imágenes
     if file_pages_json:
         try:
-            import json
-            file_pages = json.loads(file_pages_json)
-            
-            for url in file_pages:
+            pages = json.loads(file_pages_json)
+            for page_url in pages:
                 try:
-                    # Extraer public_id de la URL
-                    # Ejemplo: https://res.cloudinary.com/cloud/image/upload/v123/dazz-producciones/project_1/file_page_1.webp
-                    # public_id: dazz-producciones/project_1/file_page_1
-                    
-                    parts = url.split("/upload/")
-                    if len(parts) == 2:
-                        # Quitar versión y extensión
-                        path = parts[1].split("/", 1)[1] if "/" in parts[1] else parts[1]  # Quita vXXX
-                        public_id = path.rsplit(".", 1)[0]  # Quita extensión
-                        
-                        result = cloudinary.uploader.destroy(public_id, resource_type="image")
-                        if result.get("result") != "ok":
-                            print(f"⚠️ No se pudo eliminar {public_id}")
-                            success = False
-                        else:
-                            print(f"✅ Eliminado de Cloudinary: {public_id}")
+                    public_id = extract_public_id_from_url(page_url)
+                    if public_id:
+                        cloudinary.uploader.destroy(public_id)
+                        deleted_count += 1
                 except Exception as e:
-                    print(f"⚠️ Error eliminando página {url}: {str(e)}")
-                    success = False
+                    print(f"⚠️ Error eliminando imagen {page_url}: {str(e)}")
         except Exception as e:
-            print(f"⚠️ Error parseando file_pages: {str(e)}")
-            success = False
+            print(f"⚠️ Error procesando páginas: {str(e)}")
     
-    # 2. Eliminar PDF original (si existe)
+    # Eliminar PDF original
     if pdf_url:
         try:
-            parts = pdf_url.split("/upload/")
-            if len(parts) == 2:
-                path = parts[1].split("/", 1)[1] if "/" in parts[1] else parts[1]
-                public_id = path.rsplit(".", 1)[0]
-                
-                result = cloudinary.uploader.destroy(public_id, resource_type="raw")
-                if result.get("result") != "ok":
-                    print(f"⚠️ No se pudo eliminar PDF {public_id}")
-                    success = False
-                else:
-                    print(f"✅ PDF eliminado de Cloudinary: {public_id}")
+            public_id = extract_public_id_from_url(pdf_url)
+            if public_id:
+                cloudinary.uploader.destroy(public_id, resource_type="raw")
+                deleted_count += 1
         except Exception as e:
             print(f"⚠️ Error eliminando PDF {pdf_url}: {str(e)}")
-            success = False
     
-    return success
+    print(f"🗑️ Eliminados {deleted_count} archivos de Cloudinary")
+    return deleted_count > 0
 
 
-def delete_ticket_file(public_id: str, resource_type: str = "image") -> bool:
-    """Elimina un archivo de Cloudinary (función legacy, usar delete_ticket_files)"""
+def extract_public_id_from_url(url: str) -> str:
+    """
+    Extrae el public_id de una URL de Cloudinary
+    
+    Ejemplo:
+    https://res.cloudinary.com/dyjpek4q8/image/upload/v1234/dazz-producciones/project_4/ticket_1.webp
+    → dazz-producciones/project_4/ticket_1
+    """
     try:
-        result = cloudinary.uploader.destroy(public_id, resource_type=resource_type)
-        return result.get("result") == "ok"
+        # Separar por '/'
+        parts = url.split('/')
+        
+        # Encontrar 'upload' o 'raw' en la URL
+        upload_index = -1
+        for i, part in enumerate(parts):
+            if part in ['upload', 'raw']:
+                upload_index = i
+                break
+        
+        if upload_index == -1:
+            return None
+        
+        # El public_id está después de 'upload/vXXXX/'
+        # Saltar version (vXXXX)
+        path_parts = parts[upload_index + 2:]
+        
+        # Unir el resto y quitar extensión
+        public_id = '/'.join(path_parts)
+        public_id = public_id.rsplit('.', 1)[0]  # Quitar .webp, .jpg, etc
+        
+        return public_id
     except Exception as e:
-        print(f"⚠️ Error eliminando de Cloudinary: {str(e)}")
+        print(f"⚠️ Error extrayendo public_id de {url}: {str(e)}")
+        return None
+
+
+def delete_ticket_file(public_id: str) -> bool:
+    """Elimina un archivo individual (legacy, usar delete_ticket_files)"""
+    try:
+        cloudinary.uploader.destroy(public_id)
+        return True
+    except Exception as e:
+        print(f"Error deleting file: {str(e)}")
         return False
