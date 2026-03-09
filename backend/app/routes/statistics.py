@@ -716,13 +716,19 @@ async def get_statistics_overview_filtered(year, quarter, geo_filter, project_id
         projects_open=len(project_ids)
     )
 
-async def get_monthly_evolution_filtered(year, project_ids, db, current_user):
-    """Evolución mensual filtrada por proyectos"""
+async def get_monthly_evolution_filtered(year, project_ids, geo_filter, db, current_user):
+    """Evolución mensual filtrada por proyectos y geo"""
     if not project_ids:
         return []
     
     # Query tickets de los proyectos filtrados
-    tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids)).all()
+    tickets_query = db.query(Ticket).filter(Ticket.project_id.in_(project_ids))
+    
+    # Aplicar filtro geo si existe
+    if geo_filter:
+        tickets_query = tickets_query.filter(Ticket.geo_classification == geo_filter)
+    
+    tickets = tickets_query.all()
     
     # Inicializar array con 12 meses en 0
     monthly_totals = [0.0] * 12

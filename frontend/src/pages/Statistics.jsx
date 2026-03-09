@@ -645,10 +645,17 @@ const Statistics = () => {
               <div className="h-[300px] flex items-center justify-center">
                 <div className="text-center">
                   <p className="text-zinc-500 text-lg mb-2">📊</p>
-                  <p className="text-zinc-500">No hay datos de gastos{quarter ? ` en el Q${quarter}` : ''} de {year}</p>
-                  <p className="text-zinc-600 text-sm mt-1">
-                    {companyId ? 'para esta empresa' : 'en el período seleccionado'}
+                  <p className="text-zinc-500">
+                    No hay datos de gastos
+                    {geoFilter && ` (${geoFilter})`}
+                    {quarter ? ` en el Q${quarter}` : ''} 
+                    {' '}de {year}
                   </p>
+                  {companyId && companies.length > 0 && (
+                    <p className="text-zinc-600 text-sm mt-1">
+                      Empresa: {companies.find(c => c.id === companyId)?.name || 'N/A'}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -693,10 +700,16 @@ const Statistics = () => {
               <div className="h-[300px] flex items-center justify-center">
                 <div className="text-center">
                   <p className="text-zinc-500 text-lg mb-2">🌍</p>
-                  <p className="text-zinc-500">No hay gastos registrados{quarter ? ` en el Q${quarter}` : ''} de {year}</p>
-                  <p className="text-zinc-600 text-sm mt-1">
-                    {companyId ? 'para esta empresa' : 'en el período seleccionado'}
+                  <p className="text-zinc-500">
+                    No hay gastos registrados
+                    {quarter ? ` en el Q${quarter}` : ''} 
+                    {' '}de {year}
                   </p>
+                  {companyId && companies.length > 0 && (
+                    <p className="text-zinc-600 text-sm mt-1">
+                      Empresa: {companies.find(c => c.id === companyId)?.name || 'N/A'}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
