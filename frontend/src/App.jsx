@@ -49,11 +49,11 @@ function App() {
               } 
             />
             
-            {/* NUEVA RUTA: Estadísticas */}
+            {/* NUEVA RUTA: Estadísticas - Solo ADMIN y BOSS */}
             <Route 
               path="/statistics" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute adminOrBossOnly>
                   <Navbar />
                   <Statistics />
                 </ProtectedRoute>

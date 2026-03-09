@@ -115,14 +115,6 @@ export const updateUser = (id, data) => api.put(`/users/${id}`, data);
 export const deleteUser = (id) => api.delete(`/users/${id}`);
 
 // ============================================
-// COMPANIES (NUEVO)
-// ============================================
-
-export const getCompanies = () => api.get('/companies');
-
-export const getCompany = (id) => api.get(`/companies/${id}`);
-
-// ============================================
 // ESTADÍSTICAS
 // ============================================
 
@@ -150,9 +142,16 @@ export const getForeignBreakdown = (year, quarter = null) => {
   return api.get('/statistics/foreign-breakdown', { params });
 };
 
-export const getCompleteStatistics = (year, quarter = null, geoFilter = null) => {
+export const getCompleteStatistics = (year, quarter = null, geoFilter = null, companyId = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;
   if (geoFilter) params.geo_filter = geoFilter;
+  if (companyId) params.company_id = companyId;  // ← NUEVO
   return api.get('/statistics/complete', { params });
 };
+
+// ============================================
+// COMPANIES
+// ============================================
+
+export const getCompanies = () => api.get('/companies');
