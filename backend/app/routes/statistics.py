@@ -717,12 +717,109 @@ async def get_statistics_overview_filtered(year, quarter, geo_filter, project_id
     )
 
 async def get_monthly_evolution_filtered(year, project_ids, db, current_user):
-    # Simplificado: retornar array vacío o calcular si necesario
-    return []
+    """Evolución mensual filtrada por proyectos"""
+    if not project_ids:
+        return []
+    
+    # Query tickets de los proyectos filtrados
+    tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids)).all()
+    
+    # Inicializar array con 12 meses en 0
+    monthly_totals = [0.0] * 12
+    
+    # Sumar gastos por mes
+    for ticket in tickets:
+        try:
+            if ticket.date and "/" in ticket.date:
+                parts = ticket.date.split("/")
+                if len(parts) >= 2:
+                    month = int(parts[1]) - 1  # 0-indexed
+                    if 0 <= month < 12:
+                        monthly_totals[month] += ticket.final_total
+        except:
+            continue
+    
+    # Convertir a lista de MonthlyDataPoint
+    MONTH_NAMES_ES = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+    
+    result = []
+    for month_idx, total in enumerate(monthly_totals):
+        result.append(schemas.MonthlyDataPoint(
+            month=month_idx + 1,
+            month_name=MONTH_NAMES_ES[month_idx],
+            total=total
+        ))
+    
+    return result
 
 async def get_currency_distribution_filtered(year, quarter, project_ids, db, current_user):
-    # Simplificado
-    return []
+    """Distribución por divisa filtrada por proyectos"""
+    if not project_ids:
+        return []
+    
+    # Query tickets de los proyectos filtrados
+    tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids)).all()
+    
+    # Filtrar por trimestre si aplica
+    if quarter:
+        tickets = filter_tickets_by_quarter(tickets, quarter)
+    
+    # Calcular total general
+    total_general = sum(ticket.final_total for ticket in tickets)
+    
+    if total_general == 0:
+        return []
+    
+    # Agrupar por clasificación geográfica y divisa
+    distribution = {}
+    
+    for ticket in tickets:
+        geo = ticket.geo_classification or 'NACIONAL'
+        currency = ticket.currency or 'EUR'
+        
+        # Crear clave única
+        if geo == 'NACIONAL':
+            key = 'ESP_NACIONAL'
+            label = 'ESP Nacional'
+            color = '#10b981'  # Verde
+        elif geo == 'UE':
+            key = f'UE_{currency}'
+            label = f'UE ({currency})'
+            color = '#3b82f6'  # Azul
+        else:  # INTERNACIONAL
+            key = f'INT_{currency}'
+            label = currency
+            color = '#f59e0b' if currency == 'USD' else '#8b5cf6'  # Amber para USD, morado resto
+        
+        if key not in distribution:
+            distribution[key] = {
+                'currency': currency,
+                'label': label,
+                'total': 0.0,
+                'color': color
+            }
+        
+        distribution[key]['total'] += ticket.final_total
+    
+    # Convertir a lista con porcentajes
+    result = []
+    for data in distribution.values():
+        percentage = (data['total'] / total_general) * 100
+        result.append(schemas.CurrencyDistribution(
+            currency=data['currency'],
+            label=data['label'],
+            total=data['total'],
+            percentage=round(percentage, 1),
+            color=data['color']
+        ))
+    
+    # Ordenar por total descendente
+    result.sort(key=lambda x: x.total, reverse=True)
+    
+    return result
 
 async def get_foreign_breakdown_filtered(year, quarter, project_ids, db, current_user):
     if not project_ids:
