@@ -3,14 +3,10 @@ from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
 
-# ============================================
-# ENUMS (EN MAYÚSCULAS - coincide con PostgreSQL)
-# ============================================
-
+# Enums
 class UserRole(str, Enum):
-    ADMIN = "ADMIN"
-    BOSS = "BOSS"
-    WORKER = "WORKER"
+    ADMIN = "admin"
+    USER = "user"
 
 class ProjectStatus(str, Enum):
     EN_CURSO = "en_curso"
@@ -21,47 +17,26 @@ class TicketType(str, Enum):
     FACTURA = "factura"
 
 # ============================================
-# COMPANY SCHEMAS (NUEVO)
-# ============================================
-
-class CompanyBase(BaseModel):
-    name: str
-    cif: Optional[str] = None
-    address: Optional[str] = None
-
-class CompanyCreate(CompanyBase):
-    pass
-
-class CompanyResponse(CompanyBase):
-    id: int
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-# ============================================
-# USER SCHEMAS (ACTUALIZADO)
+# USER SCHEMAS
 # ============================================
 
 class UserBase(BaseModel):
     email: EmailStr
     name: str
     username: Optional[str] = None
-    role: UserRole = UserRole.WORKER
+    role: UserRole = UserRole.USER
 
 class UserCreate(UserBase):
     password: str
-    company_ids: List[int] = []
 
 class UserLogin(BaseModel):
-    identifier: str
+    identifier: str  # Email O username
     password: str
 
 class UserResponse(UserBase):
     id: int
     is_active: bool
     created_at: datetime
-    companies: List[CompanyResponse] = []
     
     class Config:
         from_attributes = True
@@ -87,20 +62,14 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 # ============================================
-# PROJECT SCHEMAS (ACTUALIZADO)
+# PROJECT SCHEMAS
 # ============================================
 
 class ProjectBase(BaseModel):
     year: str
     send_date: Optional[str] = None
     creative_code: str
-    
-    # ⚠️ CAMPO ANTIGUO - Mantener por compatibilidad
-    company: Optional[str] = None
-    
-    # ✅ NUEVO CAMPO - ID de empresa dueña
-    owner_company_id: int
-    
+    company: str
     responsible: str
     invoice_type: str
     description: str
@@ -118,7 +87,6 @@ class ProjectUpdate(BaseModel):
     send_date: Optional[str] = None
     creative_code: Optional[str] = None
     company: Optional[str] = None
-    owner_company_id: Optional[int] = None
     responsible: Optional[str] = None
     invoice_type: Optional[str] = None
     description: Optional[str] = None
@@ -137,13 +105,12 @@ class ProjectResponse(ProjectBase):
     created_at: datetime
     closed_at: Optional[datetime] = None
     owner_id: int
-    owner_company: Optional[CompanyResponse] = None
     
     class Config:
         from_attributes = True
 
 # ============================================
-# TICKET SCHEMAS (SIN CAMBIOS)
+# TICKET SCHEMAS
 # ============================================
 
 class TicketBase(BaseModel):
@@ -266,6 +233,7 @@ class CurrencyDistribution(BaseModel):
     color: str
 
 class TicketSummary(BaseModel):
+    """Resumen de ticket para estadísticas de gastos internacionales"""
     id: int
     date: str
     provider: str
@@ -282,7 +250,13 @@ class ProjectSummary(BaseModel):
     total_amount: float
     foreign_amount: Optional[float] = None
     currency: Optional[str] = None
-    tickets: List['TicketSummary'] = []
+    tickets: List['TicketSummary'] = []  # Lista de tickets del proyecto
+
+class CompanyGroup(BaseModel):
+    """Agrupación de proyectos por empresa (para modo TODAS LAS EMPRESAS)"""
+    company_id: int
+    company_name: str
+    projects: List[ProjectSummary]
 
 class CountryBreakdown(BaseModel):
     country_code: str
@@ -293,7 +267,8 @@ class CountryBreakdown(BaseModel):
     tax_paid_foreign: Optional[float] = None
     tax_reclamable_eur: float
     projects_count: int
-    projects: List[ProjectSummary]
+    projects: Optional[List[ProjectSummary]] = []  # ← Opcional ahora
+    companies: Optional[List[CompanyGroup]] = None  # ← Nuevo campo para modo TODAS
 
 class StatisticsResponse(BaseModel):
     overview: StatisticsOverview
