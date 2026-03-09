@@ -1,29 +1,38 @@
 import { useState, useEffect } from 'react';
-import { getUsers, registerUser, deleteUser } from '../services/api';
-import { Plus, Trash2 } from 'lucide-react';
+import { getUsers, registerUser, deleteUser, updateUser, getCompanies } from '../services/api';
+import { Plus, Trash2, Edit } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import CompanyMultiSelect from '../components/CompanyMultiSelect';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     username: '',
     password: 'temporal123',
-    role: 'user'
+    role: 'WORKER',
+    company_ids: []
   });
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
-    loadUsers();
+    loadData();
   }, []);
 
-  const loadUsers = async () => {
+  const loadData = async () => {
     try {
-      const response = await getUsers();
-      setUsers(response.data);
+      const [usersRes, companiesRes] = await Promise.all([
+        getUsers(),
+        getCompanies()
+      ]);
+      setUsers(usersRes.data);
+      setCompanies(companiesRes.data);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -38,10 +47,17 @@ const Users = () => {
       // PRIMERO: Cerrar modal y limpiar form
       setShowCreate(false);
       const tempEmail = newUser.email;
-      setNewUser({ name: '', email: '', username: '', password: 'temporal123', role: 'user' });
+      setNewUser({ 
+        name: '', 
+        email: '', 
+        username: '', 
+        password: 'temporal123', 
+        role: 'WORKER',
+        company_ids: []
+      });
       
       // SEGUNDO: Recargar lista de usuarios
-      await loadUsers();
+      await loadData();
       
       // TERCERO: Mostrar confirmación (después de recargar)
       alert(`✓ Usuario creado correctamente\n✓ Se ha enviado un email a ${tempEmail} para configurar su contraseña`);
@@ -52,17 +68,49 @@ const Users = () => {
     }
   };
 
+  const handleEdit = async () => {
+    try {
+      await updateUser(editingUser.id, editingUser);
+      
+      // Cerrar modal
+      setShowEdit(false);
+      setEditingUser(null);
+      
+      // Recargar lista
+      await loadData();
+      
+      alert('✓ Usuario actualizado correctamente');
+      
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Error al actualizar usuario: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const handleDelete = async (userId) => {
     if (!confirm('¿Eliminar este usuario?')) return;
     
     try {
       await deleteUser(userId);
-      await loadUsers(); // Recargar lista
+      await loadData(); // Recargar lista
       alert('✓ Usuario eliminado correctamente');
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Error al eliminar usuario: ' + (error.response?.data?.detail || error.message));
     }
+  };
+
+  const openEditModal = (user) => {
+    setEditingUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: user.username || '',
+      password: '', // Vacío = no cambiar
+      role: user.role,
+      company_ids: user.companies?.map(c => c.id) || []
+    });
+    setShowEdit(true);
   };
 
   // Generar username automático del nombre
@@ -76,13 +124,22 @@ const Users = () => {
       .slice(0, 15); // Max 15 chars
   };
 
-  const handleNameChange = (name) => {
+  const handleNameChange = (name, isEdit = false) => {
     const autoUsername = generateUsername(name);
-    setNewUser({
-      ...newUser, 
-      name,
-      username: newUser.username || autoUsername // Solo auto-rellenar si está vacío
-    });
+    
+    if (isEdit) {
+      setEditingUser({
+        ...editingUser, 
+        name,
+        username: editingUser.username || autoUsername
+      });
+    } else {
+      setNewUser({
+        ...newUser, 
+        name,
+        username: newUser.username || autoUsername
+      });
+    }
   };
 
   return (
@@ -114,6 +171,7 @@ const Users = () => {
           </button>
         </div>
 
+        {/* MODAL CREAR USUARIO */}
         {showCreate && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 mb-6">
             <h3 className="text-xl font-bebas tracking-wider mb-4">CREAR NUEVO USUARIO</h3>
@@ -156,39 +214,64 @@ const Users = () => {
 
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ROL</label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <button
-                    onClick={() => setNewUser({...newUser, role: 'user'})}
+                    onClick={() => setNewUser({...newUser, role: 'ADMIN'})}
                     className={`p-4 rounded-sm border-2 transition-all ${
-                      newUser.role === 'user'
+                      newUser.role === 'ADMIN'
                         ? 'border-amber-500 bg-amber-500/10'
                         : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                     }`}
-                  >
-                    <div className="text-3xl mb-2">👤</div>
-                    <p className="font-semibold">Usuario</p>
-                    <p className="text-xs text-zinc-500 mt-1">Solo ve sus proyectos</p>
-                  </button>
-
-                  <button
-                    onClick={() => setNewUser({...newUser, role: 'admin'})}
-                    className={`p-4 rounded-sm border-2 transition-all ${
-                      newUser.role === 'admin'
-                        ? 'border-amber-500 bg-amber-500/10'
-                        : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
-                    }`}
+                    type="button"
                   >
                     <div className="text-3xl mb-2">👑</div>
                     <p className="font-semibold">Admin</p>
-                    <p className="text-xs text-zinc-500 mt-1">Acceso completo</p>
+                    <p className="text-xs text-zinc-500 mt-1">Acceso total</p>
+                  </button>
+
+                  <button
+                    onClick={() => setNewUser({...newUser, role: 'BOSS'})}
+                    className={`p-4 rounded-sm border-2 transition-all ${
+                      newUser.role === 'BOSS'
+                        ? 'border-amber-500 bg-amber-500/10'
+                        : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
+                    }`}
+                    type="button"
+                  >
+                    <div className="text-3xl mb-2">🎯</div>
+                    <p className="font-semibold">Boss</p>
+                    <p className="text-xs text-zinc-500 mt-1">Gestiona empresa</p>
+                  </button>
+
+                  <button
+                    onClick={() => setNewUser({...newUser, role: 'WORKER'})}
+                    className={`p-4 rounded-sm border-2 transition-all ${
+                      newUser.role === 'WORKER'
+                        ? 'border-amber-500 bg-amber-500/10'
+                        : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
+                    }`}
+                    type="button"
+                  >
+                    <div className="text-3xl mb-2">👤</div>
+                    <p className="font-semibold">Worker</p>
+                    <p className="text-xs text-zinc-500 mt-1">Sus proyectos</p>
                   </button>
                 </div>
               </div>
+
+              {/* NUEVO: Selector de empresas */}
+              <CompanyMultiSelect
+                selectedCompanyIds={newUser.company_ids}
+                onChange={(ids) => setNewUser({...newUser, company_ids: ids})}
+                companies={companies}
+                label="Empresas asignadas"
+              />
 
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => setShowCreate(false)}
                   className="flex-1 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold"
+                  type="button"
                 >
                   Cancelar
                 </button>
@@ -196,6 +279,7 @@ const Users = () => {
                   onClick={handleCreate}
                   disabled={!newUser.name || !newUser.email || !newUser.username}
                   className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
                 >
                   Crear Usuario
                 </button>
@@ -204,6 +288,131 @@ const Users = () => {
           </div>
         )}
 
+        {/* MODAL EDITAR USUARIO */}
+        {showEdit && editingUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bebas tracking-wider mb-4">EDITAR USUARIO</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NOMBRE COMPLETO</label>
+                    <input
+                      type="text"
+                      value={editingUser.name}
+                      onChange={(e) => handleNameChange(e.target.value, true)}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">USERNAME</label>
+                    <input
+                      type="text"
+                      value={editingUser.username}
+                      onChange={(e) => setEditingUser({...editingUser, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')})}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
+                  <input
+                    type="email"
+                    value={editingUser.email}
+                    onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NUEVA CONTRASEÑA (opcional)</label>
+                  <input
+                    type="password"
+                    value={editingUser.password}
+                    onChange={(e) => setEditingUser({...editingUser, password: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                    placeholder="Dejar vacío para no cambiar"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ROL</label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <button
+                      onClick={() => setEditingUser({...editingUser, role: 'ADMIN'})}
+                      className={`p-4 rounded-sm border-2 transition-all ${
+                        editingUser.role === 'ADMIN'
+                          ? 'border-amber-500 bg-amber-500/10'
+                          : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
+                      }`}
+                      type="button"
+                    >
+                      <div className="text-3xl mb-2">👑</div>
+                      <p className="font-semibold">Admin</p>
+                    </button>
+
+                    <button
+                      onClick={() => setEditingUser({...editingUser, role: 'BOSS'})}
+                      className={`p-4 rounded-sm border-2 transition-all ${
+                        editingUser.role === 'BOSS'
+                          ? 'border-amber-500 bg-amber-500/10'
+                          : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
+                      }`}
+                      type="button"
+                    >
+                      <div className="text-3xl mb-2">🎯</div>
+                      <p className="font-semibold">Boss</p>
+                    </button>
+
+                    <button
+                      onClick={() => setEditingUser({...editingUser, role: 'WORKER'})}
+                      className={`p-4 rounded-sm border-2 transition-all ${
+                        editingUser.role === 'WORKER'
+                          ? 'border-amber-500 bg-amber-500/10'
+                          : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
+                      }`}
+                      type="button"
+                    >
+                      <div className="text-3xl mb-2">👤</div>
+                      <p className="font-semibold">Worker</p>
+                    </button>
+                  </div>
+                </div>
+
+                <CompanyMultiSelect
+                  selectedCompanyIds={editingUser.company_ids}
+                  onChange={(ids) => setEditingUser({...editingUser, company_ids: ids})}
+                  companies={companies}
+                  label="Empresas asignadas"
+                />
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowEdit(false);
+                      setEditingUser(null);
+                    }}
+                    className="flex-1 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold"
+                    type="button"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleEdit}
+                    disabled={!editingUser.name || !editingUser.email || !editingUser.username}
+                    className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    type="button"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LISTA DE USUARIOS */}
         <div className="space-y-3">
           {users.map((user) => (
             <div
@@ -224,26 +433,53 @@ const Users = () => {
                       </>
                     )}
                     <span className={`px-2 py-1 text-xs font-mono tracking-wider rounded-sm whitespace-nowrap ${
-                      user.role === 'admin'
+                      user.role === 'ADMIN'
                         ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : user.role === 'BOSS'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                         : 'bg-zinc-700/50 text-zinc-400 border border-zinc-600'
                     }`}>
-                      {user.role === 'admin' ? 'ADMIN' : 'USUARIO'}
+                      {user.role}
                     </span>
                   </div>
                   
-                  {/* Email debajo */}
-                  <p className="text-sm text-zinc-500 font-mono">{user.email}</p>
+                  {/* Email */}
+                  <p className="text-sm text-zinc-500 font-mono mb-2">{user.email}</p>
+                  
+                  {/* NUEVO: Empresas */}
+                  {user.companies && user.companies.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {user.companies.map(company => (
+                        <span
+                          key={company.id}
+                          className="px-2 py-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs rounded-sm"
+                        >
+                          🏢 {company.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {(!user.companies || user.companies.length === 0) && (
+                    <p className="text-xs text-amber-500 mt-2">⚠️ Sin empresas asignadas</p>
+                  )}
                 </div>
                 
-                {/* Papelera a la derecha */}
+                {/* Botones a la derecha */}
                 {user.id !== currentUser?.id && (
-                  <button
-                    onClick={() => handleDelete(user.id)}
-                    className="p-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors border border-red-900/30 flex-shrink-0"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => openEditModal(user)}
+                      className="p-2 bg-blue-900/20 hover:bg-blue-900/30 text-blue-400 hover:text-blue-300 rounded-sm transition-colors border border-blue-900/30"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(user.id)}
+                      className="p-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors border border-red-900/30"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

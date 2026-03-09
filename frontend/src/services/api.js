@@ -115,6 +115,14 @@ export const updateUser = (id, data) => api.put(`/users/${id}`, data);
 export const deleteUser = (id) => api.delete(`/users/${id}`);
 
 // ============================================
+// COMPANIES (NUEVO)
+// ============================================
+
+export const getCompanies = () => api.get('/companies');
+
+export const getCompany = (id) => api.get(`/companies/${id}`);
+
+// ============================================
 // ESTADÍSTICAS
 // ============================================
 
