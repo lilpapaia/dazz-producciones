@@ -32,7 +32,8 @@ async def get_usernames(
     Permisos:
     - ADMIN: Ve todos los usuarios
     - BOSS: Ve solo usuarios de sus empresas
-    - WORKER: Ve solo a sí mismo
+    - WORKER: Ve solo a sí mismo   
+     
     """
     
     # ADMIN: Retornar todos
