@@ -3,10 +3,14 @@ from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
 
-# Enums
+# ============================================
+# ENUMS (EN MAYÚSCULAS - coincide con PostgreSQL)
+# ============================================
+
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
+    ADMIN = "ADMIN"
+    BOSS = "BOSS"
+    WORKER = "WORKER"
 
 class ProjectStatus(str, Enum):
     EN_CURSO = "en_curso"
@@ -17,26 +21,47 @@ class TicketType(str, Enum):
     FACTURA = "factura"
 
 # ============================================
-# USER SCHEMAS
+# COMPANY SCHEMAS (NUEVO)
+# ============================================
+
+class CompanyBase(BaseModel):
+    name: str
+    cif: Optional[str] = None
+    address: Optional[str] = None
+
+class CompanyCreate(CompanyBase):
+    pass
+
+class CompanyResponse(CompanyBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# ============================================
+# USER SCHEMAS (ACTUALIZADO)
 # ============================================
 
 class UserBase(BaseModel):
     email: EmailStr
     name: str
     username: Optional[str] = None
-    role: UserRole = UserRole.USER
+    role: UserRole = UserRole.WORKER
 
 class UserCreate(UserBase):
     password: str
+    company_ids: List[int] = []
 
 class UserLogin(BaseModel):
-    identifier: str  # Email O username
+    identifier: str
     password: str
 
 class UserResponse(UserBase):
     id: int
     is_active: bool
     created_at: datetime
+    companies: List[CompanyResponse] = []
     
     class Config:
         from_attributes = True
@@ -62,14 +87,20 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 # ============================================
-# PROJECT SCHEMAS
+# PROJECT SCHEMAS (ACTUALIZADO)
 # ============================================
 
 class ProjectBase(BaseModel):
     year: str
     send_date: Optional[str] = None
     creative_code: str
-    company: str
+    
+    # ⚠️ CAMPO ANTIGUO - Mantener por compatibilidad
+    company: Optional[str] = None
+    
+    # ✅ NUEVO CAMPO - ID de empresa dueña
+    owner_company_id: int
+    
     responsible: str
     invoice_type: str
     description: str
@@ -87,6 +118,7 @@ class ProjectUpdate(BaseModel):
     send_date: Optional[str] = None
     creative_code: Optional[str] = None
     company: Optional[str] = None
+    owner_company_id: Optional[int] = None
     responsible: Optional[str] = None
     invoice_type: Optional[str] = None
     description: Optional[str] = None
@@ -105,12 +137,13 @@ class ProjectResponse(ProjectBase):
     created_at: datetime
     closed_at: Optional[datetime] = None
     owner_id: int
+    owner_company: Optional[CompanyResponse] = None
     
     class Config:
         from_attributes = True
 
 # ============================================
-# TICKET SCHEMAS
+# TICKET SCHEMAS (SIN CAMBIOS)
 # ============================================
 
 class TicketBase(BaseModel):
@@ -233,7 +266,6 @@ class CurrencyDistribution(BaseModel):
     color: str
 
 class TicketSummary(BaseModel):
-    """Resumen de ticket para estadísticas de gastos internacionales"""
     id: int
     date: str
     provider: str
@@ -250,7 +282,7 @@ class ProjectSummary(BaseModel):
     total_amount: float
     foreign_amount: Optional[float] = None
     currency: Optional[str] = None
-    tickets: List['TicketSummary'] = []  # Lista de tickets del proyecto
+    tickets: List['TicketSummary'] = []
 
 class CountryBreakdown(BaseModel):
     country_code: str

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Date
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Date, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -6,9 +6,14 @@ import enum
 
 Base = declarative_base()
 
+# ============================================
+# ENUMS (EN MAYÚSCULAS - coincide con PostgreSQL)
+# ============================================
+
 class UserRole(str, enum.Enum):
-    ADMIN = "admin"
-    USER = "user"
+    ADMIN = "ADMIN"
+    BOSS = "BOSS"
+    WORKER = "WORKER"
 
 class ProjectStatus(str, enum.Enum):
     EN_CURSO = "en_curso"
@@ -18,25 +23,72 @@ class TicketType(str, enum.Enum):
     TICKET = "ticket"
     FACTURA = "factura"
 
+# ============================================
+# NUEVA TABLA: COMPANIES
+# ============================================
+
+class Company(Base):
+    __tablename__ = "companies"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
+    cif = Column(String, nullable=True)
+    address = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    users = relationship("User", secondary="user_companies", back_populates="companies")
+    projects = relationship("Project", back_populates="owner_company")
+
+# ============================================
+# NUEVA TABLA INTERMEDIA: USER_COMPANIES (Many-to-Many)
+# ============================================
+
+class UserCompany(Base):
+    __tablename__ = "user_companies"
+    
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# ============================================
+# MODELO USER (ACTUALIZADO)
+# ============================================
+
 class User(Base):
     __tablename__ = "users"
+    
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=True)  # ← AÑADIDO
+    username = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.WORKER, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relaciones
     projects = relationship("Project", back_populates="owner")
+    companies = relationship("Company", secondary="user_companies", back_populates="users")
+
+# ============================================
+# MODELO PROJECT (ACTUALIZADO)
+# ============================================
 
 class Project(Base):
     __tablename__ = "projects"
+    
     id = Column(Integer, primary_key=True, index=True)
     year = Column(String, nullable=False)
     send_date = Column(String)
     creative_code = Column(String, nullable=False)
-    company = Column(String, nullable=False)
+    
+    # ⚠️ MANTENER CAMPO ANTIGUO POR AHORA (compatibilidad)
+    company = Column(String, nullable=True)
+    
+    # ✅ NUEVO CAMPO - Empresa dueña del proyecto
+    owner_company_id = Column(Integer, ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True)
+    
     responsible = Column(String, nullable=False)
     invoice_type = Column(String, nullable=False)
     description = Column(Text, nullable=False)
@@ -50,12 +102,21 @@ class Project(Base):
     tickets_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     closed_at = Column(DateTime, nullable=True)
+    
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Relaciones
     owner = relationship("User", back_populates="projects")
+    owner_company = relationship("Company", back_populates="projects")
     tickets = relationship("Ticket", back_populates="project", cascade="all, delete-orphan")
+
+# ============================================
+# MODELO TICKET (SIN CAMBIOS)
+# ============================================
 
 class Ticket(Base):
     __tablename__ = "tickets"
+    
     id = Column(Integer, primary_key=True, index=True)
     date = Column(String, nullable=False)
     provider = Column(String, nullable=False)
@@ -91,16 +152,24 @@ class Ticket(Base):
     pdf_url = Column(String, nullable=True)
     is_reviewed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    
+    # Relaciones
     project = relationship("Project", back_populates="tickets")
+
+# ============================================
+# MODELO PASSWORD RESET TOKEN (SIN CAMBIOS)
+# ============================================
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
+    
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token = Column(String, unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     used_at = Column(DateTime, nullable=True)
+    
     user = relationship("User")
-
