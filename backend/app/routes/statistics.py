@@ -412,7 +412,7 @@ async def get_complete_statistics(
     # ===== BOSS: AUTO-FORZAR SU EMPRESA =====
     if current_user.role == "BOSS":
         # Obtener empresa del BOSS
-        user_company_ids = [uc.company_id for uc in current_user.companies]
+        user_company_ids = [uc.id for uc in current_user.companies]
         if not user_company_ids:
             raise HTTPException(
                 status_code=400,
