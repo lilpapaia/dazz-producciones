@@ -55,7 +55,8 @@ const Navbar = () => {
               <span className="hidden sm:inline">Estadísticas</span>
             </Link>
 
-            {user.role === 'admin' && (
+            {/* ← CAMBIADO: 'admin' → 'ADMIN' */}
+            {user.role === 'ADMIN' && (
               <Link
                 to="/users"
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${

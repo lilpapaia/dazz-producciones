@@ -16,7 +16,8 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && user.role !== 'admin') {
+  // ← CAMBIADO: 'admin' → 'ADMIN'
+  if (adminOnly && user.role !== 'ADMIN') {
     return <Navigate to="/dashboard" replace />;
   }
 
