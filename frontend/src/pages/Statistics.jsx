@@ -6,6 +6,7 @@ import { getCompleteStatistics, getAvailableYears, getCompanies } from '../servi
 import { useAuth } from '../context/AuthContext';
 import jsPDF from 'jspdf';
 
+
 const Statistics = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
