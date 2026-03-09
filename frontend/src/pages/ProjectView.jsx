@@ -244,7 +244,9 @@ const ProjectView = () => {
               <span>•</span>
               <span>{project.year}</span>
             </div>
-            <p className="text-xs text-zinc-600 mt-1 truncate max-w-full px-4">{project.company}</p>
+            <p className="text-xs text-zinc-600 mt-1 truncate max-w-full px-4">
+              {project.owner_company?.name || project.company || 'Sin empresa'}
+            </p>
           </div>
 
           {/* DESKTOP: Layout horizontal original */}
@@ -264,7 +266,7 @@ const ProjectView = () => {
               <div className="flex items-center gap-4 text-sm text-zinc-500">
                 <span>👤 {project.responsible}</span>
                 <span>📅 {project.year}</span>
-                <span>🏢 {project.company}</span>
+                <span>🏢 {project.owner_company?.name || project.company || 'Sin empresa'}</span>
               </div>
             </div>
 

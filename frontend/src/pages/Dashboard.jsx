@@ -370,7 +370,7 @@ const Dashboard = () => {
                 <p className="text-sm text-zinc-300 mb-3 line-clamp-2">{project.description}</p>
 
                 {/* Info en una sola línea: Responsable • Año • Tickets */}
-                <div className="flex items-center gap-2 text-sm text-zinc-500 mb-3 flex-wrap">
+                <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2 flex-wrap">
                   <div className="flex items-center gap-1">
                     <span>👤</span>
                     <span>{project.responsible}</span>
@@ -385,6 +385,12 @@ const Dashboard = () => {
                     <span>🎫</span>
                     <span>{project.tickets_count} tickets</span>
                   </div>
+                </div>
+
+                {/* Empresa */}
+                <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
+                  <span>🏢</span>
+                  <span>{project.owner_company?.name || project.company || 'Sin empresa'}</span>
                 </div>
 
                 {/* Importe total */}
