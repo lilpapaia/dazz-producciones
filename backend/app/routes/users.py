@@ -32,7 +32,7 @@ async def get_usernames(
     Permisos:
     - ADMIN: Ve todos los usuarios
     - BOSS: Ve solo usuarios de sus empresas
-    - WORKER: Ve solo a sí mismo   
+    - WORKER: Ve solo a sí mismo
     """
     
     # ADMIN: Retornar todos
@@ -47,7 +47,7 @@ async def get_usernames(
     # BOSS: Usuarios de sus empresas
     if current_user.role == "BOSS":
         # Obtener IDs de empresas del BOSS
-        user_company_ids = [uc.company_id for uc in current_user.companies]
+        user_company_ids = [uc.id for uc in current_user.companies]
         
         if not user_company_ids:
             # BOSS sin empresas, solo se retorna a sí mismo
