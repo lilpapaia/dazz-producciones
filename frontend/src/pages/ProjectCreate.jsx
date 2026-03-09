@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createProject } from '../services/api';
-import { ArrowLeft, Save } from 'lucide-react';
+import { createProject, getCompanies } from '../services/api';
+import { ArrowLeft, Save, Building2 } from 'lucide-react';
 import UserAutocomplete from '../components/UserAutocomplete';
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [formData, setFormData] = useState({
     year: new Date().getFullYear().toString(),
     send_date: new Date().toISOString().split('T')[0],
     creative_code: '',
-    company: 'DIGITAL ADVERTISING SOCIAL SERVICES SL',
+    owner_company_id: '', // ← NUEVO: ID de empresa en lugar de texto
     responsible: '',
     invoice_type: 'PRODUCCION' + new Date().getFullYear(),
     description: '',
@@ -21,6 +23,28 @@ const ProjectCreate = () => {
     client_email: '',
     project_link: ''
   });
+
+  // ← NUEVO: Cargar empresas al montar
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const response = await getCompanies();
+      setCompanies(response.data);
+      
+      // Si solo hay una empresa, seleccionarla automáticamente
+      if (response.data.length === 1) {
+        setFormData(prev => ({ ...prev, owner_company_id: response.data[0].id }));
+      }
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      alert('Error al cargar empresas. Verifica tus permisos.');
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -35,7 +59,13 @@ const ProjectCreate = () => {
     setLoading(true);
 
     try {
-      const response = await createProject(formData);
+      // Convertir owner_company_id a número
+      const dataToSend = {
+        ...formData,
+        owner_company_id: parseInt(formData.owner_company_id)
+      };
+      
+      const response = await createProject(dataToSend);
       alert('✓ Proyecto creado exitosamente');
       navigate(`/projects/${response.data.id}`);
     } catch (error) {
@@ -106,16 +136,58 @@ const ProjectCreate = () => {
               />
             </div>
 
+            {/* ← NUEVO: Dropdown de empresas */}
             <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMPRESA FACTURACIÓN *</label>
-              <input
-                type="text"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                required
-              />
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">
+                EMPRESA FACTURACIÓN *
+              </label>
+              
+              {loadingCompanies ? (
+                <div className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-500">
+                  Cargando empresas...
+                </div>
+              ) : companies.length === 0 ? (
+                <div className="w-full bg-red-900/20 border border-red-900/30 rounded-sm px-4 py-2.5 text-red-400 text-sm">
+                  ⚠️ No tienes empresas asignadas. Contacta con un admin.
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                    <Building2 size={18} />
+                  </div>
+                  
+                  <select
+                    name="owner_company_id"
+                    value={formData.owner_company_id}
+                    onChange={handleChange}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-sm pl-10 pr-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none cursor-pointer"
+                    required
+                  >
+                    <option value="">Selecciona una empresa...</option>
+                    {companies.map(company => (
+                      <option key={company.id} value={company.id}>
+                        {company.name} {company.cif && `(${company.cif})`}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {/* Flecha dropdown */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+              
+              {companies.length > 0 && (
+                <p className="text-xs text-zinc-500 mt-1">
+                  {companies.length === 1 
+                    ? 'Solo tienes acceso a una empresa'
+                    : `Tienes acceso a ${companies.length} empresas`
+                  }
+                </p>
+              )}
             </div>
           </div>
 
@@ -232,7 +304,7 @@ const ProjectCreate = () => {
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.responsible}
+              disabled={loading || !formData.responsible || !formData.owner_company_id || loadingCompanies}
               className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save size={18} />
