@@ -552,7 +552,7 @@ async def get_single_company_statistics(
     
     # Calcular overview
     overview = await get_statistics_overview_filtered(year, quarter, geo_filter, project_ids, db, current_user)
-    monthly = await get_monthly_evolution_filtered(year, project_ids, db, current_user)
+    monthly = await get_monthly_evolution_filtered(year, project_ids, geo_filter, db, current_user)    
     distribution = await get_currency_distribution_filtered(year, quarter, project_ids, db, current_user)
     breakdown = await get_foreign_breakdown_filtered(year, quarter, project_ids, db, current_user)
     
