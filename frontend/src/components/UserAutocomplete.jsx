@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getUsers } from '../services/api';
+import { getUsernames } from '../services/api';
 import { User, ChevronDown } from 'lucide-react';
 
 /**
@@ -41,7 +41,7 @@ const UserAutocomplete = ({ value, onChange, label = "RESPONSABLE", required = f
 
   const loadUsers = async () => {
     try {
-      const response = await getUsers();
+      const response = await getUsernames();
       setUsers(response.data);
       setFilteredUsers(response.data);
     } catch (error) {

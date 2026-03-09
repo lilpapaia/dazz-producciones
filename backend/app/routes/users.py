@@ -5,7 +5,7 @@ from typing import List
 from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, Company, UserCompany  # ← AÑADIDO Company, UserCompany
-from app.services.auth import get_current_admin_user, get_password_hash
+from app.services.auth import get_current_admin_user, get_current_active_user, get_password_hash
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_user_deleted, log_role_changed
@@ -20,6 +20,50 @@ async def get_users(
     """Get all users (admin only) - Ahora incluye sus empresas"""
     users = db.query(User).all()
     return users
+
+@router.get("/usernames", response_model=List[schemas.UserResponse])
+async def get_usernames(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get users filtered by role for autocomplete
+    
+    Permisos:
+    - ADMIN: Ve todos los usuarios
+    - BOSS: Ve solo usuarios de sus empresas
+    - WORKER: Ve solo a sí mismo
+    """
+    
+    # ADMIN: Retornar todos
+    if current_user.role == "ADMIN":
+        users = db.query(User).all()
+        return users
+    
+    # WORKER: Solo él mismo
+    if current_user.role == "WORKER":
+        return [current_user]
+    
+    # BOSS: Usuarios de sus empresas
+    if current_user.role == "BOSS":
+        # Obtener IDs de empresas del BOSS
+        user_company_ids = [uc.company_id for uc in current_user.companies]
+        
+        if not user_company_ids:
+            # BOSS sin empresas, solo se retorna a sí mismo
+            return [current_user]
+        
+        # Buscar usuarios que tengan al menos una empresa en común
+        users_in_companies = db.query(User).join(
+            UserCompany, User.id == UserCompany.user_id
+        ).filter(
+            UserCompany.company_id.in_(user_company_ids)
+        ).distinct().all()
+        
+        return users_in_companies
+    
+    # Fallback: solo el usuario actual
+    return [current_user]
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
 async def get_user(
