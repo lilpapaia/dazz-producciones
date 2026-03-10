@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket } from '../services/api';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
 const UploadTickets = () => {
@@ -12,6 +12,8 @@ const UploadTickets = () => {
   const [compressing, setCompressing] = useState(false);
   const [results, setResults] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  // ← NUEVO: archivos que fallaron, para poder reintentar
+  const [failedFiles, setFailedFiles] = useState([]);
 
   const compressImageIfNeeded = async (file) => {
     if (!file.type.startsWith('image/')) return file;
@@ -68,18 +70,25 @@ const UploadTickets = () => {
   };
 
   const handleFileChange = async (e) => {
-    await processFiles(Array.from(e.target.files), true); // append: conserva los anteriores
-    e.target.value = ''; // reset para que onChange se dispare aunque elijas el mismo archivo
+    await processFiles(Array.from(e.target.files), true);
+    e.target.value = '';
   };
 
   const handleDrop = async (e) => {
     e.preventDefault();
-    await processFiles(Array.from(e.dataTransfer.files), true); // append
+    await processFiles(Array.from(e.dataTransfer.files), true);
   };
 
   // Quitar un archivo individual de la lista
   const removeFile = (index) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ← NUEVO: volver al estado inicial solo con los archivos fallidos
+  const retryFailed = () => {
+    setFiles(failedFiles);
+    setResults([]);
+    setFailedFiles([]);
   };
 
   const handleUpload = async () => {
@@ -89,8 +98,10 @@ const UploadTickets = () => {
     }
 
     setUploading(true);
+    setFailedFiles([]); // limpiar fallidos anteriores
     setUploadProgress({ current: 0, total: files.length });
     const newResults = [];
+    const newFailedFiles = []; // ← acumular File objects fallidos
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -105,11 +116,13 @@ const UploadTickets = () => {
           success: false,
           error: error.response?.data?.detail || 'Error al procesar'
         });
+        newFailedFiles.push(file); // ← guardar el File object original
       }
 
       setResults([...newResults]);
     }
 
+    setFailedFiles(newFailedFiles); // ← guardar todos los fallidos al terminar
     setUploading(false);
     setUploadProgress({ current: 0, total: 0 });
   };
@@ -373,10 +386,21 @@ const UploadTickets = () => {
                 ))}
               </div>
 
+              {/* ← NUEVO: botón reintentar fallidos */}
+              {failedFiles.length > 0 && (
+                <button
+                  onClick={retryFailed}
+                  className="w-full mt-4 flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 hover:border-amber-500 text-amber-400 py-3 rounded-sm font-bold transition-all"
+                >
+                  <RefreshCw size={18} />
+                  REINTENTAR {failedFiles.length} FALLIDO{failedFiles.length !== 1 ? 'S' : ''}
+                </button>
+              )}
+
               {successCount > 0 && (
                 <button
                   onClick={() => navigate(`/projects/${id}`)}
-                  className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors"
+                  className="w-full mt-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors"
                 >
                   VER PROYECTO
                 </button>
