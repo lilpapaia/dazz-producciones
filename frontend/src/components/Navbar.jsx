@@ -42,20 +42,22 @@ const Navbar = () => {
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
 
-            {/* CAMBIADO: Proyectos → Estadísticas */}
-            <Link
-              to="/statistics"
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
-                isActive('/statistics')
-                  ? 'bg-amber-500 text-zinc-950'
-                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-              }`}
-            >
-              <BarChart3 size={18} />
-              <span className="hidden sm:inline">Estadísticas</span>
-            </Link>
+            {/* Estadísticas — solo ADMIN y BOSS */}
+            {(user.role === 'ADMIN' || user.role === 'BOSS') && (
+              <Link
+                to="/statistics"
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+                  isActive('/statistics')
+                    ? 'bg-amber-500 text-zinc-950'
+                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
+                }`}
+              >
+                <BarChart3 size={18} />
+                <span className="hidden sm:inline">Estadísticas</span>
+              </Link>
+            )}
 
-            {/* ← CAMBIADO: 'admin' → 'ADMIN' */}
+            {/* Usuarios — solo ADMIN */}
             {user.role === 'ADMIN' && (
               <Link
                 to="/users"
