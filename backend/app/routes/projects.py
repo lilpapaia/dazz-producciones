@@ -105,7 +105,7 @@ async def create_project(
         )
     
     # Validar que el usuario tiene acceso a esa empresa
-    if not validate_company_access(current_user, project.owner_company_id):
+    if not validate_company_access(current_user, project.owner_company_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"No tienes permiso para crear proyectos en {company.name}"
@@ -210,7 +210,7 @@ async def update_project(
     
     # Si se intenta cambiar owner_company_id, validar acceso a la nueva empresa
     if project_update.owner_company_id and project_update.owner_company_id != project.owner_company_id:
-        if not validate_company_access(current_user, project_update.owner_company_id):
+        if not validate_company_access(current_user, project_update.owner_company_id, db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permiso para mover el proyecto a esa empresa"
