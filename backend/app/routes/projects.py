@@ -108,7 +108,7 @@ async def create_project(
         )
     
     # Crear proyecto (company es campo legacy NOT NULL, rellenar con nombre de empresa)
-    db_project = Project(**project.dict(), owner_id=current_user.id, status=ProjectStatus.EN_CURSO, company=company.name)
+    db_project = Project(**project.dict(exclude={"company"}), owner_id=current_user.id, status=ProjectStatus.EN_CURSO, company=company.name)
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
