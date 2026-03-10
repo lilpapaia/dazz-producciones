@@ -33,6 +33,7 @@ const ReviewTicket = () => {
   const [deleting, setDeleting] = useState(false);
   const [allTickets, setAllTickets] = useState([]);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
+  const [customPayment, setCustomPayment] = useState(false);
 
   // Refs para detección de swipe
   const touchStartX = useRef(0);
@@ -240,17 +241,6 @@ const ReviewTicket = () => {
       goToNextTicket();
     }
   };
-
-  if (!ticket && !loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-zinc-400 text-lg mb-2">No tienes permiso para ver este ticket</p>
-          <button onClick={() => navigate(-1)} className="text-amber-500 hover:text-amber-400 text-sm underline">Volver</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -664,11 +654,42 @@ const ReviewTicket = () => {
             </div>
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ESTATUS PAGO</label>
-              <select value={ticket.payment_status || ''} onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500">
-                <option value="">Seleccionar...</option>
-                {paymentStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
+              {!customPayment ? (
+                <select
+                  value={paymentStatusOptions.includes(ticket.payment_status) ? ticket.payment_status : (ticket.payment_status ? '__custom__' : '')}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setCustomPayment(true);
+                      setTicket({...ticket, payment_status: ''});
+                    } else {
+                      setTicket({...ticket, payment_status: e.target.value});
+                    }
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">Seleccionar...</option>
+                  {paymentStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  <option value="__custom__">✏️ Escribir otro...</option>
+                </select>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={ticket.payment_status || ''}
+                    onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
+                    placeholder="Escribe el estatus..."
+                    className="flex-1 bg-zinc-950 border border-amber-500 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => { setCustomPayment(false); setTicket({...ticket, payment_status: ''}); }}
+                    className="px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-sm transition-colors text-xs"
+                    title="Volver al desplegable"
+                  >
+                    ↩
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -706,3 +727,4 @@ const ReviewTicket = () => {
 };
 
 export default ReviewTicket;
+
