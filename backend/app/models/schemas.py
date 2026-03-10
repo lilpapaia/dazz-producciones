@@ -263,7 +263,7 @@ class CurrencyDistribution(BaseModel):
 class TicketSummary(BaseModel):
     """Resumen de ticket para estadísticas de gastos internacionales"""
     id: int
-    date: str
+    date: Optional[str] = None
     provider: str
     invoice_number: Optional[str] = None
     final_total: float
@@ -316,5 +316,3 @@ class StatisticsResponse(BaseModel):
     class Config:
         # Permite campos extra que lleguen del backend sin romper la validación
         extra = "allow"
-
-
