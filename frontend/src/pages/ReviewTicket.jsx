@@ -42,7 +42,15 @@ const ReviewTicket = () => {
   useEffect(() => { 
     loadTicket(); 
     setCurrentPage(0);
+    setCustomPayment(false);
   }, [id]);
+
+  // Si el ticket cargado tiene un payment_status personalizado (no está en la lista), activar modo custom
+  useEffect(() => {
+    if (ticket?.payment_status && !paymentStatusOptions.includes(ticket.payment_status)) {
+      setCustomPayment(true);
+    }
+  }, [ticket?.payment_status]);
 
   // Bloquear scroll cuando se abre el lightbox
   useEffect(() => {
@@ -678,6 +686,7 @@ const ReviewTicket = () => {
                     autoFocus
                     value={ticket.payment_status || ''}
                     onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
                     placeholder="Escribe el estatus..."
                     className="flex-1 bg-zinc-950 border border-amber-500 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none"
                   />
@@ -727,4 +736,3 @@ const ReviewTicket = () => {
 };
 
 export default ReviewTicket;
-
