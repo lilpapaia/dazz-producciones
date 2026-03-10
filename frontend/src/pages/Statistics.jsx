@@ -10,7 +10,7 @@ const Statistics = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
-  
+
   // ── Inicializar companyId directamente desde user para evitar race condition en BOSS
   const getInitialCompanyId = () => {
     if (user?.role === 'BOSS' && user.companies?.length > 0) {
@@ -110,7 +110,8 @@ const Statistics = () => {
     }
 
     const doc = new jsPDF();
-    const { overview, foreign_breakdown } = data;
+    const { overview } = data;
+    const foreign_breakdown = data.foreign_breakdown.filter(c => c.tax_reclamable_eur > 0);
     const pdfIsAllCompanies = data.mode === 'all_companies';
     const companyLabel = pdfIsAllCompanies
       ? 'TODAS LAS EMPRESAS'
@@ -294,6 +295,8 @@ const Statistics = () => {
   const { overview, monthly_evolution, currency_distribution, foreign_breakdown } = data;
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
   const isAllCompanies = data.mode === 'all_companies';
+  // ← FIX: solo países con IVA reclamable > 0
+  const claimableBreakdown = foreign_breakdown.filter(c => c.tax_reclamable_eur > 0);
 
   // ── Componente de ticket (reutilizable) ─────────────────────
   const TicketRow = ({ ticket, projectId, isMobile }) => (
@@ -662,7 +665,7 @@ const Statistics = () => {
         </div>
 
         {/* ── FOREIGN BREAKDOWN ─────────────────────────────────── */}
-        {foreign_breakdown && foreign_breakdown.length > 0 && (
+        {claimableBreakdown && claimableBreakdown.length > 0 && (
           <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-sm p-4 sm:p-8">
 
             {/* Header */}
@@ -705,12 +708,12 @@ const Statistics = () => {
               <div className="bg-zinc-900 border border-purple-500/30 rounded-sm p-3 sm:p-4">
                 <p className="text-xs text-purple-300 font-semibold uppercase mb-1">Proyectos</p>
                 <p className="text-xl sm:text-2xl font-bold text-purple-400">
-                  {foreign_breakdown.reduce((sum, c) => sum + c.projects_count, 0)}
+                  {claimableBreakdown.reduce((sum, c) => sum + c.projects_count, 0)}
                 </p>
               </div>
               <div className="bg-zinc-900 border border-amber-500/30 rounded-sm p-3 sm:p-4">
                 <p className="text-xs text-amber-300 font-semibold uppercase mb-1">Países</p>
-                <p className="text-xl sm:text-2xl font-bold text-amber-400">{foreign_breakdown.length}</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-400">{claimableBreakdown.length}</p>
               </div>
             </div>
 
@@ -727,7 +730,7 @@ const Statistics = () => {
 
             {/* ── VISTA MÓVIL ─────────────────────────────────── */}
             <div className="sm:hidden space-y-4">
-              {foreign_breakdown.map((country) => (
+              {claimableBreakdown.map((country) => (
                 <div key={country.country_code} className="bg-zinc-900 border border-zinc-700 rounded-sm overflow-hidden">
 
                   {/* Cabecera del país — siempre visible, no clickeable */}
@@ -814,7 +817,7 @@ const Statistics = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {foreign_breakdown.map((country) => (
+                    {claimableBreakdown.map((country) => (
                       <>
                         {/* Fila país — siempre visible, sin click */}
                         <tr key={country.country_code} className="border-b border-zinc-800 bg-zinc-900/30">
@@ -860,7 +863,7 @@ const Statistics = () => {
         )}
 
         {/* Mensaje cuando no hay datos internacionales */}
-        {(!foreign_breakdown || foreign_breakdown.length === 0) && (
+        {(!claimableBreakdown || claimableBreakdown.length === 0) && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-8 text-center">
             <p className="text-zinc-500 text-lg mb-2">🌍</p>
             <p className="text-zinc-500">No hay gastos internacionales registrados en {year}{quarter ? ` (Q${quarter})` : ''}</p>
