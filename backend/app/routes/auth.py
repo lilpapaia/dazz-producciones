@@ -4,7 +4,6 @@ from datetime import timedelta, datetime
 import secrets
 import string
 
-
 from config.database import get_db
 from app.models import schemas
 from app.models.database import User, PasswordResetToken, Company, UserCompany  # ← AÑADIDO Company, UserCompany
