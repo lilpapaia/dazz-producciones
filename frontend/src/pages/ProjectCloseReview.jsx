@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, closeProjectWithEmails, getUsers } from '../services/api';
+import { getProject, getProjectTickets, closeProjectWithEmails, getUsernames } from '../services/api';
 import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import EmailChipsInput from '../components/EmailChipsInput';
 
@@ -23,7 +23,7 @@ const ProjectCloseReview = () => {
       const [projectRes, ticketsRes, usersRes] = await Promise.all([
         getProject(id),
         getProjectTickets(id),
-        getUsers()
+        getUsernames()
       ]);
       
       setProject(projectRes.data);
@@ -81,15 +81,18 @@ const ProjectCloseReview = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      alert(`✓ Proyecto cerrado. Email enviado a ${emailRecipients.length} destinatario(s) y Excel descargado.`);
+      alert(`✓ Proyecto cerrado. Excel descargado y email enviado a ${emailRecipients.length} destinatario(s).`);
       navigate('/dashboard');
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error al cerrar proyecto');
+      console.error('Error closing project:', error);
+      alert('Error al cerrar proyecto: ' + (error.response?.data?.detail || error.message));
     } finally {
       setSending(false);
     }
   };
+
+  const totalAmount = tickets.reduce((sum, t) => sum + (t.final_total || 0), 0);
+  const responsibleEmail = getResponsibleEmail();
 
   if (loading) {
     return (
@@ -99,8 +102,13 @@ const ProjectCloseReview = () => {
     );
   }
 
-  const totalAmount = tickets.reduce((sum, t) => sum + (t.final_total || 0), 0);
-  const responsibleEmail = getResponsibleEmail();
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <p className="text-zinc-400">No se pudo cargar el proyecto</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -109,45 +117,15 @@ const ProjectCloseReview = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate(`/projects/${id}`)}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-4"
+            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3"
           >
             <ArrowLeft size={18} />
             <span className="text-sm">Volver al Proyecto</span>
           </button>
 
-          {/* Layout Móvil: Todo vertical */}
-          <div className="sm:hidden">
-            {/* Título */}
-            <h1 className="text-2xl font-bebas tracking-wider mb-4">
-              REVISAR ANTES DE CERRAR
-            </h1>
-            
-            {/* Código */}
-            <p className="text-sm text-zinc-400 font-mono mb-1">
-              {project.creative_code}
-            </p>
-            
-            {/* Nombre */}
-            <p className="text-zinc-300 mb-6">
-              • {project.description}
-            </p>
-            
-            {/* Total */}
-            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-sm p-4">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet size={20} className="text-green-400" />
-                <span className="text-sm text-zinc-400 uppercase">Total Proyecto</span>
-              </div>
-              <span className="text-2xl font-bold text-amber-500">
-                {totalAmount.toFixed(2)}€
-              </span>
-            </div>
-          </div>
-
-          {/* Layout Desktop: Original mejorado */}
-          <div className="hidden sm:flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bebas tracking-wider mb-2">REVISAR ANTES DE CERRAR</h1>
+              <h1 className="text-3xl font-bebas tracking-wider">CERRAR PROYECTO</h1>
               <p className="text-zinc-400">{project.creative_code} • {project.description}</p>
             </div>
 
@@ -342,3 +320,4 @@ const ProjectCloseReview = () => {
 };
 
 export default ProjectCloseReview;
+
