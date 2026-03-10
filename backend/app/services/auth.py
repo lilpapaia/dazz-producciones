@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 import os
 from dotenv import load_dotenv
@@ -86,7 +86,7 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).options(joinedload(User.companies)).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
     
