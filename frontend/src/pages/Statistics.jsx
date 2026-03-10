@@ -11,7 +11,6 @@ const Statistics = () => {
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
   
-
   // ── Inicializar companyId directamente desde user para evitar race condition en BOSS
   const getInitialCompanyId = () => {
     if (user?.role === 'BOSS' && user.companies?.length > 0) {
