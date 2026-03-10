@@ -202,8 +202,8 @@ async def get_complete_statistics(
     # 2. EVOLUCIÓN MENSUAL: year + company + geo_filter → sin quarter
     monthly = _calc_monthly(project_ids, geo_filter, db)
 
-    # 3. PIE DISTRIBUCIÓN: year + company + quarter + geo_filter
-    distribution = _calc_distribution(project_ids, quarter, geo_filter, db)
+    # 3. PIE DISTRIBUCIÓN: year + company + quarter (NO geo_filter — representa distribución global)
+    distribution = _calc_distribution(project_ids, quarter, None, db)
 
     # 4. BREAKDOWN INTERNACIONAL: year + company + quarter
     is_all_companies = (current_user.role == "ADMIN" and company_id is None)
@@ -555,6 +555,4 @@ def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session)
 
     result.sort(key=lambda x: x['total_spent'], reverse=True)
     return result
-
-
 
