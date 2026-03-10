@@ -1,12 +1,16 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from datetime import datetime, date
 from enum import Enum
 
-# Enums
+# ============================================
+# ENUMS - DEBEN COINCIDIR CON database.py
+# ============================================
+
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
+    ADMIN = "ADMIN"
+    BOSS = "BOSS"
+    WORKER = "WORKER"
 
 class ProjectStatus(str, Enum):
     EN_CURSO = "en_curso"
@@ -17,6 +21,25 @@ class TicketType(str, Enum):
     FACTURA = "factura"
 
 # ============================================
+# COMPANY SCHEMAS
+# ============================================
+
+class CompanyBase(BaseModel):
+    name: str
+    cif: Optional[str] = None
+    address: Optional[str] = None
+
+class CompanyCreate(CompanyBase):
+    pass
+
+class CompanyResponse(CompanyBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# ============================================
 # USER SCHEMAS
 # ============================================
 
@@ -24,10 +47,11 @@ class UserBase(BaseModel):
     email: EmailStr
     name: str
     username: Optional[str] = None
-    role: UserRole = UserRole.USER
+    role: UserRole = UserRole.WORKER
 
 class UserCreate(UserBase):
     password: str
+    company_ids: Optional[List[int]] = []  # ← AÑADIDO: empresas a asignar al usuario
 
 class UserLogin(BaseModel):
     identifier: str  # Email O username
@@ -37,6 +61,7 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     created_at: datetime
+    companies: List[CompanyResponse] = []  # Empresas asignadas
     
     class Config:
         from_attributes = True
@@ -69,7 +94,8 @@ class ProjectBase(BaseModel):
     year: str
     send_date: Optional[str] = None
     creative_code: str
-    company: str
+    company: Optional[str] = None  # Campo antiguo (string)
+    owner_company_id: Optional[int] = None  # Campo nuevo (FK)
     responsible: str
     invoice_type: str
     description: str
@@ -87,6 +113,7 @@ class ProjectUpdate(BaseModel):
     send_date: Optional[str] = None
     creative_code: Optional[str] = None
     company: Optional[str] = None
+    owner_company_id: Optional[int] = None
     responsible: Optional[str] = None
     invoice_type: Optional[str] = None
     description: Optional[str] = None
@@ -105,6 +132,7 @@ class ProjectResponse(ProjectBase):
     created_at: datetime
     closed_at: Optional[datetime] = None
     owner_id: int
+    owner_company: Optional[CompanyResponse] = None  # Empresa del proyecto
     
     class Config:
         from_attributes = True
@@ -250,10 +278,10 @@ class ProjectSummary(BaseModel):
     total_amount: float
     foreign_amount: Optional[float] = None
     currency: Optional[str] = None
-    tickets: List['TicketSummary'] = []  # Lista de tickets del proyecto
+    tickets: List[TicketSummary] = []
 
 class CompanyGroup(BaseModel):
-    """Agrupación de proyectos por empresa (para modo TODAS LAS EMPRESAS)"""
+    """Agrupación de proyectos por empresa"""
     company_id: int
     company_name: str
     projects: List[ProjectSummary]
@@ -267,11 +295,26 @@ class CountryBreakdown(BaseModel):
     tax_paid_foreign: Optional[float] = None
     tax_reclamable_eur: float
     projects_count: int
-    projects: Optional[List[ProjectSummary]] = []  # ← Opcional ahora
-    companies: Optional[List[CompanyGroup]] = None  # ← Nuevo campo para modo TODAS
+    projects: Optional[List[ProjectSummary]] = []
+    companies: Optional[List[CompanyGroup]] = None
 
 class StatisticsResponse(BaseModel):
+    """
+    Respuesta dinámica según el modo:
+    - all_companies: ADMIN sin filtro de empresa
+    - single_company: ADMIN con empresa específica o BOSS
+    """
+    mode: str  # "all_companies" | "single_company"
     overview: StatisticsOverview
     monthly_evolution: List[MonthlyDataPoint]
     currency_distribution: List[CurrencyDistribution]
     foreign_breakdown: List[CountryBreakdown]
+    
+    # Solo en modo single_company
+    company: Optional[Dict[str, Any]] = None
+
+    class Config:
+        # Permite campos extra que lleguen del backend sin romper la validación
+        extra = "allow"
+
+
