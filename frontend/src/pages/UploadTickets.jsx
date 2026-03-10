@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket } from '../services/api';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
 const UploadTickets = () => {
@@ -38,30 +38,48 @@ const UploadTickets = () => {
     }
   };
 
-  const processFiles = async (selectedFiles) => {
-    const hasLargeImages = selectedFiles.some(f => 
+  // append=true → acumula sobre los existentes (no reemplaza)
+  const processFiles = async (selectedFiles, append = false) => {
+    const hasLargeImages = selectedFiles.some(f =>
       f.type.startsWith('image/') && f.size > 3 * 1024 * 1024
     );
 
+    let processedFiles;
     if (hasLargeImages) {
       setCompressing(true);
-      const processedFiles = await Promise.all(
+      processedFiles = await Promise.all(
         selectedFiles.map(file => compressImageIfNeeded(file))
       );
-      setFiles(processedFiles);
       setCompressing(false);
     } else {
-      setFiles(selectedFiles);
+      processedFiles = selectedFiles;
+    }
+
+    if (append) {
+      // Evitar duplicados por nombre
+      setFiles(prev => {
+        const existingNames = new Set(prev.map(f => f.name));
+        const newOnes = processedFiles.filter(f => !existingNames.has(f.name));
+        return [...prev, ...newOnes];
+      });
+    } else {
+      setFiles(processedFiles);
     }
   };
 
   const handleFileChange = async (e) => {
-    await processFiles(Array.from(e.target.files));
+    await processFiles(Array.from(e.target.files), true); // append: conserva los anteriores
+    e.target.value = ''; // reset para que onChange se dispare aunque elijas el mismo archivo
   };
 
   const handleDrop = async (e) => {
     e.preventDefault();
-    await processFiles(Array.from(e.dataTransfer.files));
+    await processFiles(Array.from(e.dataTransfer.files), true); // append
+  };
+
+  // Quitar un archivo individual de la lista
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleUpload = async () => {
@@ -77,7 +95,7 @@ const UploadTickets = () => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       setUploadProgress({ current: i + 1, total: files.length });
-      
+
       try {
         const response = await uploadTicket(id, file);
         newResults.push({ file: file.name, success: true, data: response.data });
@@ -88,7 +106,7 @@ const UploadTickets = () => {
           error: error.response?.data?.detail || 'Error al procesar'
         });
       }
-      
+
       setResults([...newResults]);
     }
 
@@ -127,6 +145,7 @@ const UploadTickets = () => {
             </div>
           )}
 
+          {/* Zona de drop */}
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
@@ -141,14 +160,35 @@ const UploadTickets = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
-              <input type="file" accept="image/*" capture="environment" multiple onChange={handleFileChange} className="hidden" id="camera-input" />
-              <label htmlFor="camera-input" className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/30">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="camera-input"
+              />
+              <label
+                htmlFor="camera-input"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/30"
+              >
                 <Camera size={20} />
                 TOMAR FOTO
               </label>
 
-              <input type="file" accept="image/*,.pdf" multiple onChange={handleFileChange} className="hidden" id="file-upload" />
-              <label htmlFor="file-upload" className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30"
+              >
                 <FolderOpen size={20} />
                 ELEGIR ARCHIVOS
               </label>
@@ -156,15 +196,32 @@ const UploadTickets = () => {
             <p className="text-xs text-zinc-600 mt-4">💡 "Tomar Foto" abre la cámara en móvil</p>
           </div>
 
+          {/* Lista archivos seleccionados */}
           {files.length > 0 && (
             <div className="mt-6">
-              <h3 className="font-semibold font-mono mb-3 tracking-wider">ARCHIVOS SELECCIONADOS ({files.length})</h3>
+              <h3 className="font-semibold font-mono mb-3 tracking-wider">
+                ARCHIVOS SELECCIONADOS ({files.length})
+              </h3>
               <div className="space-y-2">
                 {files.map((file, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-sm">
-                    <FileText size={20} className="text-amber-500" />
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-sm"
+                  >
+                    <FileText size={20} className="text-amber-500 flex-shrink-0" />
                     <span className="flex-1 text-sm truncate">{file.name}</span>
-                    <span className="text-xs text-zinc-500 font-mono">{(file.size / 1024).toFixed(1)} KB</span>
+                    <span className="text-xs text-zinc-500 font-mono whitespace-nowrap">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </span>
+                    {/* Botón quitar archivo */}
+                    <button
+                      onClick={() => removeFile(index)}
+                      disabled={uploading}
+                      className="p-1 rounded-sm text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                      title="Quitar archivo"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -175,10 +232,13 @@ const UploadTickets = () => {
                 className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-zinc-950 py-3 rounded-sm font-bold transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Upload size={18} />
-                {uploading ? `PROCESANDO... (${uploadProgress.current}/${uploadProgress.total})` : 'PROCESAR CON IA'}
+                {uploading
+                  ? `PROCESANDO... (${uploadProgress.current}/${uploadProgress.total})`
+                  : 'PROCESAR CON IA'
+                }
               </button>
 
-              {/* BARRA DE PROGRESO MEJORADA */}
+              {/* Barra de progreso animada */}
               {uploading && (
                 <div className="mt-4 p-4 bg-zinc-950 border border-amber-500/30 rounded-sm space-y-3">
                   {/* Header con contador */}
@@ -201,9 +261,8 @@ const UploadTickets = () => {
                     </div>
                   </div>
 
-                  {/* Barra de progreso con animación */}
+                  {/* Barra de progreso con gradiente */}
                   <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
-                    {/* Barra de fondo con gradiente */}
                     <div
                       className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 transition-all duration-500 ease-out rounded-full"
                       style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
@@ -211,15 +270,15 @@ const UploadTickets = () => {
                       {/* Efecto de brillo animado */}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                     </div>
-                    
+
                     {/* Puntos de checkpoint cada 25% */}
                     <div className="absolute inset-0 flex items-center justify-between px-1">
                       {[25, 50, 75].map(percent => (
-                        <div 
+                        <div
                           key={percent}
                           className={`w-1 h-1 rounded-full ${
-                            (uploadProgress.current / uploadProgress.total) * 100 >= percent 
-                              ? 'bg-white' 
+                            (uploadProgress.current / uploadProgress.total) * 100 >= percent
+                              ? 'bg-white'
                               : 'bg-zinc-700'
                           }`}
                         />
@@ -239,16 +298,26 @@ const UploadTickets = () => {
             </div>
           )}
 
+          {/* Resultados */}
           {results.length > 0 && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold font-mono tracking-wider">RESULTADOS</h3>
-                <span className="text-sm text-zinc-400 font-mono">{successCount} de {results.length} exitosos</span>
+                <span className="text-sm text-zinc-400 font-mono">
+                  {successCount} de {results.length} exitosos
+                </span>
               </div>
 
               <div className="space-y-3">
                 {results.map((result, index) => (
-                  <div key={index} className={`p-4 rounded-sm border-2 ${result.success ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
+                  <div
+                    key={index}
+                    className={`p-4 rounded-sm border-2 ${
+                      result.success
+                        ? 'border-green-500/30 bg-green-500/10'
+                        : 'border-red-500/30 bg-red-500/10'
+                    }`}
+                  >
                     <div className="flex items-start gap-3">
                       {result.success
                         ? <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
@@ -258,19 +327,45 @@ const UploadTickets = () => {
                         <p className="font-medium text-sm mb-1">{result.file}</p>
                         {result.success ? (
                           <div className="text-xs space-y-1 font-mono text-zinc-400">
-                            <p><span className="font-medium">Proveedor:</span> {result.data?.provider || 'N/A'}</p>
-                            <p><span className="font-medium">Total:</span> {result.data?.final_total ? `${result.data.final_total}€` : 'N/A'}</p>
-                            <p><span className="font-medium">Tipo:</span> {result.data?.type === 'factura' ? 'Factura' : 'Ticket'}</p>
+                            <p>
+                              <span className="font-medium">Proveedor:</span>{' '}
+                              {result.data?.provider || 'N/A'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Total:</span>{' '}
+                              {result.data?.final_total ? `${result.data.final_total}€` : 'N/A'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Tipo:</span>{' '}
+                              {result.data?.type === 'factura' ? 'Factura' : 'Ticket'}
+                            </p>
                             {result.data?.is_foreign && (
                               <div className="mt-2 pt-2 border-t border-blue-500/30">
-                                <p className="text-blue-400 font-bold mb-1">🌍 Factura internacional detectada</p>
-                                <p><span className="font-medium">Divisa:</span> <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">{result.data.currency || 'N/A'}</span></p>
-                                {result.data.country_code && <p><span className="font-medium">País:</span> {result.data.country_code}</p>}
+                                <p className="text-blue-400 font-bold mb-1">
+                                  🌍 Factura internacional detectada
+                                </p>
+                                <p>
+                                  <span className="font-medium">Divisa:</span>{' '}
+                                  <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">
+                                    {result.data.currency || 'N/A'}
+                                  </span>
+                                </p>
+                                {result.data.country_code && (
+                                  <p>
+                                    <span className="font-medium">País:</span>{' '}
+                                    {result.data.country_code}
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <p className="text-xs text-red-400">{typeof result.error === 'string' ? result.error : JSON.stringify(result.error)}</p>
+                          <p className="text-xs text-red-400">
+                            {typeof result.error === 'string'
+                              ? result.error
+                              : JSON.stringify(result.error)
+                            }
+                          </p>
                         )}
                       </div>
                     </div>
@@ -279,7 +374,10 @@ const UploadTickets = () => {
               </div>
 
               {successCount > 0 && (
-                <button onClick={() => navigate(`/projects/${id}`)} className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors">
+                <button
+                  onClick={() => navigate(`/projects/${id}`)}
+                  className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors"
+                >
                   VER PROYECTO
                 </button>
               )}
