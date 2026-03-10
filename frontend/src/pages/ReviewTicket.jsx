@@ -241,6 +241,17 @@ const ReviewTicket = () => {
     }
   };
 
+  if (!ticket && !loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-zinc-400 text-lg mb-2">No tienes permiso para ver este ticket</p>
+          <button onClick={() => navigate(-1)} className="text-amber-500 hover:text-amber-400 text-sm underline">Volver</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
