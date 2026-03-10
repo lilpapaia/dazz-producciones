@@ -66,6 +66,7 @@ def authenticate_user(db: Session, identifier: str, password: str):
         return False
     return user
 
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
