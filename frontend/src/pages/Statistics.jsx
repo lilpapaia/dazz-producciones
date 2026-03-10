@@ -166,6 +166,9 @@ const Statistics = () => {
 
     // ── Helper: renderiza un proyecto con sus tickets ─────────
     const renderProject = (project, indent) => {
+      // ← FIX: solo tickets con IVA reclamable > 0
+      const tickets = (project.tickets || []).filter(t => t.foreign_tax_eur > 0);
+
       checkPageBreak(30);
       doc.setDrawColor(...colors.gray); doc.setLineWidth(0.2);
       doc.line(indent, yPos, pageWidth - indent, yPos);
@@ -186,7 +189,6 @@ const Statistics = () => {
       );
       yPos += 7;
 
-      const tickets = project.tickets || [];
       if (tickets.length > 0) {
         doc.setFont(undefined, 'bold'); doc.setTextColor(...colors.success);
         doc.text(`TICKETS INTERNACIONALES (${tickets.length}):`, indent + 4, yPos);
@@ -342,6 +344,8 @@ const Statistics = () => {
   // ── Componente proyecto expandible (reutilizable) ───────────
   const ProjectRow = ({ project, isMobile, indent = false }) => {
     const isExpanded = expandedProjects.has(project.id);
+    // ← FIX: solo tickets con IVA reclamable > 0
+    const claimableTickets = (project.tickets || []).filter(t => t.foreign_tax_eur > 0);
     return (
       <div className={`space-y-2 ${indent ? 'ml-6' : ''}`}>
         <div
@@ -361,7 +365,7 @@ const Statistics = () => {
                 <div className="flex flex-col gap-1 text-xs text-zinc-500">
                   <span className="font-mono">{project.creative_code}</span>
                   <span className="bg-zinc-800 px-2 py-0.5 rounded self-start">
-                    {project.tickets?.length || 0} ticket{project.tickets?.length !== 1 ? 's' : ''}
+                    {claimableTickets.length} ticket{claimableTickets.length !== 1 ? 's' : ''} con IVA reclamable
                   </span>
                 </div>
               </div>
@@ -379,10 +383,10 @@ const Statistics = () => {
           </div>
         </div>
 
-        {isExpanded && project.tickets && project.tickets.length > 0 && (
+        {isExpanded && claimableTickets.length > 0 && (
           <div className="ml-8 space-y-2">
             <p className="text-xs text-zinc-600 font-semibold uppercase mb-2">📄 Tickets internacionales:</p>
-            {project.tickets.map(ticket => (
+            {claimableTickets.map(ticket => (
               <TicketRow key={ticket.id} ticket={ticket} projectId={project.id} isMobile={isMobile} />
             ))}
           </div>
