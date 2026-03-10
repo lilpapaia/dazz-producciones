@@ -30,7 +30,14 @@ class CloseProjectRequest(BaseModel):
 # HELPER: Validar acceso a proyecto según empresa
 # ============================================
 
-def can_access_project(user: User, project: Project) -> bool:
+def _get_user_company_ids(user: User, db: Session):
+    """Recarga companies del usuario desde DB para evitar DetachedInstanceError."""
+    from sqlalchemy.orm import joinedload
+    u = db.query(User).options(joinedload(User.companies)).filter(User.id == user.id).first()
+    return [c.id for c in u.companies] if u else []
+
+
+def can_access_project(user: User, project: Project, db: Session = None) -> bool:
     """
     Verificar si un usuario puede acceder a un proyecto.
     
@@ -41,20 +48,18 @@ def can_access_project(user: User, project: Project) -> bool:
     if user.role == "ADMIN":
         return True
     
+    company_ids = _get_user_company_ids(user, db) if db else [c.id for c in user.companies]
+    
     if user.role == "BOSS":
-        # BOSS puede ver todos los proyectos de su empresa
-        user_company_ids = [c.id for c in user.companies]
-        return project.owner_company_id in user_company_ids
+        return project.owner_company_id in company_ids
     
     # WORKER: solo sus propios proyectos de sus empresas
     if project.owner_id != user.id:
         return False
-    
-    user_company_ids = [c.id for c in user.companies]
-    return project.owner_company_id in user_company_ids
+    return project.owner_company_id in company_ids
 
 
-def can_modify_project(user: User, project: Project) -> bool:
+def can_modify_project(user: User, project: Project, db: Session = None) -> bool:
     """
     Verificar si un usuario puede modificar/eliminar un proyecto.
     
@@ -66,9 +71,8 @@ def can_modify_project(user: User, project: Project) -> bool:
         return True
     
     if user.role == "BOSS":
-        # BOSS puede modificar todos los proyectos de su empresa
-        user_company_ids = [c.id for c in user.companies]
-        return project.owner_company_id in user_company_ids
+        company_ids = _get_user_company_ids(user, db) if db else [c.id for c in user.companies]
+        return project.owner_company_id in company_ids
     
     # WORKER: solo sus propios proyectos
     return project.owner_id == user.id
@@ -137,12 +141,12 @@ async def get_projects(
     
     elif current_user.role == "BOSS":
         # BOSS ve todos los proyectos de su empresa
-        user_company_ids = [c.id for c in current_user.companies]
+        user_company_ids = _get_user_company_ids(current_user, db)
         query = query.filter(Project.owner_company_id.in_(user_company_ids))
     
     else:
         # WORKER ve solo SUS proyectos de sus empresas
-        user_company_ids = [c.id for c in current_user.companies]
+        user_company_ids = _get_user_company_ids(current_user, db)
         query = query.filter(
             Project.owner_id == current_user.id,
             Project.owner_company_id.in_(user_company_ids)
@@ -172,7 +176,7 @@ async def get_project(
         )
     
     # Validar acceso según empresa
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para ver este proyecto"
@@ -198,7 +202,7 @@ async def update_project(
         )
     
     # Validar permisos de modificación
-    if not can_modify_project(current_user, project):
+    if not can_modify_project(current_user, project, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para editar este proyecto"
@@ -238,7 +242,7 @@ async def close_project(
         )
     
     # Validar permisos: ADMIN, BOSS de la empresa, o dueño
-    if not can_modify_project(current_user, project):
+    if not can_modify_project(current_user, project, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para cerrar este proyecto"
@@ -326,7 +330,7 @@ async def reopen_project(
         pass  # ADMIN puede siempre
     elif current_user.role == "BOSS":
         # Validar que es BOSS de la empresa del proyecto
-        user_company_ids = [c.id for c in current_user.companies]
+        user_company_ids = _get_user_company_ids(current_user, db)
         if project.owner_company_id not in user_company_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -361,7 +365,7 @@ async def delete_project(
         )
     
     # Validar permisos de eliminación
-    if not can_modify_project(current_user, project):
+    if not can_modify_project(current_user, project, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para eliminar este proyecto"
