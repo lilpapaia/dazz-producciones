@@ -358,9 +358,9 @@ const Statistics = () => {
               }
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-zinc-100 mb-1 truncate">{project.description}</p>
-                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                <div className="flex flex-col gap-1 text-xs text-zinc-500">
                   <span className="font-mono">{project.creative_code}</span>
-                  <span className="bg-zinc-800 px-2 py-0.5 rounded">
+                  <span className="bg-zinc-800 px-2 py-0.5 rounded self-start">
                     {project.tickets?.length || 0} ticket{project.tickets?.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -869,5 +869,3 @@ const Statistics = () => {
 };
 
 export default Statistics;
-
-
