@@ -10,6 +10,7 @@ const Statistics = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
+  
 
   // ── Inicializar companyId directamente desde user para evitar race condition en BOSS
   const getInitialCompanyId = () => {
