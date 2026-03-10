@@ -200,7 +200,9 @@ const ProjectView = () => {
     );
   }
 
-  const isAdmin = user?.role === 'admin';
+  // ← FIX: mayúsculas correctas (era 'admin' → siempre false)
+  const isAdmin = user?.role === 'ADMIN';
+  const isBoss  = user?.role === 'BOSS';
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -306,8 +308,8 @@ const ProjectView = () => {
               </button>
             )}
 
-            {/* BOTÓN REABRIR (solo si CERRADO y es ADMIN) */}
-            {project.status === 'cerrado' && isAdmin && (
+            {/* BOTÓN REABRIR — visible para TODOS los roles si proyecto cerrado */}
+            {project.status === 'cerrado' && (
               <button
                 onClick={handleReopenProject}
                 disabled={reopeningProject}
@@ -318,8 +320,8 @@ const ProjectView = () => {
               </button>
             )}
 
-            {/* BOTÓN BORRAR PROYECTO (solo admin o owner) */}
-            {(isAdmin || project.owner_id === user?.id) && (
+            {/* BOTÓN BORRAR PROYECTO — ADMIN, BOSS, o dueño */}
+            {(isAdmin || isBoss || project.owner_id === user?.id) && (
               <button
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deletingProject}
@@ -650,3 +652,4 @@ const ProjectView = () => {
 };
 
 export default ProjectView;
+
