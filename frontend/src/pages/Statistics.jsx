@@ -611,7 +611,7 @@ const Statistics = () => {
               Distribución por Origen
             </h3>
             <p className="text-xs text-zinc-600 mb-6">
-              {quarter ? `Q${quarter}` : 'Año completo'}{geoFilter ? ` · ${geoFilter}` : ''}
+              {quarter ? `Q${quarter}` : 'Año completo'}
             </p>
 
             {currency_distribution && currency_distribution.length > 0 ? (
@@ -857,3 +857,4 @@ const Statistics = () => {
 };
 
 export default Statistics;
+
