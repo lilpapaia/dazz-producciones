@@ -9,6 +9,8 @@ const ProjectCreate = () => {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const [emailInput, setEmailInput] = useState('');
+  const [clientEmails, setClientEmails] = useState([]);
   const [formData, setFormData] = useState({
     year: new Date().getFullYear().toString(),
     send_date: new Date().toISOString().split('T')[0],
@@ -54,6 +56,21 @@ const ProjectCreate = () => {
     setFormData({ ...formData, responsible: name });
   };
 
+  const addEmail = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const email = emailInput.trim().replace(/,$/, '');
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !clientEmails.includes(email)) {
+        setClientEmails(prev => [...prev, email]);
+      }
+      setEmailInput('');
+    }
+  };
+
+  const removeEmail = (email) => {
+    setClientEmails(prev => prev.filter(e => e !== email));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -62,7 +79,8 @@ const ProjectCreate = () => {
       // Convertir owner_company_id a número
       const dataToSend = {
         ...formData,
-        owner_company_id: parseInt(formData.owner_company_id)
+        owner_company_id: parseInt(formData.owner_company_id),
+        client_email: clientEmails.join(', ')
       };
       
       const response = await createProject(dataToSend);
@@ -267,17 +285,34 @@ const ProjectCreate = () => {
             />
           </div>
 
-          {/* Email Cliente */}
+          {/* Email Cliente - múltiples */}
           <div>
             <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL CLIENTE</label>
-            <input
-              type="email"
-              name="client_email"
-              value={formData.client_email}
-              onChange={handleChange}
-              placeholder="cliente@empresa.com"
-              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-            />
+            <div className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-3 py-2 focus-within:border-amber-500 transition-colors min-h-[42px] flex flex-wrap gap-2 items-center">
+              {clientEmails.map(email => (
+                <span key={email} className="flex items-center gap-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded px-2 py-0.5 text-xs font-mono">
+                  {email}
+                  <button type="button" onClick={() => removeEmail(email)} className="text-amber-500 hover:text-red-400 ml-1 leading-none">×</button>
+                </span>
+              ))}
+              <input
+                type="email"
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                onKeyDown={addEmail}
+                onBlur={() => {
+                  if (emailInput.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) {
+                    setClientEmails(prev => [...prev, emailInput.trim()]);
+                    setEmailInput('');
+                  }
+                }}
+                placeholder={clientEmails.length === 0 ? "cliente@empresa.com — pulsa Enter para añadir" : "Añadir otro email..."}
+                className="flex-1 min-w-[200px] bg-transparent text-zinc-100 focus:outline-none text-sm py-0.5"
+              />
+            </div>
+            {clientEmails.length > 0 && (
+              <p className="text-xs text-zinc-500 mt-1">{clientEmails.length} email{clientEmails.length > 1 ? 's' : ''} añadido{clientEmails.length > 1 ? 's' : ''}</p>
+            )}
           </div>
 
           {/* Link SharePoint */}
