@@ -18,6 +18,25 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"])
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+
+def can_access_project(current_user: User, project, db: Session) -> bool:
+    """
+    ADMIN: acceso total.
+    BOSS: solo proyectos de su empresa.
+    WORKER: solo proyectos donde es owner.
+    """
+    if current_user.role == "ADMIN":
+        return True
+    if current_user.role == "BOSS":
+        from sqlalchemy.orm import joinedload
+        boss = db.query(User).options(joinedload(User.companies)).filter(User.id == current_user.id).first()
+        if not boss or not boss.companies:
+            return False
+        company_ids = [c.id for c in boss.companies]
+        return project.owner_company_id in company_ids
+    # WORKER: solo sus propios proyectos
+    return project.owner_id == current_user.id
+
 @router.post("/{project_id}/upload", response_model=schemas.TicketResponse, status_code=status.HTTP_201_CREATED)
 async def upload_ticket(
     project_id: int,
@@ -28,7 +47,7 @@ async def upload_ticket(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "application/pdf"]
@@ -153,7 +172,7 @@ async def get_project_tickets(project_id: int, db: Session = Depends(get_db), cu
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return db.query(Ticket).filter(Ticket.project_id == project_id).all()
 
@@ -164,7 +183,7 @@ async def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     project = db.query(Project).filter(Project.id == ticket.project_id).first()
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return ticket
 
@@ -175,7 +194,7 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     project = db.query(Project).filter(Project.id == ticket.project_id).first()
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     old_total = ticket.final_total
     update_data = ticket_update.dict(exclude_unset=True)
@@ -194,7 +213,7 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     project = db.query(Project).filter(Project.id == ticket.project_id).first()
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     # 1. BORRAR ARCHIVOS DE CLOUDINARY PRIMERO
