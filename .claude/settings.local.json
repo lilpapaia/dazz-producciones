@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"except:\" /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones/backend/app/routes/*.py)",
+      "Bash(cd \"C:\\\\Users\\\\lilpa\\\\OneDrive\\\\Escritorio\\\\dazz-producciones\" && python -c \"import py_compile; py_compile.compile\\('backend/app/routes/statistics.py', doraise=True\\); py_compile.compile\\('backend/app/routes/projects.py', doraise=True\\); py_compile.compile\\('backend/app/routes/users.py', doraise=True\\); print\\('OK - Los 3 archivos compilan sin errores'\\)\")"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
 from io import BytesIO
@@ -32,7 +32,6 @@ class CloseProjectRequest(BaseModel):
 
 def _get_user_company_ids(user: User, db: Session):
     """Recarga companies del usuario desde DB para evitar DetachedInstanceError."""
-    from sqlalchemy.orm import joinedload
     u = db.query(User).options(joinedload(User.companies)).filter(User.id == user.id).first()
     return [c.id for c in u.companies] if u else []
 
@@ -133,7 +132,7 @@ async def get_projects(
     - WORKER: ve solo SUS proyectos de sus empresas
     """
 
-    query = db.query(Project)
+    query = db.query(Project).options(joinedload(Project.owner_company))
 
     if current_user.role == "ADMIN":
         # ADMIN ve TODOS los proyectos

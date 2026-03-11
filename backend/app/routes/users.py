@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from config.database import get_db
@@ -18,7 +18,7 @@ async def get_users(
     current_user: User = Depends(get_current_admin_user)
 ):
     """Get all users (admin only) - Ahora incluye sus empresas"""
-    users = db.query(User).all()
+    users = db.query(User).options(joinedload(User.companies)).all()
     return users
 
 @router.get("/usernames", response_model=List[schemas.UserResponse])
@@ -37,7 +37,7 @@ async def get_usernames(
     
     # ADMIN: Retornar todos
     if current_user.role == "ADMIN":
-        users = db.query(User).all()
+        users = db.query(User).options(joinedload(User.companies)).all()
         return users
     
     # WORKER: Solo él mismo
@@ -93,15 +93,16 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Validar que las empresas existan
+    # Validar que las empresas existan (1 sola query en vez de N)
     if user_update.company_ids:
-        for company_id in user_update.company_ids:
-            company = db.query(Company).filter(Company.id == company_id).first()
-            if not company:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Empresa con ID {company_id} no encontrada"
-                )
+        existing = db.query(Company.id).filter(Company.id.in_(user_update.company_ids)).all()
+        existing_ids = {c[0] for c in existing}
+        missing = set(user_update.company_ids) - existing_ids
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Empresa(s) con ID {missing} no encontrada(s)"
+            )
     
     # Detectar cambio de rol
     role_changed = False

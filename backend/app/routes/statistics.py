@@ -109,7 +109,7 @@ async def get_monthly_evolution(
                     month = int(parts[1]) - 1
                     if 0 <= month < 12:
                         monthly_totals[month] += ticket.final_total
-        except:
+        except (ValueError, IndexError):
             continue
     
     return [
@@ -258,8 +258,11 @@ def _calc_overview(project_ids: list, db: Session) -> schemas.StatisticsOverview
     tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids)).all()
     intl_tickets = [t for t in tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
 
-    projects = db.query(Project).filter(Project.id.in_(project_ids)).all()
-    closed = sum(1 for p in projects if p.status == ProjectStatus.CERRADO)
+    # COUNT directo en DB (evita traer todos los projects a Python)
+    closed = db.query(func.count(Project.id)).filter(
+        Project.id.in_(project_ids),
+        Project.status == ProjectStatus.CERRADO
+    ).scalar()
     total = len(project_ids)
 
     return schemas.StatisticsOverview(
@@ -383,10 +386,17 @@ def _build_breakdown_single(tickets: list, db: Session) -> list:
         countries[country_code]['total_spent'] += ticket.final_total
         countries[country_code]['tax_reclamable_eur'] += ticket.foreign_tax_eur or 0.0
 
+    # Pre-fetch TODOS los projects en 1 sola query (evita N+1 por país)
+    all_project_ids = set()
+    for data in countries.values():
+        all_project_ids.update(data['projects'])
+    all_projects = db.query(Project).filter(Project.id.in_(list(all_project_ids))).all() if all_project_ids else []
+    projects_map = {p.id: p for p in all_projects}
+
     result = []
     for country_code, data in countries.items():
         project_ids_list = list(data['projects'])
-        projects = db.query(Project).filter(Project.id.in_(project_ids_list)).all()
+        projects = [projects_map[pid] for pid in project_ids_list if pid in projects_map]
 
         project_summaries = []
         for project in projects:
@@ -449,8 +459,15 @@ def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session)
     if quarter:
         tickets = filter_tickets_by_quarter(tickets, quarter)
 
+    # Pre-fetch TODAS las companies en 1 sola query (evita N+1 por empresa)
+    all_company_ids = set()
+    for ticket in tickets:
+        if ticket.project and ticket.project.owner_company_id:
+            all_company_ids.add(ticket.project.owner_company_id)
+    companies_list = db.query(Company).filter(Company.id.in_(list(all_company_ids))).all() if all_company_ids else []
+    company_cache = {c.id: c.name for c in companies_list}
+
     countries: dict = {}
-    company_cache: dict = {}
 
     for ticket in tickets:
         if not ticket.project:
@@ -475,12 +492,9 @@ def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session)
 
         # Inicializar empresa dentro del país
         if comp_id not in countries[country_code]['companies']:
-            if comp_id not in company_cache:
-                company = db.query(Company).filter(Company.id == comp_id).first()
-                company_cache[comp_id] = company.name if company else 'Sin empresa'
             countries[country_code]['companies'][comp_id] = {
                 'company_id': comp_id,
-                'company_name': company_cache[comp_id],
+                'company_name': company_cache.get(comp_id, 'Sin empresa'),
                 'projects': {}
             }
 
