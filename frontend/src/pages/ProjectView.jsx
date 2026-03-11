@@ -612,19 +612,20 @@ const ProjectView = () => {
               <p className="text-zinc-100 whitespace-pre-wrap">{project.client_data || 'N/A'}</p>
             </div>
 
-            <div>
+            {/* ── FIX MÓVIL: Email y SharePoint en líneas separadas ── */}
+            <div className="col-span-2">
               <p className="text-zinc-500 mb-1">Email Cliente</p>
-              <p className="text-zinc-100">{project.client_email || 'N/A'}</p>
+              <p className="text-zinc-100 break-all">{project.client_email || 'N/A'}</p>
             </div>
 
-            <div>
+            <div className="col-span-2">
               <p className="text-zinc-500 mb-1">Link Proyecto</p>
               {project.project_link ? (
                 <a
                   href={project.project_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-amber-500 hover:text-amber-400 underline"
+                  className="text-amber-500 hover:text-amber-400 underline break-all"
                 >
                   Abrir SharePoint
                 </a>
@@ -652,4 +653,5 @@ const ProjectView = () => {
 };
 
 export default ProjectView;
+
 
