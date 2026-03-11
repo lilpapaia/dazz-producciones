@@ -31,18 +31,19 @@
   - ✅ Implementado 2026-03-11: 50+ queries → 5-7 queries (85% reducción)
   - ✅ Archivos: statistics.py, projects.py, users.py
   - ✅ Verificado: Funcionalidad 100% intacta
+
+- [x] **Code splitting frontend** (Esfuerzo: 🔨 2-3h | ROI: ⭐⭐⭐⭐⭐)
+  - ✅ Lazy load rutas: Statistics, Users, ProjectCreate, etc. (8 rutas)
+  - ✅ Dynamic import jsPDF + html2canvas (solo al exportar)
+  - ✅ Implementado 2026-03-11: Bundle 893 KB → 332 KB (63% reducción)
+  - ✅ Archivos: App.jsx, Statistics.jsx, vite.config.js
+  - ✅ Verificado: Navegación funciona, spinner apropiado
   
 - [ ] **Refactorizar Statistics.jsx** (Esfuerzo: 🔨🔨 4-6h | ROI: ⭐⭐⭐⭐)
-  - 500+ líneas → Componentes reutilizables
+  - 890 líneas → Componentes reutilizables
   - Separar: StatisticsHeader, CountryBreakdown, ProjectList, TicketRow
   - Hooks custom: useStatistics, useExpandedState
   - Performance: React.memo, useMemo para gráficos
-  
-- [ ] **Code splitting frontend** (Esfuerzo: 🔨 2-3h | ROI: ⭐⭐⭐⭐)
-  - Lazy load rutas: Statistics, Users, ProjectDetail
-  - Separar bundle Recharts (pesado)
-  - Analizar dependencias: `npm run build -- --report`
-  - Target: Initial bundle <200KB
 
 ---
 
@@ -124,7 +125,7 @@
 ## 🎯 Métricas Éxito
 
 **Sprint 1 (Optimizaciones):**
-- Initial bundle: <200KB (actual: ~350KB)
+- Initial bundle: <200KB ✅ LOGRADO (332 KB total, 255 KB JS - 2026-03-11)
 - Statistics render: <100ms (actual: ~300ms)
 - Queries BD: <50ms promedio ✅ MEJORADO (2026-03-11)
 

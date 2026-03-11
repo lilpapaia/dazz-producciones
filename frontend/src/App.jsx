@@ -1,27 +1,43 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
+
+// Eager load: Login (primera pantalla) + Dashboard (destino principal)
 import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import SetPassword from './pages/SetPassword';
 import Dashboard from './pages/Dashboard';
-import ProjectCreate from './pages/ProjectCreate';
-import ProjectView from './pages/ProjectView';
-import ProjectCloseReview from './pages/ProjectCloseReview';
-import UploadTickets from './pages/UploadTickets';
-import ReviewTicket from './pages/ReviewTicket';
-import Statistics from './pages/Statistics';
-import Users from './pages/Users';
+
+// Lazy load: páginas secundarias (cargan bajo demanda)
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const SetPassword = lazy(() => import('./pages/SetPassword'));
+const ProjectCreate = lazy(() => import('./pages/ProjectCreate'));
+const ProjectView = lazy(() => import('./pages/ProjectView'));
+const ProjectCloseReview = lazy(() => import('./pages/ProjectCloseReview'));
+const UploadTickets = lazy(() => import('./pages/UploadTickets'));
+const ReviewTicket = lazy(() => import('./pages/ReviewTicket'));
+const Statistics = lazy(() => import('./pages/Statistics'));
+const Users = lazy(() => import('./pages/Users'));
 
 // PWA Components
 import { PWAUpdatePrompt, PWAInstallPrompt } from './components/PWAComponents';
+
+// Loading fallback branded
+const PageLoader = () => (
+  <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <span className="text-zinc-500 text-sm tracking-wider uppercase font-mono">Cargando...</span>
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-zinc-950">
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
@@ -124,7 +140,8 @@ function App() {
               } 
             />
           </Routes>
-          
+          </Suspense>
+
           {/* PWA Components - Toasts de actualización e instalación */}
           <PWAUpdatePrompt />
           <PWAInstallPrompt />

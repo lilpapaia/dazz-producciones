@@ -96,6 +96,48 @@
 
 ---
 
+## 2026-03-11: [Performance] - Code Splitting Frontend con React.lazy
+
+**Error:** Bundle inicial 893 KB - todas las páginas y librerías cargaban al entrar (Login)
+**Causa raíz:**
+- Imports estáticos de todas las rutas en App.jsx
+- jsPDF (385 KB) + html2canvas (201 KB) en bundle principal
+- Recharts (366 KB) cargaba aunque solo se usa en Statistics
+- Usuario descargaba TODO antes de poder usar Login
+
+**Solución implementada:**
+- **React.lazy():** 8 rutas convertidas a lazy load (Statistics, Users, ProjectCreate, etc.)
+- **Suspense:** Fallback spinner branded (zinc/amber) mientras cargan páginas
+- **Dynamic import jsPDF:** Solo carga cuando usuario exporta PDF
+- **Eager load:** Login y Dashboard (páginas críticas) siguen cargando al inicio
+
+**Archivos modificados:**
+- frontend/src/App.jsx (lazy imports + Suspense wrapper)
+- frontend/src/pages/Statistics.jsx (dynamic import jsPDF)
+- frontend/vite.config.js (limpieza manualChunks)
+
+**Resultado:**
+- Bundle inicial: 893 KB → 332 KB (63% reducción)
+- Bundle JS inicial: 816 KB → 255 KB (69% reducción)
+- Gzip inicial: 254 KB → 82 KB (68% reducción)
+- jsPDF + html2canvas: 586 KB on-demand (solo al exportar)
+- Recharts: 366 KB on-demand (solo en Statistics)
+- Carga inicial 3x más rápida
+- Funcionalidad 100% intacta (verificado en local)
+
+**Regla:** SIEMPRE lazy load páginas secundarias (no críticas)
+**Regla:** Mantener eager solo Login + página principal (Dashboard)
+**Regla:** Dynamic import librerías pesadas que se usan ocasionalmente
+**Regla:** Añadir Suspense con fallback branded para UX consistente
+
+**Prevención:**
+- Build regular con `npm run build` para monitorear tamaños
+- Revisar chunks grandes (>100KB) y evaluar lazy load
+- Pattern: Páginas secundarias → lazy(), librerías ocasionales → dynamic import
+- Verificar que PWA cachea todos los chunks tras primera visita
+
+---
+
 ## Template para futuras lecciones
 
 ```

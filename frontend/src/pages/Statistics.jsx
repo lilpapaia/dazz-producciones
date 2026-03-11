@@ -4,7 +4,7 @@ import { TrendingUp, DollarSign, Globe, Building2, BarChart3, ChevronDown, Chevr
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getCompleteStatistics, getAvailableYears, getCompanies } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import jsPDF from 'jspdf';
+// jsPDF se importa dinámicamente en exportPDFReport() para reducir bundle
 
 const Statistics = () => {
   const navigate = useNavigate();
@@ -103,12 +103,13 @@ const Statistics = () => {
   };
 
   // ── PDF Export ─────────────────────────────────────────────
-  const exportPDFReport = () => {
+  const exportPDFReport = async () => {
     if (!data || !data.foreign_breakdown || data.foreign_breakdown.length === 0) {
       alert('No hay datos internacionales para exportar');
       return;
     }
 
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const { overview } = data;
     // ← FIX: solo países con IVA reclamable > 0 en PDF
