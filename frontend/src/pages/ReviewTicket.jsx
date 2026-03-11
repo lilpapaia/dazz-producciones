@@ -45,7 +45,7 @@ const ReviewTicket = () => {
     setCustomPayment(false);
   }, [id]);
 
-  // Si el ticket cargado tiene un payment_status personalizado (no está en la lista), activar modo custom
+  // Si el ticket tiene un payment_status personalizado (no está en la lista), activar modo input
   useEffect(() => {
     if (ticket?.payment_status && !paymentStatusOptions.includes(ticket.payment_status)) {
       setCustomPayment(true);
@@ -651,7 +651,7 @@ const ReviewTicket = () => {
           </div>
 
           {/* Estados */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className={customPayment ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4"}>
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ESTATUS FACTURA</label>
               <select value={ticket.invoice_status || ''} onChange={(e) => setTicket({...ticket, invoice_status: e.target.value})}
@@ -680,19 +680,19 @@ const ReviewTicket = () => {
                   <option value="__custom__">✏️ Escribir otro...</option>
                 </select>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <input
                     type="text"
                     autoFocus
                     value={ticket.payment_status || ''}
                     onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
                     onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
-                    placeholder="Escribe el estatus..."
-                    className="flex-1 bg-zinc-950 border border-amber-500 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none"
+                    placeholder="Escribe el estatus de pago..."
+                    className="flex-1 min-w-0 bg-zinc-950 border border-amber-500 rounded-sm px-3 py-2.5 text-zinc-100 focus:outline-none text-sm"
                   />
                   <button
                     onClick={() => { setCustomPayment(false); setTicket({...ticket, payment_status: ''}); }}
-                    className="px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-sm transition-colors text-xs"
+                    className="flex-shrink-0 px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-sm transition-colors text-sm"
                     title="Volver al desplegable"
                   >
                     ↩
