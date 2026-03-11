@@ -25,7 +25,7 @@
 ## 🚀 Sprint 1: Optimizaciones (1-2 semanas)
 
 ### Prioridad Alta
-- [x] **Optimizar queries backend** (Esfuerzo: 🔨🔨 3-4h | ROI: ⭐⭐⭐⭐)
+- [x] **Optimizar queries backend** (Esfuerzo: 🔨🔨 3-4h | ROI: ⭐⭐⭐⭐⭐)
   - ✅ Auditar N+1 en: projects + tickets, companies, statistics
   - ✅ Verificar joinedload en todas las relaciones
   - ✅ Implementado 2026-03-11: 50+ queries → 5-7 queries (85% reducción)
@@ -46,6 +46,24 @@
   - ✅ Implementado 2026-03-11: Render 300ms → <100ms (3x más rápido)
   - ✅ Archivos: Statistics/ completa (13 archivos nuevos)
   - ✅ Verificado: Funcionalidad intacta, más fluido
+
+- [x] **Código duplicado backend** (Esfuerzo: 🔨🔨 3-5h | ROI: ⭐⭐⭐⭐)
+  - ✅ Centralizar permisos en services/permissions.py
+  - ✅ Eliminar can_access_project duplicada (projects.py + tickets.py)
+  - ✅ Eliminar _get_user_company_ids duplicada
+  - ✅ Fix auth.py validación empresas (N queries → 1 batch)
+  - ✅ Añadir validaciones Pydantic (Field validators en schemas.py)
+  - ✅ Fix bare except: en cloudinary_service.py
+  - ✅ Implementado 2026-03-11: 6 archivos modificados, -66 líneas
+  - ✅ Archivos: permissions.py (nuevo), projects.py, tickets.py, auth.py, schemas.py, cloudinary_service.py
+  - ✅ Verificado: Funcionalidad intacta, validaciones OK
+
+- [ ] **Componentes reutilizables frontend** (Esfuerzo: 🔨🔨 4-5h | ROI: ⭐⭐⭐)
+  - LoadingSpinner consistente (usado en 8+ lugares)
+  - StatusBadge reutilizable (proyectos, tickets)
+  - FormField wrapper con validación visual
+  - useVoiceSearch hook (tickets, proyectos)
+  - EmptyState component (listas vacías)
 
 ---
 
@@ -130,6 +148,7 @@
 - Initial bundle: <200KB ✅ LOGRADO (332 KB total, 255 KB JS - 2026-03-11)
 - Statistics render: <100ms ✅ LOGRADO (3x mejora - 2026-03-11)
 - Queries BD: <50ms promedio ✅ MEJORADO (2026-03-11)
+- Código duplicado: 0 funciones ✅ LOGRADO (centralizado permissions.py - 2026-03-11)
 
 **Sprint 2 (Testing):**
 - Backend coverage: 70%+ (actual: 0%)

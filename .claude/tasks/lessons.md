@@ -195,6 +195,55 @@ Statistics/
 
 ---
 
+## 2026-03-11: [Backend] - Código duplicado y validaciones faltantes
+
+**Error:** Funciones de permisos duplicadas en múltiples archivos, validaciones Pydantic ausentes
+**Causa raíz:**
+- can_access_project() duplicada en projects.py y tickets.py (versiones ligeramente diferentes)
+- _get_user_company_ids() duplicada en projects.py y companies_service.py
+- auth.py validaba empresas en loop (N queries)
+- schemas.py sin Field() validators (aceptaba negativos, passwords cortos, IVA >100%)
+- cloudinary_service.py con bare except: (esconde errores críticos)
+
+**Solución implementada:**
+- **Centralización permisos:** Creado services/permissions.py con 3 funciones únicas
+- **Eliminación duplicados:** Removidas funciones locales de projects.py (-46 líneas) y tickets.py (-17 líneas)
+- **Batch query auth:** Validación empresas N queries → 1 query batch
+- **Validaciones Pydantic:** Field(ge=0) para amounts, Field(0-100) para porcentajes, Field(min_length=6) para passwords
+- **Error handling:** bare except: → except Exception: (no esconde errores críticos)
+- **Seguridad mejorada:** tickets.py ahora verifica owner_company_id para WORKER (antes solo owner_id)
+
+**Archivos modificados:**
+- backend/app/services/permissions.py (creado - 62 líneas)
+- backend/app/routes/projects.py (refactor imports - eliminó helpers)
+- backend/app/routes/tickets.py (refactor imports - eliminó can_access_project)
+- backend/app/routes/auth.py (batch query empresas)
+- backend/app/models/schemas.py (Field validators añadidos)
+- backend/app/services/cloudinary_service.py (fixed bare except)
+
+**Resultado:**
+- Código duplicado: 2 copias → 1 fuente única
+- Funciones permisos: centralizadas en un solo archivo
+- Validaciones: amounts ≥0, IVA 0-100%, passwords ≥6 chars
+- Error handling: mejorado (no esconde errores críticos)
+- Seguridad WORKER: mejorada (verifica empresa + owner)
+- Mantenibilidad: cambiar permisos = 1 archivo vs 2+
+- Funcionalidad 100% intacta (verificado en local)
+
+**Regla:** NUNCA duplicar lógica de permisos - centralizar en services/
+**Regla:** SIEMPRE validar inputs con Field() en schemas (defense in depth)
+**Regla:** NUNCA bare except: - usar except Exception: mínimo
+**Regla:** Batch queries para validaciones múltiples (evitar N+1)
+
+**Prevención:**
+- Code review: buscar funciones con nombres similares en archivos diferentes
+- Checklist validaciones: ¿Amounts pueden ser negativos? ¿Strings vacíos? ¿Rangos sin límite?
+- Pattern: Permisos → services/permissions.py, nunca en routes/
+- Linter: configurar flake8/ruff para detectar bare except:
+- Testing: intentar enviar datos inválidos (negativo, vacío, fuera de rango)
+
+---
+
 ## Template para futuras lecciones
 
 ```

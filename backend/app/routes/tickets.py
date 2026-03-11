@@ -9,6 +9,7 @@ from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, Ticket
 from app.services.auth import get_current_active_user
+from app.services.permissions import can_access_project
 from app.services.claude_ai import extract_ticket_data
 from app.services.cloudinary_service import upload_ticket_file, delete_ticket_file
 from app.services.exchange_rate import get_historical_exchange_rate
@@ -18,24 +19,6 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"])
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-
-def can_access_project(current_user: User, project, db: Session) -> bool:
-    """
-    ADMIN: acceso total.
-    BOSS: solo proyectos de su empresa.
-    WORKER: solo proyectos donde es owner.
-    """
-    if current_user.role == "ADMIN":
-        return True
-    if current_user.role == "BOSS":
-        from sqlalchemy.orm import joinedload
-        boss = db.query(User).options(joinedload(User.companies)).filter(User.id == current_user.id).first()
-        if not boss or not boss.companies:
-            return False
-        company_ids = [c.id for c in boss.companies]
-        return project.owner_company_id in company_ids
-    # WORKER: solo sus propios proyectos
-    return project.owner_id == current_user.id
 
 @router.post("/{project_id}/upload", response_model=schemas.TicketResponse, status_code=status.HTTP_201_CREATED)
 async def upload_ticket(

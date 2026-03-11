@@ -186,7 +186,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except:
+            except Exception:
                 pass
         
         # 2. Subir PDF original para descarga (si no es muy grande)
@@ -226,7 +226,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
             if temp_compressed and os.path.exists(temp_compressed):
                 try:
                     os.remove(temp_compressed)
-                except:
+                except Exception:
                     pass
 
 

@@ -9,7 +9,8 @@ from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, ProjectStatus, Company
 from app.services.auth import get_current_active_user
-from app.services.companies_service import validate_company_access  # ← NUEVO
+from app.services.companies_service import validate_company_access
+from app.services.permissions import get_user_company_ids, can_access_project, can_modify_project
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_project_deleted
@@ -24,57 +25,6 @@ RESPONSIBLE_EMAILS = {
 
 class CloseProjectRequest(BaseModel):
     recipients: Optional[List[EmailStr]] = None
-
-
-# ============================================
-# HELPER: Validar acceso a proyecto según empresa
-# ============================================
-
-def _get_user_company_ids(user: User, db: Session):
-    """Recarga companies del usuario desde DB para evitar DetachedInstanceError."""
-    u = db.query(User).options(joinedload(User.companies)).filter(User.id == user.id).first()
-    return [c.id for c in u.companies] if u else []
-
-
-def can_access_project(user: User, project: Project, db: Session = None) -> bool:
-    """
-    Verificar si un usuario puede acceder a un proyecto.
-
-    - ADMIN: puede acceder a cualquier proyecto
-    - BOSS: puede acceder a proyectos de su empresa
-    - WORKER: puede acceder solo a SUS proyectos de sus empresas
-    """
-    if user.role == "ADMIN":
-        return True
-
-    company_ids = _get_user_company_ids(user, db) if db else [c.id for c in user.companies]
-
-    if user.role == "BOSS":
-        return project.owner_company_id in company_ids
-
-    # WORKER: solo sus propios proyectos de sus empresas
-    if project.owner_id != user.id:
-        return False
-    return project.owner_company_id in company_ids
-
-
-def can_modify_project(user: User, project: Project, db: Session = None) -> bool:
-    """
-    Verificar si un usuario puede modificar/eliminar un proyecto.
-
-    - ADMIN: puede modificar cualquier proyecto
-    - BOSS: puede modificar proyectos de su empresa
-    - WORKER: puede modificar solo SUS proyectos
-    """
-    if user.role == "ADMIN":
-        return True
-
-    if user.role == "BOSS":
-        company_ids = _get_user_company_ids(user, db) if db else [c.id for c in user.companies]
-        return project.owner_company_id in company_ids
-
-    # WORKER: solo sus propios proyectos
-    return project.owner_id == user.id
 
 
 # ============================================
@@ -140,12 +90,12 @@ async def get_projects(
 
     elif current_user.role == "BOSS":
         # BOSS ve todos los proyectos de su empresa
-        user_company_ids = _get_user_company_ids(current_user, db)
+        user_company_ids = get_user_company_ids(current_user, db)
         query = query.filter(Project.owner_company_id.in_(user_company_ids))
 
     else:
         # WORKER ve solo SUS proyectos de sus empresas
-        user_company_ids = _get_user_company_ids(current_user, db)
+        user_company_ids = get_user_company_ids(current_user, db)
         query = query.filter(
             Project.owner_id == current_user.id,
             Project.owner_company_id.in_(user_company_ids)

@@ -61,15 +61,16 @@ async def register(
                 detail="Username already taken"
             )
     
-    # Validar que las empresas existan
+    # Validar que las empresas existan (1 query en batch)
     if user.company_ids:
-        for company_id in user.company_ids:
-            company = db.query(Company).filter(Company.id == company_id).first()
-            if not company:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Empresa con ID {company_id} no encontrada"
-                )
+        existing = db.query(Company.id).filter(Company.id.in_(user.company_ids)).all()
+        existing_ids = {c[0] for c in existing}
+        missing = set(user.company_ids) - existing_ids
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Empresa(s) con ID {missing} no encontrada(s)"
+            )
     
     # Crear usuario en BD
     try:

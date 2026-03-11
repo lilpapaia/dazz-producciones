@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Any, Dict
 from datetime import datetime, date
 from enum import Enum
@@ -25,9 +25,9 @@ class TicketType(str, Enum):
 # ============================================
 
 class CompanyBase(BaseModel):
-    name: str
-    cif: Optional[str] = None
-    address: Optional[str] = None
+    name: str = Field(min_length=1, max_length=300)
+    cif: Optional[str] = Field(default=None, max_length=20)
+    address: Optional[str] = Field(default=None, max_length=500)
 
 class CompanyCreate(CompanyBase):
     pass
@@ -50,8 +50,8 @@ class UserBase(BaseModel):
     role: UserRole = UserRole.WORKER
 
 class UserCreate(UserBase):
-    password: str
-    company_ids: Optional[List[int]] = []  # ← AÑADIDO: empresas a asignar al usuario
+    password: str = Field(min_length=6)
+    company_ids: Optional[List[int]] = []
 
 class UserLogin(BaseModel):
     identifier: str  # Email O username
@@ -76,8 +76,8 @@ class Token(BaseModel):
 # ============================================
 
 class SetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
+    token: str = Field(min_length=1)
+    new_password: str = Field(min_length=6)
 
 class SetPasswordResponse(BaseModel):
     message: str
@@ -91,19 +91,19 @@ class ForgotPasswordRequest(BaseModel):
 # ============================================
 
 class ProjectBase(BaseModel):
-    year: str
+    year: str = Field(min_length=4, max_length=4)
     send_date: Optional[str] = None
-    creative_code: str
+    creative_code: str = Field(min_length=1, max_length=100)
     company: Optional[str] = None  # Campo antiguo (string)
     owner_company_id: Optional[int] = None  # Campo nuevo (FK)
-    responsible: str
-    invoice_type: str
-    description: str
-    other_invoice_data: Optional[str] = None
-    client_oc: Optional[str] = None
-    client_data: Optional[str] = None
-    client_email: Optional[str] = None
-    project_link: Optional[str] = None
+    responsible: str = Field(min_length=1, max_length=200)
+    invoice_type: str = Field(min_length=1, max_length=100)
+    description: str = Field(min_length=1, max_length=500)
+    other_invoice_data: Optional[str] = Field(default=None, max_length=1000)
+    client_oc: Optional[str] = Field(default=None, max_length=200)
+    client_data: Optional[str] = Field(default=None, max_length=500)
+    client_email: Optional[str] = Field(default=None, max_length=200)
+    project_link: Optional[str] = Field(default=None, max_length=500)
 
 class ProjectCreate(ProjectBase):
     pass
@@ -142,22 +142,22 @@ class ProjectResponse(ProjectBase):
 # ============================================
 
 class TicketBase(BaseModel):
-    date: str
-    provider: str
-    invoice_number: Optional[str] = None
-    po_notes: Optional[str] = None
-    base_amount: float
-    iva_amount: float
-    iva_percentage: float
-    total_with_iva: float
-    irpf_percentage: float = 0.0
-    irpf_amount: float = 0.0
-    final_total: float
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    contact_name: Optional[str] = None
-    invoice_status: Optional[str] = None
-    payment_status: Optional[str] = None
+    date: str = Field(min_length=1)
+    provider: str = Field(min_length=1, max_length=500)
+    invoice_number: Optional[str] = Field(default=None, max_length=100)
+    po_notes: Optional[str] = Field(default=None, max_length=1000)
+    base_amount: float = Field(ge=0)
+    iva_amount: float = Field(ge=0)
+    iva_percentage: float = Field(ge=0, le=100)
+    total_with_iva: float = Field(ge=0)
+    irpf_percentage: float = Field(default=0.0, ge=0, le=100)
+    irpf_amount: float = Field(default=0.0, ge=0)
+    final_total: float = Field(ge=0)
+    phone: Optional[str] = Field(default=None, max_length=50)
+    email: Optional[str] = Field(default=None, max_length=200)
+    contact_name: Optional[str] = Field(default=None, max_length=200)
+    invoice_status: Optional[str] = Field(default=None, max_length=50)
+    payment_status: Optional[str] = Field(default=None, max_length=50)
     type: TicketType = TicketType.TICKET
 
 class TicketCreate(TicketBase):
@@ -165,23 +165,23 @@ class TicketCreate(TicketBase):
     file_path: str
 
 class TicketUpdate(BaseModel):
-    date: Optional[str] = None
-    provider: Optional[str] = None
-    invoice_number: Optional[str] = None
-    po_notes: Optional[str] = None
-    notes: Optional[str] = None
-    base_amount: Optional[float] = None
-    iva_amount: Optional[float] = None
-    iva_percentage: Optional[float] = None
-    total_with_iva: Optional[float] = None
-    irpf_percentage: Optional[float] = None
-    irpf_amount: Optional[float] = None
-    final_total: Optional[float] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    contact_name: Optional[str] = None
-    invoice_status: Optional[str] = None
-    payment_status: Optional[str] = None
+    date: Optional[str] = Field(default=None, min_length=1)
+    provider: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    invoice_number: Optional[str] = Field(default=None, max_length=100)
+    po_notes: Optional[str] = Field(default=None, max_length=1000)
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    base_amount: Optional[float] = Field(default=None, ge=0)
+    iva_amount: Optional[float] = Field(default=None, ge=0)
+    iva_percentage: Optional[float] = Field(default=None, ge=0, le=100)
+    total_with_iva: Optional[float] = Field(default=None, ge=0)
+    irpf_percentage: Optional[float] = Field(default=None, ge=0, le=100)
+    irpf_amount: Optional[float] = Field(default=None, ge=0)
+    final_total: Optional[float] = Field(default=None, ge=0)
+    phone: Optional[str] = Field(default=None, max_length=50)
+    email: Optional[str] = Field(default=None, max_length=200)
+    contact_name: Optional[str] = Field(default=None, max_length=200)
+    invoice_status: Optional[str] = Field(default=None, max_length=50)
+    payment_status: Optional[str] = Field(default=None, max_length=50)
     type: Optional[TicketType] = None
     is_reviewed: Optional[bool] = None
 
