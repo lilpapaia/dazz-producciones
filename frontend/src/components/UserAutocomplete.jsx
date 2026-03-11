@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getUsernames } from '../services/api';
 import { User, ChevronDown } from 'lucide-react';
+import useClickOutside from '../hooks/useClickOutside';
 
 /**
  * Componente de autocompletado para seleccionar un usuario registrado
@@ -29,15 +30,7 @@ const UserAutocomplete = ({ value, onChange, label = "RESPONSABLE", required = f
   }, [value]);
 
   // Cerrar dropdown al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(wrapperRef, () => setShowDropdown(false));
 
   const loadUsers = async () => {
     try {

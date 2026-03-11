@@ -3,6 +3,8 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTicket, updateTicket, deleteTicket, getProjectTickets } from '../services/api';
 import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import StatusBadge from '../components/common/StatusBadge';
 
 const invoiceStatusOptions = [
   "RECIBIDO", "PEDIDO", "PENDIENTE PEDIR", "RECIBIDO PERO ERRONEO",
@@ -166,13 +168,7 @@ const ReviewTicket = () => {
     return ticket.file_name;
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner size="lg" fullPage />;
 
   const pages = getPages();
   const totalPages = pages.length;
@@ -272,11 +268,7 @@ const ReviewTicket = () => {
 
           {/* Badges en su propia fila */}
           <div className="flex items-center gap-2 mb-3">
-            <span className={`inline-block px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
-              ticket.type === 'factura' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
-            }`}>
-              {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
-            </span>
+            <StatusBadge type="ticket" value={ticket.type} />
             {ticket.is_foreign && (
               <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-sm text-xs font-bold uppercase border border-blue-500/30 flex items-center gap-1">
                 🌍 INTERNACIONAL

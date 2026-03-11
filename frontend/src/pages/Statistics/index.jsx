@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, TrendingUp, Globe, Building2, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useStatisticsData } from './hooks/useStatisticsData';
 import { useExpandedState } from './hooks/useExpandedState';
 import { exportPDFReport } from './services/pdfExport';
@@ -35,16 +36,7 @@ const Statistics = () => {
     navigate(path);
   }, [navigate]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-zinc-400">Cargando estadisticas...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner size="lg" fullPage message="Cargando estadisticas..." />;
 
   if (!data) {
     return (

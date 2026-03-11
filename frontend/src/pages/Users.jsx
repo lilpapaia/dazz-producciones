@@ -3,6 +3,7 @@ import { getUsers, registerUser, deleteUser, updateUser, getCompanies } from '..
 import { Plus, Trash2, Edit } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CompanyMultiSelect from '../components/CompanyMultiSelect';
+import StatusBadge from '../components/common/StatusBadge';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -432,15 +433,7 @@ const Users = () => {
                         <span className="text-zinc-600">•</span>
                       </>
                     )}
-                    <span className={`px-2 py-1 text-xs font-mono tracking-wider rounded-sm whitespace-nowrap ${
-                      user.role === 'ADMIN'
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                        : user.role === 'BOSS'
-                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        : 'bg-zinc-700/50 text-zinc-400 border border-zinc-600'
-                    }`}>
-                      {user.role}
-                    </span>
+                    <StatusBadge type="role" value={user.role} />
                   </div>
                   
                   {/* Email */}

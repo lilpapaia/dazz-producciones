@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjectTickets, closeProjectWithEmails, getUsernames } from '../services/api';
 import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import EmailChipsInput from '../components/EmailChipsInput';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import StatusBadge from '../components/common/StatusBadge';
 
 const ProjectCloseReview = () => {
   const { id } = useParams();
@@ -94,13 +96,7 @@ const ProjectCloseReview = () => {
   const totalAmount = tickets.reduce((sum, t) => sum + (t.final_total || 0), 0);
   const responsibleEmail = getResponsibleEmail();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner size="lg" fullPage />;
 
   if (!project) {
     return (
@@ -190,13 +186,7 @@ const ProjectCloseReview = () => {
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 text-xs font-mono rounded-sm ${
-                        ticket.type === 'factura'
-                          ? 'bg-blue-500/20 text-blue-400'
-                          : 'bg-zinc-700/50 text-zinc-400'
-                      }`}>
-                        {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
-                      </span>
+                      <StatusBadge type="ticket" value={ticket.type} />
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">{ticket.date || 'N/A'}</td>
                     <td className="px-4 py-3">{ticket.provider}</td>
@@ -302,7 +292,7 @@ const ProjectCloseReview = () => {
           >
             {sending ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-zinc-950"></div>
+                <LoadingSpinner size="sm" color="dark" />
                 PROCESANDO...
               </>
             ) : (

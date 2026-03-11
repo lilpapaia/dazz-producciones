@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects, getCompanies } from '../services/api';
 import { Plus, Search, X, Mic, Clock, Building2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import StatusBadge from '../components/common/StatusBadge';
+import EmptyState from '../components/common/EmptyState';
+import useVoiceSearch from '../hooks/useVoiceSearch';
+import useClickOutside from '../hooks/useClickOutside';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -21,15 +26,25 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
-  const [isListening, setIsListening] = useState(false);
-
   const searchRef = useRef(null);
-  const recognitionRef = useRef(null);
+
+  const { isListening, startVoiceSearch } = useVoiceSearch({
+    lang: 'es-ES',
+    onResult: useCallback((transcript) => {
+      setSearchTerm(transcript);
+      const saved = localStorage.getItem('recentSearches');
+      const recent = saved ? JSON.parse(saved) : [];
+      const updated = [transcript, ...recent.filter(s => s !== transcript)].slice(0, 5);
+      setRecentSearches(updated);
+      localStorage.setItem('recentSearches', JSON.stringify(updated));
+    }, []),
+  });
+
+  useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
 
   useEffect(() => {
     loadProjects();
     loadRecentSearches();
-    initVoiceRecognition();
     if (isAdmin) loadCompanies();
   }, []);
 
@@ -65,33 +80,6 @@ const Dashboard = () => {
     localStorage.setItem('recentSearches', JSON.stringify(updated));
   };
 
-  const initVoiceRecognition = () => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.lang = 'es-ES';
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setSearchTerm(transcript);
-        saveRecentSearch(transcript);
-        setIsListening(false);
-      };
-      recognitionRef.current.onerror = () => setIsListening(false);
-      recognitionRef.current.onend = () => setIsListening(false);
-    }
-  };
-
-  const startVoiceSearch = () => {
-    if (recognitionRef.current) {
-      setIsListening(true);
-      recognitionRef.current.start();
-    } else {
-      alert('Tu navegador no soporta búsqueda por voz');
-    }
-  };
-
   const handleSearchChange = (value) => {
     setSearchTerm(value);
     setShowSuggestions(value.length > 0);
@@ -108,17 +96,6 @@ const Dashboard = () => {
     setSearchTerm('');
     setShowSuggestions(false);
   };
-
-  // Click fuera cierra sugerencias
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // ── Proyectos filtrados por tab (solo ADMIN) + statusFilter + searchTerm ──
   const getFilteredProjects = (tabId = activeTab) => {
@@ -180,13 +157,7 @@ const Dashboard = () => {
     >
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-lg font-bebas tracking-wider">{project.creative_code}</h3>
-        <span className={`px-2 py-1 text-xs font-mono rounded-sm border whitespace-nowrap ${
-          project.status === 'en_curso'
-            ? 'bg-green-500/20 text-green-400 border-green-500/30'
-            : 'bg-gray-100 text-gray-800 border-gray-300'
-        }`}>
-          {project.status === 'en_curso' ? 'EN CURSO' : 'CERRADO'}
-        </span>
+        <StatusBadge type="project" value={project.status} />
       </div>
 
       <p className="text-sm text-zinc-300 mb-3 line-clamp-2">{project.description}</p>
@@ -225,13 +196,7 @@ const Dashboard = () => {
   );
 
   // ── Loading ────────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner size="lg" fullPage />;
 
   // ── Barra de búsqueda + filtros de estado (compartida) ─────────────────────
   const SearchAndFilters = () => (
@@ -465,14 +430,10 @@ const Dashboard = () => {
         {/* Grid proyectos */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
           {filteredProjects.length === 0 ? (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-12 text-center">
-              <p className="text-zinc-400 mb-2">No hay proyectos que mostrar</p>
-              {searchTerm && (
-                <button onClick={clearSearch} className="text-amber-500 hover:text-amber-400 text-sm">
-                  Limpiar búsqueda
-                </button>
-              )}
-            </div>
+            <EmptyState
+              message="No hay proyectos que mostrar"
+              action={searchTerm ? { label: "Limpiar búsqueda", onClick: clearSearch } : null}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map(project => (

@@ -1,9 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjectTickets, deleteTicket, deleteProject, closeProject, reopenProject } from '../services/api';
 import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import StatusBadge from '../components/common/StatusBadge';
+import EmptyState from '../components/common/EmptyState';
+import useVoiceSearch from '../hooks/useVoiceSearch';
+import useClickOutside from '../hooks/useClickOutside';
 
 const ProjectView = () => {
   const { id } = useParams();
@@ -20,16 +25,26 @@ const ProjectView = () => {
   const [ticketSearch, setTicketSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
-  const [isListening, setIsListening] = useState(false);
-
   const searchRef = useRef(null);
-  const recognitionRef = useRef(null);
+
+  const { isListening, startVoiceSearch } = useVoiceSearch({
+    lang: 'es-ES',
+    onResult: useCallback((transcript) => {
+      setTicketSearch(transcript);
+      const saved = localStorage.getItem(`recentSearches_project_${id}`);
+      const recent = saved ? JSON.parse(saved) : [];
+      const updated = [transcript, ...recent.filter(s => s !== transcript)].slice(0, 5);
+      setRecentSearches(updated);
+      localStorage.setItem(`recentSearches_project_${id}`, JSON.stringify(updated));
+    }, [id]),
+  });
+
+  useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
 
   useEffect(() => {
     loadProject();
     loadTickets();
     loadRecentSearches();
-    initVoiceRecognition();
   }, [id]);
 
   const loadProject = async () => {
@@ -67,40 +82,6 @@ const ProjectView = () => {
     const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 5);
     setRecentSearches(updated);
     localStorage.setItem(`recentSearches_project_${id}`, JSON.stringify(updated));
-  };
-
-  const initVoiceRecognition = () => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.lang = 'es-ES';
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setTicketSearch(transcript);
-        saveRecentSearch(transcript);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
-  };
-
-  const startVoiceSearch = () => {
-    if (recognitionRef.current) {
-      setIsListening(true);
-      recognitionRef.current.start();
-    } else {
-      alert('Tu navegador no soporta búsqueda por voz');
-    }
   };
 
   const handleSearchChange = (value) => {
@@ -181,24 +162,7 @@ const ProjectView = () => {
   // Sugerencias (primeros 5)
   const suggestions = filteredTickets.slice(0, 5);
 
-  // Click fuera cierra sugerencias
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  if (loading || !project) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-      </div>
-    );
-  }
+  if (loading || !project) return <LoadingSpinner size="lg" fullPage />;
 
   // ← FIX: mayúsculas correctas (era 'admin' → siempre false)
   const isAdmin = user?.role === 'ADMIN';
@@ -222,13 +186,7 @@ const ProjectView = () => {
             {/* Código + Badge */}
             <div className="flex items-center gap-2 mb-2 flex-wrap justify-center">
               <h1 className="text-2xl font-bebas tracking-wider">{project.creative_code}</h1>
-              <span className={`px-2 py-1 text-xs font-mono tracking-wider rounded-sm border whitespace-nowrap ${
-                project.status === 'en_curso'
-                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                  : 'bg-gray-100 text-gray-800 border-gray-300'
-              }`}>
-                {project.status === 'en_curso' ? 'EN CURSO' : 'CERRADO'}
-              </span>
+              <StatusBadge type="project" value={project.status} />
             </div>
 
             {/* Título */}
@@ -256,13 +214,7 @@ const ProjectView = () => {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bebas tracking-wider">{project.creative_code}</h1>
-                <span className={`px-3 py-1 text-xs font-mono tracking-wider rounded-sm border ${
-                  project.status === 'en_curso'
-                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                    : 'bg-gray-100 text-gray-800 border-gray-300'
-                }`}>
-                  {project.status === 'en_curso' ? 'EN CURSO' : 'CERRADO'}
-                </span>
+                <StatusBadge type="project" value={project.status} />
               </div>
               <p className="text-lg text-zinc-300 mb-1">{project.description}</p>
               <div className="flex items-center gap-4 text-sm text-zinc-500">
@@ -406,13 +358,7 @@ const ProjectView = () => {
                               {ticket.is_foreign && (
                                 <span className="text-sm">🌍</span>
                               )}
-                              <span className={`px-2 py-0.5 text-xs font-mono rounded-sm border ${
-                                ticket.type === 'factura'
-                                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                                  : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
-                              }`}>
-                                {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
-                              </span>
+                              <StatusBadge type="ticket" value={ticket.type} />
                             </div>
                             <p className="font-semibold text-sm">{ticket.provider}</p>
                             <p className="text-xs text-zinc-400 mt-0.5">
@@ -474,25 +420,18 @@ const ProjectView = () => {
         {/* Tickets List */}
         <div>
           {filteredTickets.length === 0 ? (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-12 text-center">
-              {ticketSearch ? (
-                <>
-                  <p className="text-zinc-400 mb-2">No se encontraron tickets</p>
-                  <button
-                    onClick={clearSearch}
-                    className="text-amber-500 hover:text-amber-400 text-sm"
-                  >
-                    Limpiar búsqueda
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Upload size={48} className="mx-auto mb-4 text-zinc-600" />
-                  <p className="text-zinc-400 mb-2">No hay tickets en este proyecto</p>
-                  <p className="text-sm text-zinc-600">Haz click en "SUBIR TICKETS" para comenzar</p>
-                </>
-              )}
-            </div>
+            ticketSearch ? (
+              <EmptyState
+                message="No se encontraron tickets"
+                action={{ label: "Limpiar búsqueda", onClick: clearSearch }}
+              />
+            ) : (
+              <EmptyState
+                icon={<Upload size={48} />}
+                message="No hay tickets en este proyecto"
+                subtitle='Haz click en "SUBIR TICKETS" para comenzar'
+              />
+            )
           ) : (
             <div className="space-y-3">
               {filteredTickets.map((ticket) => (
@@ -515,13 +454,7 @@ const ProjectView = () => {
                         {ticket.is_foreign && (
                           <span className="text-lg flex-shrink-0" title="Internacional">🌍</span>
                         )}
-                        <span className={`px-2 py-1 text-xs font-mono rounded-sm border whitespace-nowrap ${
-                          ticket.type === 'factura'
-                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                            : 'bg-zinc-700/50 text-zinc-400 border-zinc-600'
-                        }`}>
-                          {ticket.type === 'factura' ? 'FACTURA' : 'TICKET'}
-                        </span>
+                        <StatusBadge type="ticket" value={ticket.type} />
                       </div>
 
                       {/* Lado derecho: precio y papelera */}
