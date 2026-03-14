@@ -8,7 +8,17 @@
       "Bash(cd /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones && python -m py_compile backend/app/routes/tickets.py 2>&1 && echo \"✅ tickets.py OK\" || echo \"❌ tickets.py FAIL\")",
       "Bash(cd /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones && python -m py_compile backend/app/models/schemas.py 2>&1 && echo \"✅ schemas.py OK\" || echo \"❌ schemas.py FAIL\")",
       "Bash(cd /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones && python -m py_compile backend/app/services/cloudinary_service.py 2>&1 && echo \"✅ cloudinary_service.py OK\" || echo \"❌ cloudinary_service.py FAIL\")",
-      "Bash(cd /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones && python -m py_compile backend/app/services/permissions.py 2>&1 && echo \"✅ permissions.py OK\" || echo \"❌ permissions.py FAIL\")"
+      "Bash(cd /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones && python -m py_compile backend/app/services/permissions.py 2>&1 && echo \"✅ permissions.py OK\" || echo \"❌ permissions.py FAIL\")",
+      "Bash(ls C:\\\\Users\\\\lilpa\\\\OneDrive\\\\Escritorio\\\\dazz-producciones\\\\backend/add_*.py 2>/dev/null || echo \"No migration scripts found\")",
+      "Bash(find /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones/frontend -maxdepth 2 -name \"*.test.js\" -o -name \"*.spec.js\" -o -name \"jest.config.js\" -o -name \"vitest.config.js\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Bash(python -m pytest tests/test_auth.py tests/test_projects_api.py tests/test_tickets_api.py tests/test_users_api.py tests/test_statistics_api.py tests/test_schemas.py tests/test_permissions.py -v --no-header --tb=short --no-cov 2>&1)",
+      "Bash(python -m pytest tests/test_existing_functionality.py -v --no-header --tb=short --no-cov 2>&1)",
+      "Bash(python -m pytest tests/test_roles.py -v --no-header --tb=short --no-cov 2>&1)",
+      "Bash(python -m pytest tests/test_security.py -v --no-header --tb=short --no-cov 2>&1)",
+      "Bash(python -m pytest tests/ -v --no-header --tb=short --no-cov 2>&1)",
+      "Bash(python -c \"from slowapi import Limiter; from slowapi.util import get_remote_address; l = Limiter\\(key_func=get_remote_address, storage_uri='memory://'\\); print\\(dir\\(l\\)\\); print\\(type\\(l._limiter\\)\\); print\\(dir\\(l._limiter\\)\\)\" 2>&1)",
+      "Bash(python -c \"from slowapi import Limiter; from slowapi.util import get_remote_address; l = Limiter\\(key_func=get_remote_address, storage_uri='memory://'\\); print\\(type\\(l._storage\\)\\); print\\(dir\\(l._storage\\)\\)\" 2>&1)",
+      "Bash(PYTHONIOENCODING=utf-8 python -c \"\nimport os\nos.environ['SECRET_KEY'] = 'test'\nos.environ['ENVIRONMENT'] = 'development'\nfrom main import app\nfrom app.routes.auth import limiter as auth_limiter\nprint\\('same limiter?', app.state.limiter is auth_limiter\\)\nprint\\('same storage?', app.state.limiter._storage is auth_limiter._storage\\)\n\" 2>&1)"
     ]
   }
 }

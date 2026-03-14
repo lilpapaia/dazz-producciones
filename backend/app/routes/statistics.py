@@ -12,6 +12,16 @@ from app.services.geographic_classifier import classify_geography, get_country_n
 
 router = APIRouter(prefix="/statistics", tags=["Statistics"])
 
+
+# VULN-007: Dependencia que verifica que el usuario es ADMIN o BOSS
+async def get_current_admin_or_boss(
+    current_user: User = Depends(get_current_active_user)
+) -> User:
+    """Solo ADMIN y BOSS pueden ver estadísticas"""
+    if current_user.role not in ["ADMIN", "BOSS"]:
+        raise HTTPException(status_code=403, detail="Solo ADMIN y BOSS pueden ver estadísticas")
+    return current_user
+
 MONTH_NAMES_ES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -45,7 +55,7 @@ def filter_tickets_by_quarter(tickets: List, quarter: int) -> List:
 @router.get("/available-years", response_model=List[int])
 async def get_available_years(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_or_boss)
 ):
     """Obtiene la lista de años que tienen proyectos"""
     years = db.query(Project.year).distinct().all()
@@ -59,7 +69,7 @@ async def get_statistics_overview(
     quarter: Optional[int] = Query(None, ge=1, le=4),
     geo_filter: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_or_boss)
 ):
     tickets_query = db.query(Ticket).join(Project).filter(Project.year == str(year))
     all_tickets = tickets_query.all()
@@ -96,7 +106,7 @@ async def get_statistics_overview(
 async def get_monthly_evolution(
     year: int = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_or_boss)
 ):
     tickets = db.query(Ticket).join(Project).filter(Project.year == str(year)).all()
     monthly_totals = [0.0] * 12
@@ -123,7 +133,7 @@ async def get_currency_distribution(
     year: int = Query(...),
     quarter: Optional[int] = Query(None, ge=1, le=4),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_or_boss)
 ):
     tickets = db.query(Ticket).join(Project).filter(Project.year == str(year)).all()
     if quarter:
@@ -136,7 +146,7 @@ async def get_foreign_breakdown(
     year: int = Query(...),
     quarter: Optional[int] = Query(None, ge=1, le=4),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_or_boss)
 ):
     query = db.query(Ticket).join(Project).filter(
         Project.year == str(year),

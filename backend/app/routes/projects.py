@@ -1,7 +1,8 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 from pydantic import BaseModel, EmailStr
 
@@ -211,9 +212,10 @@ async def close_project(
         from app.services.excel_generator import create_project_excel_bytes
         excel_bytes = create_project_excel_bytes(project, tickets)
     except Exception as e:
+        print(f"❌ Error generando Excel: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Excel generation failed: {str(e)}"
+            detail="Error interno al generar Excel"
         )
 
     recipients = []
@@ -243,14 +245,16 @@ async def close_project(
             print(f"Warning: Email sending failed: {str(e)}")
 
     project.status = ProjectStatus.CERRADO
-    project.closed_at = datetime.utcnow()
+    project.closed_at = datetime.now(timezone.utc)
     db.commit()
 
     if excel_bytes:
+        # VULN-010: Sanitizar creative_code para Content-Disposition header
+        safe_code = re.sub(r'[^\w\-.]', '_', project.creative_code)
         return Response(
             content=excel_bytes,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={project.creative_code}_GASTOS.xlsx"}
+            headers={"Content-Disposition": f'attachment; filename="{safe_code}_GASTOS.xlsx"'}
         )
     else:
         raise HTTPException(

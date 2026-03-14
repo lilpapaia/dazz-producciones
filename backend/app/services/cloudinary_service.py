@@ -11,10 +11,21 @@ import os
 from pathlib import Path
 from PIL import Image
 
+# VULN-002: Credenciales obligatorias — sin valores hardcodeados
+_cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
+_api_key = os.getenv("CLOUDINARY_API_KEY")
+_api_secret = os.getenv("CLOUDINARY_API_SECRET")
+
+if not all([_cloud_name, _api_key, _api_secret]):
+    raise RuntimeError(
+        "Cloudinary credentials are required. "
+        "Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables."
+    )
+
 cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dyjpek4q8"),
-    api_key=os.getenv("CLOUDINARY_API_KEY", "869752186781145"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    cloud_name=_cloud_name,
+    api_key=_api_key,
+    api_secret=_api_secret,
     secure=True
 )
 
@@ -310,11 +321,3 @@ def extract_public_id_from_url(url: str) -> str:
         return None
 
 
-def delete_ticket_file(public_id: str) -> bool:
-    """Elimina un archivo individual (legacy, usar delete_ticket_files)"""
-    try:
-        cloudinary.uploader.destroy(public_id)
-        return True
-    except Exception as e:
-        print(f"Error deleting file: {str(e)}")
-        return False

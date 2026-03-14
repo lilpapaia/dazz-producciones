@@ -85,7 +85,7 @@ class TestUpdateUser:
                 "email": boss_user.email,
                 "name": "Updated Boss",
                 "role": "BOSS",
-                "password": "newpass123",
+                "password": "NewPass123!",
                 "company_ids": [company_dazz.id]
             },
             headers=auth_header(admin_token)
@@ -100,7 +100,7 @@ class TestUpdateUser:
                 "email": "x@test.com",
                 "name": "X",
                 "role": "WORKER",
-                "password": "pass123456",
+                "password": "Pass123456!",
                 "company_ids": []
             },
             headers=auth_header(admin_token)
@@ -114,7 +114,7 @@ class TestUpdateUser:
                 "email": boss_user.email,
                 "name": "Boss",
                 "role": "BOSS",
-                "password": "pass123456",
+                "password": "Pass123456!",
                 "company_ids": [9999]
             },
             headers=auth_header(admin_token)
@@ -128,7 +128,7 @@ class TestUpdateUser:
                 "email": worker_user.email,
                 "name": worker_user.name,
                 "role": "BOSS",
-                "password": "pass123456",
+                "password": "Pass123456!",
                 "company_ids": [company_dazz.id]
             },
             headers=auth_header(admin_token)
@@ -148,7 +148,7 @@ class TestDeleteUser:
         user = User(
             name="To Delete",
             email="delete@test.com",
-            hashed_password=get_password_hash("pass123456"),
+            hashed_password=get_password_hash("Password123!"),
             role="WORKER",
             is_active=True
         )

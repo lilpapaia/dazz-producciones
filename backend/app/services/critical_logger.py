@@ -13,7 +13,7 @@ Eventos críticos:
 - Excepciones inesperadas
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 
 
@@ -63,7 +63,7 @@ def log_critical(
     print(separator)
     
     # Timestamp
-    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     print(f"Timestamp: {timestamp}")
     
     # Usuario (si existe)

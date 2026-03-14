@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
+import re
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Any, Dict
 from datetime import datetime, date
 from enum import Enum
@@ -50,8 +51,21 @@ class UserBase(BaseModel):
     role: UserRole = UserRole.WORKER
 
 class UserCreate(UserBase):
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=8)
     company_ids: Optional[List[int]] = []
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('La contraseña debe tener al menos 8 caracteres')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('La contraseña debe contener al menos una mayúscula')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('La contraseña debe contener al menos un número')
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:\'",.<>?/\\`~]', v):
+            raise ValueError('La contraseña debe contener al menos un símbolo especial')
+        return v
 
 class UserLogin(BaseModel):
     identifier: str  # Email O username
@@ -68,8 +82,19 @@ class UserResponse(UserBase):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
     user: UserResponse
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(min_length=1)
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class LogoutRequest(BaseModel):
+    refresh_token: str = Field(min_length=1)
 
 # ============================================
 # PASSWORD RESET / SET PASSWORD SCHEMAS
@@ -77,7 +102,20 @@ class Token(BaseModel):
 
 class SetPasswordRequest(BaseModel):
     token: str = Field(min_length=1)
-    new_password: str = Field(min_length=6)
+    new_password: str = Field(min_length=8)
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('La contraseña debe tener al menos 8 caracteres')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('La contraseña debe contener al menos una mayúscula')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('La contraseña debe contener al menos un número')
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:\'",.<>?/\\`~]', v):
+            raise ValueError('La contraseña debe contener al menos un símbolo especial')
+        return v
 
 class SetPasswordResponse(BaseModel):
     message: str

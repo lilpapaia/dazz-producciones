@@ -1,6 +1,14 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+/**
+ * NOTA DE SEGURIDAD: Esta protección de rutas es SOLO visual/UX.
+ * La seguridad real de permisos está implementada en el backend
+ * (FastAPI con JWT + verificación de roles en cada endpoint).
+ * Un usuario podría manipular localStorage para ver la UI de admin,
+ * pero no podría ejecutar ninguna acción sin un token JWT válido
+ * con los permisos correctos.
+ */
 const ProtectedRoute = ({ children, adminOnly = false, adminOrBossOnly = false }) => {
   const { user, loading } = useAuth();
 

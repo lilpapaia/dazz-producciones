@@ -11,9 +11,11 @@ from app.models.database import User, Project, Ticket
 from app.services.auth import get_current_active_user
 from app.services.permissions import can_access_project
 from app.services.claude_ai import extract_ticket_data
-from app.services.cloudinary_service import upload_ticket_file, delete_ticket_file
+from app.services.cloudinary_service import upload_ticket_file
 from app.services.exchange_rate import get_historical_exchange_rate
 from app.services.geographic_classifier import classify_geography
+# VULN-004/005: Integrar validadores
+from app.services.validators import validate_file_upload, sanitize_filename
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 UPLOAD_DIR = Path("uploads")
@@ -33,11 +35,12 @@ async def upload_ticket(
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    allowed_types = ["image/jpeg", "image/jpg", "image/png", "application/pdf"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"File type {file.content_type} not allowed.")
+    # VULN-004/005: Usar validate_file_upload en lugar de validación manual de content_type
+    await validate_file_upload(file)
 
-    temp_path = UPLOAD_DIR / f"temp_{current_user.id}_{file.filename}"
+    # VULN-004/005: Usar sanitize_filename para el nombre del archivo temporal
+    safe_filename = sanitize_filename(file.filename)
+    temp_path = UPLOAD_DIR / f"temp_{current_user.id}_{safe_filename}"
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -48,7 +51,7 @@ async def upload_ticket(
         # 2. Extraer datos con Claude AI (usando primera página/imagen)
         ai_file_path = str(temp_path)
         ai_mime = file.content_type
-        
+
         # Si es PDF, usar la primera página convertida para la IA
         # La conversión ya ocurrió en Cloudinary, pero necesitamos el temp para IA
         extracted_data = extract_ticket_data(ai_file_path, ai_mime)
@@ -143,8 +146,12 @@ async def upload_ticket(
         db.refresh(ticket)
         return ticket
 
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions from validators as-is
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process ticket: {str(e)}")
+        # VULN-006: Logear error real, devolver genérico
+        print(f"❌ Error procesando ticket: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al procesar ticket")
     finally:
         if temp_path.exists():
             temp_path.unlink()
@@ -198,7 +205,7 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     project = db.query(Project).filter(Project.id == ticket.project_id).first()
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     # 1. BORRAR ARCHIVOS DE CLOUDINARY PRIMERO
     try:
         from app.services.cloudinary_service import delete_ticket_files
@@ -207,7 +214,7 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     except Exception as e:
         print(f"⚠️ Error eliminando archivos de Cloudinary: {str(e)}")
         # Continuar aunque falle (evitar bloqueo)
-    
+
     # 2. BORRAR DE BASE DE DATOS
     project.tickets_count -= 1
     project.total_amount -= ticket.final_total

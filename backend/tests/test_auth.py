@@ -19,7 +19,7 @@ class TestRegister:
                 "name": "New User",
                 "username": "newuser",
                 "role": "WORKER",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": [company_dazz.id]
             },
             headers=auth_header(admin_token)
@@ -38,7 +38,7 @@ class TestRegister:
                 "email": admin_user.email,
                 "name": "Dup User",
                 "role": "WORKER",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": []
             },
             headers=auth_header(admin_token)
@@ -54,7 +54,7 @@ class TestRegister:
                 "name": "Dup Username",
                 "username": admin_user.username,
                 "role": "WORKER",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": []
             },
             headers=auth_header(admin_token)
@@ -69,7 +69,7 @@ class TestRegister:
                 "email": "new2@test.com",
                 "name": "New User 2",
                 "role": "WORKER",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": [9999]
             },
             headers=auth_header(admin_token)
@@ -83,7 +83,7 @@ class TestRegister:
                 "email": "short@test.com",
                 "name": "Short Pass",
                 "role": "WORKER",
-                "password": "12345",
+                "password": "Ab1!",
                 "company_ids": []
             },
             headers=auth_header(admin_token)
@@ -97,7 +97,7 @@ class TestRegister:
                 "email": "nonadmin@test.com",
                 "name": "Non Admin",
                 "role": "WORKER",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": []
             },
             headers=auth_header(boss_token)
@@ -111,7 +111,7 @@ class TestRegister:
                 "email": "notoken@test.com",
                 "name": "No Token",
                 "role": "WORKER",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": []
             }
         )
@@ -124,18 +124,18 @@ class TestLogin:
     def test_login_success_email(self, client, admin_user):
         response = client.post(
             "/auth/login",
-            json={"identifier": "admin@test.com", "password": "password123"}
-        )
+            json={"identifier": "admin@test.com", "password": "Password123!"}        )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
+        assert "refresh_token" in data
         assert data["token_type"] == "bearer"
         assert data["user"]["email"] == "admin@test.com"
 
     def test_login_success_username(self, client, admin_user):
         response = client.post(
             "/auth/login",
-            json={"identifier": "admin", "password": "password123"}
+            json={"identifier": "admin", "password": "Password123!"}
         )
         assert response.status_code == 200
         assert "access_token" in response.json()
@@ -157,7 +157,7 @@ class TestLogin:
     def test_login_returns_user_with_companies(self, client, boss_user, company_dazz):
         response = client.post(
             "/auth/login",
-            json={"identifier": "boss@test.com", "password": "password123"}
+            json={"identifier": "boss@test.com", "password": "Password123!"}
         )
         assert response.status_code == 200
         user_data = response.json()["user"]
@@ -169,19 +169,19 @@ class TestSetPassword:
 
     def test_set_password_success(self, client, db_session, admin_user):
         from app.models.database import PasswordResetToken
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         token = PasswordResetToken(
             user_id=admin_user.id,
             token="valid-test-token-123",
-            expires_at=datetime.utcnow() + timedelta(hours=24)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
         )
         db_session.add(token)
         db_session.commit()
 
         response = client.post(
             "/auth/set-password",
-            json={"token": "valid-test-token-123", "new_password": "newpass123"}
+            json={"token": "valid-test-token-123", "new_password": "NewPass123!"}
         )
         assert response.status_code == 200
         assert response.json()["success"] is True
@@ -189,44 +189,44 @@ class TestSetPassword:
     def test_set_password_invalid_token(self, client):
         response = client.post(
             "/auth/set-password",
-            json={"token": "invalid-token", "new_password": "newpass123"}
+            json={"token": "invalid-token", "new_password": "NewPass123!"}
         )
         assert response.status_code == 400
 
     def test_set_password_expired_token(self, client, db_session, admin_user):
         from app.models.database import PasswordResetToken
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         token = PasswordResetToken(
             user_id=admin_user.id,
             token="expired-token-123",
-            expires_at=datetime.utcnow() - timedelta(hours=1)  # Expired
+            expires_at=datetime.now(timezone.utc) - timedelta(hours=1)  # Expired
         )
         db_session.add(token)
         db_session.commit()
 
         response = client.post(
             "/auth/set-password",
-            json={"token": "expired-token-123", "new_password": "newpass123"}
+            json={"token": "expired-token-123", "new_password": "NewPass123!"}
         )
         assert response.status_code == 400
 
     def test_set_password_used_token(self, client, db_session, admin_user):
         from app.models.database import PasswordResetToken
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         token = PasswordResetToken(
             user_id=admin_user.id,
             token="used-token-123",
-            expires_at=datetime.utcnow() + timedelta(hours=24),
-            used_at=datetime.utcnow()  # Already used
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+            used_at=datetime.now(timezone.utc)  # Already used
         )
         db_session.add(token)
         db_session.commit()
 
         response = client.post(
             "/auth/set-password",
-            json={"token": "used-token-123", "new_password": "newpass123"}
+            json={"token": "used-token-123", "new_password": "NewPass123!"}
         )
         assert response.status_code == 400
 
@@ -270,7 +270,7 @@ class TestRegisterFirstAdmin:
                 "email": "first@admin.com",
                 "name": "First Admin",
                 "role": "ADMIN",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": []
             }
         )
@@ -284,7 +284,7 @@ class TestRegisterFirstAdmin:
                 "email": "second@admin.com",
                 "name": "Second Admin",
                 "role": "ADMIN",
-                "password": "secure123",
+                "password": "Secure123!",
                 "company_ids": []
             }
         )

@@ -18,8 +18,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await loginApi(identifier, password); // ← Envía identifier
-      login(response.data.access_token, response.data.user);
+      const response = await loginApi(identifier, password);
+      login(response.data.access_token, response.data.refresh_token, response.data.user);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al iniciar sesión');

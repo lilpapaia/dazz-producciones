@@ -206,7 +206,7 @@ class TestUserSchemas:
             email="test@test.com",
             name="Test User",
             role="WORKER",
-            password="secure123"
+            password="Secure123!"
         )
         assert user.email == "test@test.com"
         assert user.role == "WORKER"
@@ -217,7 +217,34 @@ class TestUserSchemas:
                 email="test@test.com",
                 name="Test",
                 role="WORKER",
-                password="12345"
+                password="Ab1!"
+            )
+
+    def test_user_password_no_uppercase_rejected(self):
+        with pytest.raises(ValidationError):
+            UserCreate(
+                email="test@test.com",
+                name="Test",
+                role="WORKER",
+                password="secure123!"
+            )
+
+    def test_user_password_no_number_rejected(self):
+        with pytest.raises(ValidationError):
+            UserCreate(
+                email="test@test.com",
+                name="Test",
+                role="WORKER",
+                password="Securepass!"
+            )
+
+    def test_user_password_no_symbol_rejected(self):
+        with pytest.raises(ValidationError):
+            UserCreate(
+                email="test@test.com",
+                name="Test",
+                role="WORKER",
+                password="Secure1234"
             )
 
     def test_user_invalid_email_rejected(self):
@@ -226,7 +253,7 @@ class TestUserSchemas:
                 email="not-an-email",
                 name="Test",
                 role="WORKER",
-                password="secure123"
+                password="Secure123!"
             )
 
     def test_user_invalid_role_rejected(self):
@@ -235,7 +262,7 @@ class TestUserSchemas:
                 email="test@test.com",
                 name="Test",
                 role="SUPERADMIN",
-                password="secure123"
+                password="Secure123!"
             )
 
     def test_user_company_ids_default_empty(self):
@@ -243,7 +270,7 @@ class TestUserSchemas:
             email="test@test.com",
             name="Test",
             role="WORKER",
-            password="secure123"
+            password="Secure123!"
         )
         assert user.company_ids == []
 
@@ -273,13 +300,13 @@ class TestSetPasswordSchema:
     """Tests de SetPasswordRequest"""
 
     def test_valid_request(self):
-        req = SetPasswordRequest(token="valid-token", new_password="newpass123")
+        req = SetPasswordRequest(token="valid-token", new_password="NewPass123!")
         assert req.token == "valid-token"
 
     def test_short_password_rejected(self):
         with pytest.raises(ValidationError):
-            SetPasswordRequest(token="valid-token", new_password="12345")
+            SetPasswordRequest(token="valid-token", new_password="Ab1!")
 
     def test_empty_token_rejected(self):
         with pytest.raises(ValidationError):
-            SetPasswordRequest(token="", new_password="newpass123")
+            SetPasswordRequest(token="", new_password="NewPass123!")

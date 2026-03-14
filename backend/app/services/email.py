@@ -179,38 +179,6 @@ def send_set_password_email(user_name: str, user_email: str, token: str):
     return send_email(user_email, subject, html_content)
 
 
-def send_user_created_email(user_name: str, user_email: str, temporary_password: str):
-    """
-    Email antiguo - Ahora solo se usa si NO se genera token
-    Mantenerlo por compatibilidad
-    """
-    subject = "Bienvenido a DAZZ Creative - Credenciales de acceso"
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-    </head>
-    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px;">
-            <h2 style="color: #333;">Bienvenido a DAZZ Creative</h2>
-            <p>Hola {user_name},</p>
-            <p>Tu cuenta ha sido creada en el sistema de gestión de producciones.</p>
-            <div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>Email:</strong> {user_email}</p>
-                <p style="margin: 5px 0;"><strong>Contraseña temporal:</strong> {temporary_password}</p>
-            </div>
-            <p>Accede al sistema: <a href="{FRONTEND_URL}/login">https://producciones.dazzcreative.com</a></p>
-            <p style="color: #666; font-size: 12px; margin-top: 30px;">Por favor, cambia tu contraseña después de iniciar sesión por primera vez.</p>
-        </div>
-    </body>
-    </html>
-    """
-    
-    return send_email(user_email, subject, html_content)
-
-
 def send_forgot_password_email(user_name: str, user_email: str, token: str):
     """
     Enviar email para restablecer contraseña olvidada
@@ -308,12 +276,6 @@ def send_forgot_password_email(user_name: str, user_email: str, token: str):
     """
     
     return send_email(user_email, subject, html_content)
-
-
-def send_project_closed_email(recipients: list, project_data: dict):
-    """Enviar email cuando se cierra un proyecto"""
-    # TODO: Implementar si se necesita
-    pass
 
 
 def send_project_closed_email_multi(

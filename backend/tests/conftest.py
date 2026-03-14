@@ -15,6 +15,10 @@ import os
 # Asegurar que el directorio backend está en el path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Configurar environment de test ANTES de importar la app
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only-not-production")
+os.environ.setdefault("ENVIRONMENT", "development")
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -58,7 +62,7 @@ def db_session(db_engine):
 
 @pytest.fixture(scope="function")
 def client(db_session):
-    """TestClient con BD de test inyectada."""
+    """TestClient con BD de test inyectada. Rate limiter se resetea por test."""
     from config.database import get_db
     from main import app
 
@@ -69,6 +73,25 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+
+    # Resetear TODOS los rate limiters para evitar 429 entre tests
+    for limiter_ref in [app.state.limiter]:
+        try:
+            limiter_ref.reset()
+            limiter_ref._storage.reset()
+            limiter_ref._storage.storage.clear()
+            limiter_ref._storage.expirations.clear()
+        except Exception:
+            pass
+    try:
+        from app.routes.auth import limiter as auth_limiter
+        auth_limiter.reset()
+        auth_limiter._storage.reset()
+        auth_limiter._storage.storage.clear()
+        auth_limiter._storage.expirations.clear()
+    except Exception:
+        pass
+
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
@@ -109,7 +132,7 @@ def admin_user(db_session, company_dazz):
         name="Admin Test",
         email="admin@test.com",
         username="admin",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("Password123!"),
         role="ADMIN",
         is_active=True
     )
@@ -131,7 +154,7 @@ def boss_user(db_session, company_dazz):
         name="Boss Test",
         email="boss@test.com",
         username="boss",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("Password123!"),
         role="BOSS",
         is_active=True
     )
@@ -153,7 +176,7 @@ def worker_user(db_session, company_dazz):
         name="Worker Test",
         email="worker@test.com",
         username="worker",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("Password123!"),
         role="WORKER",
         is_active=True
     )
@@ -175,7 +198,7 @@ def boss_other_company(db_session, company_other):
         name="Boss Other",
         email="boss_other@test.com",
         username="boss_other",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("Password123!"),
         role="BOSS",
         is_active=True
     )
@@ -197,7 +220,7 @@ def inactive_user(db_session):
         name="Inactive User",
         email="inactive@test.com",
         username="inactive",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("Password123!"),
         role="WORKER",
         is_active=False
     )

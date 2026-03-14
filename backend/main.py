@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -9,7 +9,7 @@ import os
 
 from database_config import engine
 from app.models.database import Base
-from app.routes import users, auth, projects, tickets, statistics, companies  # ← AÑADIDO companies
+from app.routes import users, auth, projects, tickets, statistics, companies
 
 # ============================================
 # 🔒 RATE LIMITING
@@ -25,7 +25,7 @@ limiter = Limiter(
 app = FastAPI(
     title="Dazz Creative - Sistema Gestión Gastos",
     description="API para gestión de proyectos y tickets/facturas con IA",
-    version="2.0.0",  # ← ACTUALIZADO versión
+    version="2.0.0",
     redirect_slashes=False
 )
 
@@ -34,9 +34,26 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ============================================
+# 🔒 VULN-015: SECURITY HEADERS MIDDLEWARE
+# ============================================
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ============================================
 # 🔒 CONFIGURACIÓN SEGURA DE CORS
 # ============================================
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# VULN-011: Default "production", no "development"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 # Orígenes permitidos - SOLO TUS DOMINIOS
 ALLOWED_ORIGINS = [
@@ -52,18 +69,20 @@ if ENVIRONMENT == "development":
         "http://127.0.0.1:5173",
     ])
 
+# VULN-017: Restringir métodos y headers CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-# Mount uploads directory for file access
+# VULN-003: Eliminado mount de /uploads (archivos van a Cloudinary)
+# El directorio uploads/ sigue existiendo para archivos temporales
+# pero NO se expone como ruta pública
 if not os.path.exists("uploads"):
     os.makedirs("uploads")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include routers
 app.include_router(auth.router)
@@ -71,14 +90,14 @@ app.include_router(projects.router)
 app.include_router(tickets.router)
 app.include_router(users.router)
 app.include_router(statistics.router)
-app.include_router(companies.router)  # ← AÑADIDO router companies
+app.include_router(companies.router)
 
 @app.get("/")
-@limiter.limit("10 per minute")  # Límite específico para este endpoint
+@limiter.limit("10 per minute")
 async def root(request: Request):
     return {
         "message": "Dazz Creative - API Sistema Gestión Gastos",
-        "version": "2.0.0",  # ← ACTUALIZADO versión
+        "version": "2.0.0",
         "status": "running",
         "environment": ENVIRONMENT
     }
@@ -108,7 +127,7 @@ if ENVIRONMENT == "development":
     ):
         """Envía un email de prueba con Brevo."""
         from app.services.email import send_email
-        
+
         try:
             send_email(
                 to_email=email_to,
@@ -137,6 +156,7 @@ async def startup_event():
     print(f"🔒 Modo: {ENVIRONMENT}")
     print(f"🌐 CORS permitido para: {ALLOWED_ORIGINS}")
     print(f"🛡️ Rate limiting: Activo (200/día, 50/hora)")
+    print(f"🛡️ Security headers: Activo")
 
 if __name__ == "__main__":
     import uvicorn

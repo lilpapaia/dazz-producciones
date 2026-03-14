@@ -17,14 +17,85 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// VULN-009: Interceptor con refresh token automático
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Si es 401 y no es un retry ni es el endpoint de refresh/login
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh') &&
+      !originalRequest.url?.includes('/auth/login')
+    ) {
+      if (isRefreshing) {
+        // Si ya estamos refrescando, encolar la petición
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (!refreshToken) {
+        // Sin refresh token, limpiar y redirigir
+        isRefreshing = false;
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        const response = await axios.post(`${API_URL}/auth/refresh`, {
+          refresh_token: refreshToken
+        });
+
+        const newAccessToken = response.data.access_token;
+        localStorage.setItem('token', newAccessToken);
+
+        // Reintentar peticiones encoladas
+        processQueue(null, newAccessToken);
+
+        // Reintentar la petición original
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh token inválido — logout completo
+        processQueue(refreshError, null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -46,6 +117,15 @@ export const setPassword = (token, newPassword) =>
 
 export const forgotPassword = (email) =>
   api.post('/auth/forgot-password', { email });
+
+// VULN-009: Logout con revocación de refresh token
+export const logoutApi = () => {
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (refreshToken) {
+    return api.post('/auth/logout', { refresh_token: refreshToken });
+  }
+  return Promise.resolve();
+};
 
 // ============================================
 // PROJECTS
@@ -146,7 +226,7 @@ export const getCompleteStatistics = (year, quarter = null, geoFilter = null, co
   const params = { year };
   if (quarter) params.quarter = quarter;
   if (geoFilter) params.geo_filter = geoFilter;
-  if (companyId) params.company_id = companyId;  // ← NUEVO
+  if (companyId) params.company_id = companyId;
   return api.get('/statistics/complete', { params });
 };
 

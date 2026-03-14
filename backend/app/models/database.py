@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Date, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 
 Base = declarative_base()
@@ -34,7 +34,7 @@ class Company(Base):
     name = Column(String, unique=True, nullable=False, index=True)
     cif = Column(String, nullable=True)
     address = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relaciones
     users = relationship("User", secondary="user_companies", back_populates="companies")
@@ -49,7 +49,7 @@ class UserCompany(Base):
     
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), primary_key=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 # ============================================
 # MODELO USER (ACTUALIZADO)
@@ -65,7 +65,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.WORKER, nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relaciones
     projects = relationship("Project", back_populates="owner")
@@ -100,7 +100,7 @@ class Project(Base):
     status = Column(Enum(ProjectStatus), default=ProjectStatus.EN_CURSO, nullable=False)
     total_amount = Column(Float, default=0.0)
     tickets_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     closed_at = Column(DateTime, nullable=True)
     
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -151,7 +151,7 @@ class Ticket(Base):
     file_pages = Column(Text, nullable=True)
     pdf_url = Column(String, nullable=True)
     is_reviewed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     
@@ -169,7 +169,23 @@ class PasswordResetToken(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token = Column(String, unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     used_at = Column(DateTime, nullable=True)
     
+    user = relationship("User")
+
+# ============================================
+# MODELO REFRESH TOKEN (VULN-009)
+# ============================================
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String, unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+
     user = relationship("User")
