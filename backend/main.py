@@ -57,9 +57,11 @@ app.add_middleware(SecurityHeadersMiddleware)
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 # Orígenes permitidos - SOLO TUS DOMINIOS
+SUPPLIER_PORTAL_URL = os.getenv("SUPPLIER_PORTAL_URL", "https://providers.dazzcreative.com")
 ALLOWED_ORIGINS = [
-    "https://dazz-producciones.vercel.app",  # Producción
-    "https://providers.dazzcreative.com",    # Portal proveedores
+    "https://dazz-producciones.vercel.app",  # Producción DAZZ
+    "https://producciones.dazzcreative.com", # Dominio custom DAZZ
+    SUPPLIER_PORTAL_URL,                     # Portal proveedores (env var)
 ]
 
 # En desarrollo también permitir localhost
@@ -67,8 +69,10 @@ if ENVIRONMENT == "development":
     ALLOWED_ORIGINS.extend([
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:5174",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
     ])
 
 # VULN-017: Restringir métodos y headers CORS
