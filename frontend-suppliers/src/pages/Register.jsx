@@ -1,0 +1,177 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { validateToken, registerSupplier } from '../services/api';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+
+const Register = () => {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { login } = useAuth();
+  const token = params.get('token') || '';
+
+  const [step, setStep] = useState(1); // 1: details, 2: banking, 3: password
+  const [tokenValid, setTokenValid] = useState(null);
+  const [invitation, setInvitation] = useState({});
+  const [form, setForm] = useState({ name: '', nif_cif: '', phone: '', address: '', iban: '', password: '', confirmPassword: '', gdpr_consent: false });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!token) { setTokenValid(false); return; }
+    validateToken(token).then(({ data }) => {
+      setTokenValid(data.valid);
+      if (data.valid) { setInvitation(data); setForm(f => ({ ...f, name: data.name || '' })); }
+    }).catch(() => setTokenValid(false));
+  }, [token]);
+
+  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  const handleSubmit = async () => {
+    setError('');
+    if (form.password !== form.confirmPassword) { setError('Passwords do not match'); return; }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (!form.gdpr_consent) { setError('You must accept the data processing terms'); return; }
+
+    setLoading(true);
+    try {
+      const { data } = await registerSupplier({
+        token,
+        name: form.name,
+        nif_cif: form.nif_cif || null,
+        phone: form.phone || null,
+        address: form.address || null,
+        iban: form.iban || null,
+        password: form.password,
+        gdpr_consent: true,
+      });
+      login({ access_token: data.access_token, refresh_token: data.refresh_token, supplier: { id: data.supplier_id, name: form.name, email: invitation.email } });
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (tokenValid === null) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (tokenValid === false) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+      <div className="text-center max-w-sm">
+        <AlertCircle size={40} className="text-red-400 mx-auto mb-3" />
+        <h2 className="font-['Bebas_Neue'] text-xl text-zinc-100 mb-2">Invalid or expired link</h2>
+        <p className="text-xs text-zinc-500">This registration link is invalid, expired, or has already been used. Please contact the DAZZ admin team.</p>
+      </div>
+    </div>
+  );
+
+  const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-md focus:border-amber-500 outline-none";
+  const labelCls = "text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1.5 block";
+
+  return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <h1 className="font-['Bebas_Neue'] text-2xl tracking-wider text-amber-500">DAZZ SUPPLIERS</h1>
+          <p className="text-xs text-zinc-500 mt-1">Create your account</p>
+        </div>
+
+        {/* Progress */}
+        <div className="flex gap-1 mb-1.5">
+          {[1, 2, 3].map(s => (
+            <div key={s} className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-amber-500' : 'bg-zinc-800'}`} />
+          ))}
+        </div>
+        <div className="flex justify-between text-[9px] text-zinc-600 mb-5">
+          <span>Details</span><span>Banking</span><span>Password</span>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+          {/* Step 1: Details */}
+          {step === 1 && (
+            <>
+              <div className="mb-3">
+                <label className={labelCls}>Name / Company <span className="text-amber-500">*</span></label>
+                <input value={form.name} onChange={set('name')} required className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className={labelCls}>NIF/CIF/VAT</label>
+                  <input value={form.nif_cif} onChange={set('nif_cif')} placeholder="e.g. 12345678A" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Phone</label>
+                  <input value={form.phone} onChange={set('phone')} placeholder="+34 600..." className={inputCls} />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className={labelCls}>Fiscal address</label>
+                <input value={form.address} onChange={set('address')} placeholder="Street, city, country" className={inputCls} />
+              </div>
+              <button onClick={() => setStep(2)} disabled={!form.name.trim()} className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
+                Continue
+              </button>
+            </>
+          )}
+
+          {/* Step 2: Banking */}
+          {step === 2 && (
+            <>
+              <div className="mb-4">
+                <label className={labelCls}>IBAN <span className="text-amber-500">*</span></label>
+                <input value={form.iban} onChange={set('iban')} placeholder="ES12 1234 5678 9012 3456 7890" className={inputCls} />
+                <p className="text-[10px] text-zinc-600 mt-1">Your IBAN will be encrypted and stored securely.</p>
+              </div>
+              <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded-md p-3 text-xs mb-4 leading-relaxed">
+                Bank certificate (PDF) upload will be available after registration. You can submit it from your profile.
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setStep(1)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
+                <button onClick={() => setStep(3)} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors">Continue</button>
+              </div>
+            </>
+          )}
+
+          {/* Step 3: Password + RGPD */}
+          {step === 3 && (
+            <>
+              <div className="mb-3">
+                <label className={labelCls}>Password <span className="text-amber-500">*</span></label>
+                <input type="password" value={form.password} onChange={set('password')} placeholder="Min 8 chars, 1 uppercase, 1 number" className={inputCls} />
+              </div>
+              <div className="mb-4">
+                <label className={labelCls}>Confirm password <span className="text-amber-500">*</span></label>
+                <input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} className={inputCls} />
+              </div>
+
+              <label className="flex items-start gap-2 mb-4 cursor-pointer">
+                <input type="checkbox" checked={form.gdpr_consent} onChange={set('gdpr_consent')} className="mt-0.5 accent-amber-500" />
+                <span className="text-[11px] text-zinc-400 leading-relaxed">
+                  I consent to the processing of my personal data in accordance with GDPR and the <a href="#" className="text-amber-500 underline">privacy policy</a>.
+                </span>
+              </label>
+
+              {error && (
+                <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-md p-2.5 text-xs mb-3">{error}</div>
+              )}
+
+              <div className="flex gap-2">
+                <button onClick={() => setStep(2)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
+                <button onClick={handleSubmit} disabled={loading} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
+                  {loading ? 'Creating...' : 'Create account'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
