@@ -13,12 +13,101 @@
 - [x] 21 endpoints API REST
 - [x] Auth JWT + roles (ADMIN/BOSS/WORKER)
 - [x] Deploy Railway + Vercel
+- [x] **Módulo Proveedores completo** (6 fases: BD, IA, 23 endpoints, UI admin, portal, integración)
+- [x] **Testing automatizado proveedores** (2026-03-16: 25 issues encontrados)
+- [x] Setup Claude Code + .claude/ estructura
+- [x] Análisis completo proyecto
 
 ---
 
-## 🔄 EN PROGRESO
-- [x] Setup Claude Code + .claude/ estructura
-- [x] Análisis completo proyecto
+## 🔴 URGENTE: Fixes CRITICAL Proveedores (antes de lanzar)
+
+- [ ] **C-1: Encriptar IBAN** (Esfuerzo: 🔨🔨 3-4h | ROI: ⭐⭐⭐⭐⭐)
+  - `iban_encrypted` almacena plaintext UTF-8, NO está encriptado
+  - Se expone sin enmascarar en GET /suppliers y GET /suppliers/{id}
+  - Fix: Fernet o pgcrypto, solo exponer enmascarado en listados
+  - Archivos: models/suppliers.py, routes/suppliers.py, routes/supplier_portal.py, services/supplier_ai.py
+
+- [ ] **C-2: Fix file stream upload** (Esfuerzo: 🔨 1-2h | ROI: ⭐⭐⭐⭐⭐)
+  - `file.read()` consume stream, luego `file.seek(0)` + `shutil.copyfileobj` puede dar PDF vacío
+  - Fix: Guardar bytes en variable, escribir directamente en ambos temp files
+  - Archivos: routes/supplier_portal.py (líneas 329-381)
+
+- [ ] **C-3: Rate limiting registro** (Esfuerzo: 🔨 30min | ROI: ⭐⭐⭐⭐⭐)
+  - `/portal/register/validate/{token}` y `/portal/register` sin rate limit
+  - Permite brute force de tokens de invitación
+  - Fix: Añadir @limiter.limit("10/minute") y @limiter.limit("5/hour")
+  - Archivos: routes/supplier_portal.py
+
+---
+
+## 🟠 Fixes HIGH Proveedores
+
+- [ ] **H-1/H-2: N+1 queries proveedores** (Esfuerzo: 🔨🔨 3-4h | ROI: ⭐⭐⭐⭐)
+  - list_suppliers: 5 queries/supplier, list_invoices: 1 query/invoice
+  - Fix: joinedload + pre-aggregate en bulk queries
+  - Archivos: routes/suppliers.py
+
+- [ ] **H-3: Columna date String→Date** (Esfuerzo: 🔨 2h | ROI: ⭐⭐⭐⭐)
+  - SupplierInvoice.date es String, imposible filtrar por rango
+  - Fix: Migrar a Column(Date), parsear string IA antes de guardar
+  - Archivos: models/suppliers.py, routes/supplier_portal.py
+
+- [ ] **H-4: Validar magic bytes PDF** (Esfuerzo: 🔨 30min | ROI: ⭐⭐⭐⭐)
+  - Upload solo verifica content_type (spoofable por cliente)
+  - Fix: Verificar primeros bytes empiezan con %PDF
+  - Archivos: routes/supplier_portal.py
+
+- [ ] **H-5: Sanitizar filename Cloudinary** (Esfuerzo: 🔨 15min | ROI: ⭐⭐⭐)
+  - public_id permite caracteres peligrosos
+  - Fix: regex [^A-Za-z0-9_-] → '_'
+  - Archivos: services/supplier_storage.py
+
+- [ ] **H-6: Logout autenticado** (Esfuerzo: 🔨 30min | ROI: ⭐⭐⭐)
+  - /logout no requiere auth ni verifica ownership
+  - Fix: Añadir Depends(get_current_active_supplier), verificar supplier_id
+  - Archivos: routes/supplier_portal.py
+
+- [ ] **H-7: Enum validation status** (Esfuerzo: 🔨 15min | ROI: ⭐⭐⭐)
+  - InvoiceStatusUpdate.status acepta cualquier string
+  - Fix: Cambiar a Literal["APPROVED", "PAID", "REJECTED", "PENDING"]
+  - Archivos: models/supplier_schemas.py
+
+---
+
+## 🟡 Fixes MEDIUM Proveedores
+
+- [ ] Índice compuesto (supplier_id, status) en supplier_invoices
+- [ ] Índice compuesto (recipient_type, recipient_id, is_read) en notifications
+- [ ] NIF matching: query filtrada en vez de full table scan
+- [ ] supplier_type: validar con Literal enum
+- [ ] OC_PENDING invoices: añadir path de borrado
+- [ ] Atomicidad: commit invoice + notificaciones juntos
+- [ ] DELETE_REQUESTED en transition table con mensaje claro
+- [ ] File copy async: usar asyncio.to_thread() o bytes directos
+
+---
+
+## 🔵 Fixes LOW Proveedores
+
+- [ ] onupdate lambda: incluir updated_at explícito en bulk updates
+- [ ] Logout idempotente: devolver 200 en double logout
+- [ ] Dead code: eliminar validación password duplicada en schema
+- [ ] TODO misleading: reemplazar con comentario honesto
+- [ ] IBAN masking: validar formato antes de enmascarar
+- [ ] Math tolerance: usar % en vez de fijo 2 céntimos
+- [ ] Admin notifications: documentar convención recipient_id=0
+
+---
+
+## 🔧 Bugs generales detectados en testing
+
+- [ ] **Bug /health y / endpoint** (500 por slowapi rate limiter)
+  - Probablemente get_remote_address falla detrás de proxy Railway
+  - Fix: Probar sin rate limiter o con X-Forwarded-For
+- [ ] **Rate limiting no funciona** (workers gunicorn no comparten memoria)
+  - storage_uri="memory://" no se comparte entre workers
+  - Fix: Usar Redis como backend de rate limiting
 
 ---
 

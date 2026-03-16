@@ -5,8 +5,8 @@
 **Nombre:** Dazz Producciones  
 **Descripción:** Sistema gestión gastos con IA para productora audiovisual  
 **Cliente:** Dazz Creative (productora Madrid)  
-**Estado:** ✅ Producción activa - 314 deployments  
-**GitHub:** https://github.com/lilpapaja/dazz-producciones (público)  
+**Estado:** ✅ Producción activa (módulo proveedores completado 6 fases)
+**GitHub:** https://github.com/lilpapaja/dazz-producciones (público)
 **Desarrollador:** Julio (lilpapaja) - Nivel junior, primera vez con Claude Code
 
 ---
@@ -22,8 +22,10 @@
 - **IA:** Claude Sonnet 4 (Anthropic API)
 - **Auth:** JWT (python-jose)
 - **Emails:** Brevo API (Railway bloquea SMTP)
-- **Storage:** Cloudinary (imágenes facturas)
+- **Storage:** Cloudinary (dazz-producciones/tickets/ + dazz-suppliers/invoices/)
+- **Storage certificados:** Cloudflare R2 (certificados bancarios proveedores)
 - **Deploy:** Railway (auto-deploy desde GitHub)
+- **Variable Railway:** SUPPLIER_PORTAL_URL configurada
 
 ### Frontend
 - **Framework:** React 19.2 + Vite 7.3
@@ -39,7 +41,8 @@
 
 ### URLs Producción
 - **Backend:** https://dazz-producciones-production.up.railway.app
-- **Frontend:** https://dazz-producciones.vercel.app
+- **Frontend DAZZ:** https://dazz-producciones.vercel.app
+- **Portal Proveedores:** https://dazzsuppliers.vercel.app
 
 ---
 
@@ -58,9 +61,10 @@ backend/
 │   │   ├── tickets.py       # Upload, IA extracción
 │   │   ├── statistics.py    # Stats + IVA extranjero
 │   │   ├── users.py         # Gestión usuarios
-│   │   └── companies.py     # Multi-tenant
+│   │   ├── companies.py     # Multi-tenant
+│   │   └── suppliers.py     # 23 endpoints proveedores
 │   └── services/
-│       ├── claude_ai.py              # Extracción IA
+│       ├── claude_ai.py              # Extracción IA (tickets + facturas proveedores)
 │       ├── email.py                  # Brevo API
 │       ├── excel_generator.py        # BytesIO Excel
 │       ├── exchange_rate.py          # Tasas cambio
@@ -193,35 +197,97 @@ frontend/
 8. **Auth JWT** - Login + refresh tokens + roles
 9. **PWA** - Instalable + offline + cámara
 10. **Email styled** - Dark theme Brevo branded
+11. **Módulo Proveedores** - ✅ Completado 6 fases (ver sección dedicada abajo)
 
 ### ⏸️ Pendientes (Roadmap)
+- Testing completo módulo proveedores + correcciones menores
 - Tests unitarios backend (0% coverage)
 - Tests E2E frontend (Playwright)
-- Refactorizar Statistics.jsx (500+ líneas)
-- Optimizar queries N+1
-- Code splitting frontend
 - Push notifications PWA
 - Dashboard analytics
 
 ---
 
-## 🚨 Problemas Conocidos
+## 🏭 Módulo Proveedores (Completado 2026-03-16)
 
-### 1. Statistics.jsx muy grande
-**Problema:** 500+ líneas, difícil mantener  
-**Solución:** Refactorizar en componentes pequeños
+### 6 Fases de implementación
+1. **BD + Modelos** - Tablas suppliers, supplier_invoices, bank_certificates en PostgreSQL
+2. **IA Extracción** - Claude extrae datos de facturas de proveedores automáticamente
+3. **Backend completo** - 23 endpoints en `routes/suppliers.py`
+4. **UI Admin DAZZ** - Gestión proveedores integrada en frontend principal (dazz-producciones.vercel.app)
+5. **Portal del Proveedor** - App independiente en `frontend-suppliers/` desplegada en dazzsuppliers.vercel.app
+6. **Integración completa** - Backend ↔ Portal ↔ Admin UI conectados
 
-### 2. Bundle size grande
-**Problema:** Initial bundle ~350KB  
-**Solución:** Lazy load rutas, separar Recharts
+### Infraestructura
+- **Portal proveedores:** frontend-suppliers/ → Vercel (dazzsuppliers.vercel.app)
+- **Tema portal:** zinc/amber (mismo que DAZZ principal)
+- **Variable Railway:** `SUPPLIER_PORTAL_URL` configurada para enlaces en emails
+- **Cloudflare R2:** Certificados bancarios de proveedores
+- **Cloudinary separado:**
+  - `dazz-producciones/tickets/` → Tickets internos DAZZ
+  - `dazz-suppliers/invoices/` → Facturas de proveedores
 
-### 3. Sin tests
-**Problema:** 0% coverage, deploys sin validación  
-**Solución:** pytest backend + Playwright frontend
+### Auditoría
+- 20+ fixes aplicados durante auditoría pre-testing
+- Testing automatizado 2026-03-16: 25 issues encontrados (3 critical, 7 high, 8 medium, 7 low)
 
-### 4. Queries potencialmente N+1
-**Problema:** Cargar projects + tickets puede ser lento  
-**Solución:** Auditar joinedload, índices PostgreSQL
+### Testing completado (2026-03-16)
+- ✅ 22/22 endpoints routing OK (ningún 500)
+- ✅ 21/21 endpoints protegidos devuelven 401 sin auth
+- ✅ CORS correcto (DAZZ + portal permitidos, orígenes externos bloqueados)
+- ✅ 6/6 security headers presentes
+- ✅ Validaciones login/registro funcionan (email, password strength, GDPR)
+- ✅ Token validation devuelve `{valid: false}` para tokens fake
+- ✅ Refresh/logout manejan tokens inválidos correctamente
+- ✅ Endpoints existentes (auth, projects, tickets, stats) sin regresión
+- ❌ `/health` y `/` devuelven 500 (bug rate limiter slowapi)
+- ⚠️ Rate limiting no se activa (workers gunicorn no comparten memoria)
+
+### Estado actual
+- ✅ Implementación completa + testing automatizado hecho
+- 🔴 3 CRITICAL pendientes de arreglar antes de lanzar
+- ⏳ Testing manual UI pendiente (admin + portal proveedor)
+
+---
+
+## 🚨 Issues Módulo Proveedores (25 encontrados 2026-03-16)
+
+### CRITICAL (3) — Arreglar antes de lanzar
+1. **C-1: IBAN sin encriptar** — Campo `iban_encrypted` almacena plaintext UTF-8, se expone en GET /suppliers
+2. **C-2: File stream consumido** — Upload PDF a Cloudinary puede producir archivos vacíos (seek en stream consumido)
+3. **C-3: Sin rate limiting registro** — `/portal/register/validate/{token}` y `/portal/register` sin límite
+
+### HIGH (7) — Arreglar pronto
+4. **H-1: N+1 list_suppliers** — 5 queries por proveedor en listado
+5. **H-2: N+1 list_invoices** — 1 query por factura para nombre proveedor
+6. **H-3: date es String** — Columna `date` en invoices es String, no Date
+7. **H-4: Content-type spoofing** — Upload no valida magic bytes PDF (%PDF)
+8. **H-5: Filename no sanitizado** — Cloudinary public_id sin sanitizar
+9. **H-6: Logout sin auth** — No verifica ownership del refresh token
+10. **H-7: Status sin validar enum** — `InvoiceStatusUpdate.status` acepta cualquier string
+
+### MEDIUM (8)
+11. Índice compuesto faltante (supplier_id, status) en invoices
+12. Índice compuesto faltante (recipient_type, recipient_id, is_read) en notifications
+13. Full table scan SupplierOC para NIF matching en registro
+14. supplier_type acepta string arbitrario (falta enum validation)
+15. OC_PENDING invoices sin path de borrado
+16. Notificaciones commit separado del invoice (gap atomicidad)
+17. DELETE_REQUESTED no en transition table (error confuso)
+18. File copy síncrono en endpoint async (bloquea event loop)
+
+### LOW (7)
+19. onupdate lambda no se ejecuta en bulk updates
+20. Double logout devuelve 400 (debería ser 200 idempotente)
+21. Dead code: validación password duplicada en schema
+22. TODO misleading sugiere encriptación que no existe
+23. IBAN masking no valida formato antes de enmascarar
+24. Math tolerance fija (2 céntimos) falla en facturas grandes
+25. Admin notifications hardcodean recipient_id=0
+
+### Otros problemas conocidos
+- **Sin tests automatizados:** 0% coverage backend y frontend
+- **Bug rate limiter:** `/` y `/health` devuelven 500 por slowapi
 
 ---
 
@@ -295,10 +361,12 @@ frontend/
 - **PWA:** frontend/pwa-setup/GUIA_INSTALACION_PWA.md
 
 ### APIs Externas
-- **Claude AI:** Anthropic API (Sonnet 4)
+- **Claude AI:** Anthropic API (Sonnet 4) - tickets + facturas proveedores
 - **Tasas cambio:** frankfurter.app (gratis)
 - **Emails:** Brevo API
-- **Storage:** Cloudinary
+- **Storage tickets:** Cloudinary (dazz-producciones/tickets/)
+- **Storage facturas proveedores:** Cloudinary (dazz-suppliers/invoices/)
+- **Storage certificados bancarios:** Cloudflare R2
 
 ### Soporte
 - **Developer:** Julio (lilpapaja)
@@ -309,12 +377,13 @@ frontend/
 
 ## 🎯 Objetivos Claude Code
 
-1. **Optimizar:** Refactorizar Statistics.jsx, queries N+1, bundle size
-2. **Testing:** 70%+ coverage backend, E2E críticos frontend
+1. **Fixes CRITICAL proveedores:** Arreglar C-1 (IBAN), C-2 (file stream), C-3 (rate limiting)
+2. **Fixes HIGH proveedores:** N+1 queries, content-type, logout auth, enum validation
+3. **Testing general:** 70%+ coverage backend, E2E críticos frontend
 3. **Quality:** Code review, best practices, documentación actualizada
 4. **Features:** Push notifications, analytics dashboard, búsqueda avanzada
 
 ---
 
-**Última actualización:** 2026-03-11  
-**Estado:** Producción activa - Optimización continua
+**Última actualización:** 2026-03-17
+**Estado:** Producción activa - Testing completado, 3 CRITICAL pendientes de fix

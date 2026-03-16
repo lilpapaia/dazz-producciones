@@ -22,7 +22,13 @@
       "Bash(cd:*)",
       "Bash(sleep:*)",
       "Bash(curl:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "WebFetch(domain:dazz-producciones-production.up.railway.app)",
+      "WebFetch(domain:dazz-producciones.vercel.app)",
+      "WebFetch(domain:dazzsuppliers.vercel.app)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }
