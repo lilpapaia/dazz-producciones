@@ -19,6 +19,15 @@ const ReviewTicket = lazy(() => import('./pages/ReviewTicket'));
 const Statistics = lazy(() => import('./pages/Statistics'));
 const Users = lazy(() => import('./pages/Users'));
 
+// Suppliers module (admin only)
+const SuppliersLayout = lazy(() => import('./pages/suppliers/SuppliersLayout'));
+const SuppliersDashboard = lazy(() => import('./pages/suppliers/SuppliersDashboard'));
+const SuppliersList = lazy(() => import('./pages/suppliers/SuppliersList'));
+const SupplierDetail = lazy(() => import('./pages/suppliers/SupplierDetail'));
+const InvoicesList = lazy(() => import('./pages/suppliers/InvoicesList'));
+const SupplierInvite = lazy(() => import('./pages/suppliers/SupplierInvite'));
+const SupplierNotifications = lazy(() => import('./pages/suppliers/SupplierNotifications'));
+
 // PWA Components
 import { PWAUpdatePrompt, PWAInstallPrompt } from './components/PWAComponents';
 
@@ -130,15 +139,33 @@ function App() {
             />
             
             {/* Users - Admin only */}
-            <Route 
-              path="/users" 
+            <Route
+              path="/users"
               element={
                 <ProtectedRoute adminOnly>
                   <Navbar />
                   <Users />
                 </ProtectedRoute>
-              } 
+              }
             />
+
+            {/* Suppliers module - Admin only */}
+            <Route
+              path="/suppliers"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Navbar />
+                  <SuppliersLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<SuppliersDashboard />} />
+              <Route path="list" element={<SuppliersList />} />
+              <Route path="invoices" element={<InvoicesList />} />
+              <Route path="invite" element={<SupplierInvite />} />
+              <Route path="notifications" element={<SupplierNotifications />} />
+              <Route path=":id" element={<SupplierDetail />} />
+            </Route>
           </Routes>
           </Suspense>
 

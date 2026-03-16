@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, LogOut, Truck } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
     <nav className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-50">
@@ -54,6 +54,21 @@ const Navbar = () => {
               >
                 <BarChart3 size={18} />
                 <span className="hidden sm:inline">Estadísticas</span>
+              </Link>
+            )}
+
+            {/* Proveedores — solo ADMIN */}
+            {user.role === 'ADMIN' && (
+              <Link
+                to="/suppliers"
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+                  isActive('/suppliers')
+                    ? 'bg-amber-500 text-zinc-950'
+                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
+                }`}
+              >
+                <Truck size={18} />
+                <span className="hidden sm:inline">Proveedores</span>
               </Link>
             )}
 
