@@ -2,11 +2,6 @@ import { useState, useEffect } from 'react';
 import { getProfile } from '../services/api';
 import { Mail } from 'lucide-react';
 
-const maskIban = (iban) => {
-  if (!iban || iban.length < 4) return '****';
-  return '**** **** **** **** ' + iban.slice(-4);
-};
-
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +28,7 @@ const Profile = () => {
     ['NIF/CIF', profile.nif_cif || 'Not set'],
     ['Phone', profile.phone || 'Not set'],
     ['Address', profile.address || 'Not set'],
-    ['IBAN', maskIban(profile.nif_cif)], // IBAN masked for supplier view
+    ['IBAN', profile.iban_masked || 'Not set'],
     ['Type', profile.supplier_type],
   ];
 

@@ -35,6 +35,16 @@ from app.services.supplier_email import (
 router = APIRouter(prefix="/suppliers", tags=["Suppliers (Admin)"])
 
 
+def _decode_iban(supplier) -> str | None:
+    """Decode IBAN for admin view (full, unmasked). TODO: decrypt with pgcrypto."""
+    if not supplier.iban_encrypted:
+        return None
+    try:
+        return supplier.iban_encrypted.decode("utf-8")
+    except (UnicodeDecodeError, AttributeError):
+        return None
+
+
 def _generate_token(length: int = 64) -> str:
     chars = string.ascii_letters + string.digits
     return "".join(secrets.choice(chars) for _ in range(length))
@@ -79,6 +89,7 @@ class SupplierResponse(BaseModel):
     nif_cif: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    iban: Optional[str] = None
     supplier_type: str
     status: str
     oc_id: Optional[int] = None
@@ -259,7 +270,7 @@ async def list_suppliers(
 
         result.append(SupplierResponse(
             id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
-            phone=s.phone, address=s.address,
+            phone=s.phone, address=s.address, iban=_decode_iban(s),
             supplier_type=s.supplier_type.value if s.supplier_type else "GENERAL",
             status=s.status.value if s.status else "NEW",
             oc_id=s.oc_id, oc_number=oc_number,
@@ -297,6 +308,7 @@ async def get_supplier(
     return SupplierResponse(
         id=supplier.id, name=supplier.name, email=supplier.email,
         nif_cif=supplier.nif_cif, phone=supplier.phone, address=supplier.address,
+        iban=_decode_iban(supplier),
         supplier_type=supplier.supplier_type.value if supplier.supplier_type else "GENERAL",
         status=supplier.status.value if supplier.status else "NEW",
         oc_id=supplier.oc_id, oc_number=oc_number,
@@ -318,8 +330,10 @@ async def update_supplier(
     if not supplier:
         raise HTTPException(404, "Supplier not found")
 
+    ALLOWED_FIELDS = {"name", "nif_cif", "phone", "address", "supplier_type"}
     for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(supplier, field, value)
+        if field in ALLOWED_FIELDS:
+            setattr(supplier, field, value)
 
     db.commit()
     return {"message": "Supplier updated"}
@@ -462,7 +476,7 @@ async def update_invoice_status(
     if new_status == "REJECTED" and not body.reason:
         raise HTTPException(400, "Rejection reason is required")
 
-    invoice.status = new_status
+    invoice.status = InvoiceStatus(new_status)
     if new_status == "REJECTED":
         invoice.rejection_reason = body.reason
 

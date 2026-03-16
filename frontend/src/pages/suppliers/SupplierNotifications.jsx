@@ -18,18 +18,18 @@ const SupplierNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
 
-  const load = () => {
-    getNotifications({ unread_only: filter === 'unread', limit: 50 })
-      .then(r => setNotifications(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { setLoading(true); load(); }, [filter]);
-
-  // Poll every 30s
   useEffect(() => {
-    const interval = setInterval(load, 30000);
+    const doLoad = () => {
+      getNotifications({ unread_only: filter === 'unread', limit: 50 })
+        .then(r => setNotifications(r.data))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    };
+
+    setLoading(true);
+    doLoad();
+
+    const interval = setInterval(doLoad, 30000);
     return () => clearInterval(interval);
   }, [filter]);
 

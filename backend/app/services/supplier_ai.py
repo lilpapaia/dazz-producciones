@@ -309,9 +309,9 @@ def validate_supplier_invoice(
             # Resolver company_id
             company_id = resolve_company_from_oc(oc_number, db)
 
-            # Buscar proyecto por creative_code
+            # Buscar proyecto por creative_code (case-insensitive)
             project = db.query(Project).filter(
-                Project.creative_code == oc_number
+                Project.creative_code.ilike(oc_number)
             ).first()
 
             if project:

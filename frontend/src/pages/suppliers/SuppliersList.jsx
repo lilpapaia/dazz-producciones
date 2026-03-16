@@ -23,20 +23,21 @@ const SuppliersList = () => {
   const [search, setSearch] = useState('');
   const [companyFilter, setCompanyFilter] = useState(null);
 
-  useEffect(() => {
-    Promise.all([getSuppliers(), getCompanies()])
+  const load = () => {
+    const params = {};
+    if (companyFilter) params.company_id = companyFilter;
+    Promise.all([getSuppliers(params), getCompanies()])
       .then(([s, c]) => { setSuppliers(s.data); setCompanies(c.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { setLoading(true); load(); }, [companyFilter]);
 
   const filtered = suppliers.filter(s => {
-    if (search) {
-      const q = search.toLowerCase();
-      if (!s.name.toLowerCase().includes(q) && !(s.nif_cif || '').toLowerCase().includes(q)) return false;
-    }
-    if (companyFilter && s.oc_number && !s.oc_number.startsWith(companyFilter)) return false;
-    return true;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return s.name.toLowerCase().includes(q) || (s.nif_cif || '').toLowerCase().includes(q);
   });
 
   if (loading) return (
@@ -68,7 +69,7 @@ const SuppliersList = () => {
         <span className="text-[9px] text-zinc-500 tracking-widest uppercase">Company:</span>
         <button onClick={() => setCompanyFilter(null)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>All</button>
         {companies.map(c => (
-          <button key={c.id} onClick={() => setCompanyFilter(c.name)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${companyFilter === c.name ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
+          <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
             {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
           </button>
         ))}

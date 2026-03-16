@@ -155,13 +155,15 @@ class Ticket(Base):
 
     # Campos portal proveedores (Fase 1)
     from_supplier_portal = Column(Boolean, default=False)
-    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
-    supplier_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id"), nullable=True)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True, index=True)
+    supplier_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id"), nullable=True, index=True)
 
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
 
     # Relaciones
     project = relationship("Project", back_populates="tickets")
+    supplier = relationship("Supplier", foreign_keys=[supplier_id])
+    supplier_invoice = relationship("SupplierInvoice", foreign_keys=[supplier_invoice_id])
 
 # ============================================
 # MODELO PASSWORD RESET TOKEN (SIN CAMBIOS)

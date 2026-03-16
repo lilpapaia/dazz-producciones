@@ -5,6 +5,7 @@ Prefijo: /portal
 
 import os
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import datetime, timezone
@@ -124,6 +125,7 @@ class ProfileResponse(BaseModel):
     nif_cif: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    iban_masked: Optional[str] = None
     supplier_type: str
     oc_number: Optional[str] = None
     created_at: datetime
@@ -348,9 +350,19 @@ async def get_profile(
         oc = db.query(SupplierOC).filter(SupplierOC.id == supplier.oc_id).first()
         oc_number = oc.oc_number if oc else None
 
+    # Mask IBAN for supplier view (only last 4 digits visible)
+    iban_masked = None
+    if supplier.iban_encrypted:
+        try:
+            raw = supplier.iban_encrypted.decode("utf-8")
+            iban_masked = "**** **** **** **** " + raw[-4:] if len(raw) >= 4 else "****"
+        except (UnicodeDecodeError, AttributeError):
+            iban_masked = "****"
+
     return ProfileResponse(
         id=supplier.id, name=supplier.name, email=supplier.email,
         nif_cif=supplier.nif_cif, phone=supplier.phone, address=supplier.address,
+        iban_masked=iban_masked,
         supplier_type=supplier.supplier_type.value if supplier.supplier_type else "GENERAL",
         oc_number=oc_number,
         created_at=supplier.created_at,
@@ -362,7 +374,9 @@ async def get_profile(
 # ============================================
 
 @router.post("/invoices/upload")
+@limiter.limit("10/hour")
 async def upload_invoice(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     supplier: Supplier = Depends(get_current_active_supplier),
@@ -415,11 +429,16 @@ async def upload_invoice(
                     supplier_id=supplier.id)
             db.commit()
 
-            raise HTTPException(422, {
-                "message": "Invoice validation failed",
-                "errors": validation["errors"],
-                "warnings": validation["warnings"],
-            })
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "detail": {
+                        "message": "Invoice validation failed",
+                        "errors": validation["errors"],
+                        "warnings": validation["warnings"],
+                    }
+                },
+            )
 
         # Validation passed → upload to Cloudinary (authenticated, no public URL)
         await file.seek(0)
@@ -459,8 +478,11 @@ async def upload_invoice(
 
     finally:
         # Always clean up temp file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except OSError:
+            pass
 
     # Notifications
     _notify(db, NotificationRecipientType.ADMIN, 0,

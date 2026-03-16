@@ -71,7 +71,7 @@ async def create_project(
     try:
         from app.models.suppliers import SupplierInvoice, InvoiceStatus, NotificationRecipientType, NotificationEventType, SupplierNotification
         pending_invoices = db.query(SupplierInvoice).filter(
-            SupplierInvoice.oc_number == db_project.creative_code,
+            SupplierInvoice.oc_number.ilike(db_project.creative_code),
             SupplierInvoice.status == InvoiceStatus.OC_PENDING,
         ).all()
         for inv in pending_invoices:

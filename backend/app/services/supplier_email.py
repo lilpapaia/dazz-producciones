@@ -5,6 +5,7 @@ Uses Brevo API via the existing send_email() function.
 """
 
 import os
+import html as html_mod
 from dotenv import load_dotenv
 from app.services.email import send_email
 
@@ -124,10 +125,10 @@ def send_supplier_invoice_paid(name: str, email: str, invoice_number: str, amoun
 
 def send_supplier_invoice_rejected(name: str, email: str, invoice_number: str, reason: str):
     body = (
-        _text(f"Hello <strong>{name}</strong>,")
-        + _text(f"Unfortunately, your invoice <strong>{invoice_number}</strong> has been "
+        _text(f"Hello <strong>{html_mod.escape(name)}</strong>,")
+        + _text(f"Unfortunately, your invoice <strong>{html_mod.escape(invoice_number)}</strong> has been "
                 "<strong style='color:#ef4444;'>rejected</strong>.")
-        + _warning(f"<strong>Reason:</strong> {reason}")
+        + _warning(f"<strong>Reason:</strong> {html_mod.escape(reason)}")
         + _text("Please review the issue and submit a corrected invoice through the portal.")
     )
     return send_email(email, f"DAZZ Group — Invoice {invoice_number} Rejected", _base_template(
@@ -145,10 +146,10 @@ def send_supplier_invoice_deleted(name: str, email: str, invoice_number: str):
 
 
 def send_supplier_ia_rejected(name: str, email: str, invoice_number: str, reasons: list):
-    reasons_html = "".join(f"<li style='margin-bottom:6px;'>{r}</li>" for r in reasons)
+    reasons_html = "".join(f"<li style='margin-bottom:6px;'>{html_mod.escape(str(r))}</li>" for r in reasons)
     body = (
-        _text(f"Hello <strong>{name}</strong>,")
-        + _text(f"Invoice <strong>{invoice_number or 'uploaded'}</strong> could not be processed "
+        _text(f"Hello <strong>{html_mod.escape(name)}</strong>,")
+        + _text(f"Invoice <strong>{html_mod.escape(invoice_number or 'uploaded')}</strong> could not be processed "
                 "due to the following issues:")
         + f'<ul style="color:#d4d4d8;font-size:14px;line-height:1.8;">{reasons_html}</ul>'
         + _text("Please fix the issues and upload the invoice again.")
