@@ -318,10 +318,10 @@ def validate_supplier_invoice(
                 project_id = project.id
                 oc_status = "FOUND"
             else:
-                oc_status = "OC_PENDING"
-                warnings.append(
-                    f"OC '{oc_number}' no existe aún como proyecto en DAZZ Producciones. "
-                    f"La factura quedará en estado 'OC pendiente' hasta que se cree el proyecto."
+                oc_status = "NOT_FOUND"
+                errors.append(
+                    f"OC '{oc_number}' does not exist as a project in DAZZ Producciones. "
+                    f"The project must be created before submitting the invoice."
                 )
 
             # Validar empresa para influencers
@@ -378,10 +378,14 @@ def validate_supplier_invoice(
 # ============================================
 
 def _normalize_nif(nif: Optional[str]) -> Optional[str]:
-    """Normaliza NIF/CIF para comparación: quita espacios, guiones, puntos, uppercase."""
+    """Normaliza NIF/CIF para comparación: quita espacios, guiones, puntos, prefijo ES, uppercase."""
     if not nif:
         return None
-    return nif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
+    normalized = nif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
+    # Remove ES prefix (common in EU invoices: ES12345678A → 12345678A)
+    if normalized.startswith("ES") and len(normalized) > 2 and normalized[2:3].isdigit():
+        normalized = normalized[2:]
+    return normalized if normalized else None
 
 
 def _normalize_iban(iban: Optional[str]) -> Optional[str]:

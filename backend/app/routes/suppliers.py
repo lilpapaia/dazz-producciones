@@ -396,7 +396,7 @@ async def update_invoice_status(
     # Validate transitions
     valid_transitions = {
         "PENDING": ["APPROVED", "REJECTED"],
-        "OC_PENDING": ["PENDING", "REJECTED"],
+        "OC_PENDING": ["PENDING", "REJECTED"],  # Legacy: kept for existing data
         "APPROVED": ["PAID"],
     }
     current = invoice.status.value if invoice.status else "PENDING"

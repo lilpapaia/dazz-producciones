@@ -67,7 +67,7 @@ async def create_project(
     db.commit()
     db.refresh(db_project)
 
-    # Auto-link: find supplier invoices with OC_PENDING matching this project's creative_code
+    # Legacy auto-link: handle any existing OC_PENDING invoices (new invoices require OC to exist)
     try:
         from app.models.suppliers import SupplierInvoice, InvoiceStatus, NotificationRecipientType, NotificationEventType, SupplierNotification
         pending_invoices = db.query(SupplierInvoice).filter(

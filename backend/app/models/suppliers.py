@@ -16,6 +16,7 @@ from app.models.database import Base
 class SupplierType(str, enum.Enum):
     INFLUENCER = "INFLUENCER"
     GENERAL = "GENERAL"
+    MIXED = "MIXED"
 
 
 class SupplierStatus(str, enum.Enum):

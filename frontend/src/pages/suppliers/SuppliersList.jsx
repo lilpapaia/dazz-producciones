@@ -7,6 +7,7 @@ import { getCompanies } from '../../services/api';
 const TYPE_BADGE = {
   INFLUENCER: 'bg-purple-400/10 text-purple-400 border border-purple-400/20',
   GENERAL: 'bg-blue-400/10 text-blue-400 border border-blue-400/20',
+  MIXED: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
 };
 
 const STATUS_BADGE = {

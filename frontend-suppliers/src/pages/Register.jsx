@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { validateToken, registerSupplier } from '../services/api';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { validateToken, registerSupplier, uploadBankCert } from '../services/api';
+import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ const Register = () => {
   const [tokenValid, setTokenValid] = useState(null);
   const [invitation, setInvitation] = useState({});
   const [form, setForm] = useState({ name: '', nif_cif: '', phone: '', address: '', iban: '', password: '', confirmPassword: '', gdpr_consent: false });
+  const [bankCertFile, setBankCertFile] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -46,6 +47,12 @@ const Register = () => {
         gdpr_consent: true,
       });
       login({ access_token: data.access_token, refresh_token: data.refresh_token, supplier: { id: data.supplier_id, name: form.name, email: invitation.email } });
+
+      // Upload bank cert if provided (non-blocking — already registered)
+      if (bankCertFile) {
+        try { await uploadBankCert(bankCertFile); } catch { /* cert upload failure is not critical */ }
+      }
+
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed');
@@ -122,17 +129,31 @@ const Register = () => {
           {/* Step 2: Banking */}
           {step === 2 && (
             <>
-              <div className="mb-4">
+              <div className="mb-3">
                 <label className={labelCls}>IBAN <span className="text-amber-500">*</span></label>
                 <input value={form.iban} onChange={set('iban')} placeholder="ES12 1234 5678 9012 3456 7890" className={inputCls} />
                 <p className="text-[10px] text-zinc-600 mt-1">Your IBAN will be encrypted and stored securely.</p>
               </div>
-              <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded-md p-3 text-xs mb-4 leading-relaxed">
-                Bank certificate (PDF) upload will be available after registration. You can submit it from your profile.
+              <div className="mb-4">
+                <label className={labelCls}>Bank certificate (PDF) <span className="text-amber-500">*</span></label>
+                {bankCertFile ? (
+                  <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-md p-2.5">
+                    <FileText size={16} className="text-red-400 flex-shrink-0" />
+                    <span className="text-xs text-zinc-300 truncate flex-1">{bankCertFile.name}</span>
+                    <button type="button" onClick={() => setBankCertFile(null)} className="text-[10px] text-zinc-500 hover:text-zinc-300">Remove</button>
+                  </div>
+                ) : (
+                  <label className="block border-2 border-dashed border-zinc-700 rounded-md p-4 text-center cursor-pointer hover:border-amber-500 transition-colors">
+                    <FileText size={20} className="text-zinc-600 mx-auto mb-1" />
+                    <span className="text-xs text-zinc-400">Tap to select PDF</span>
+                    <input type="file" accept=".pdf,application/pdf" onChange={e => { if (e.target.files?.[0]) setBankCertFile(e.target.files[0]); }} className="hidden" />
+                  </label>
+                )}
+                <p className="text-[10px] text-zinc-600 mt-1">Document proving bank account ownership (required by DAZZ).</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setStep(1)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
-                <button onClick={() => setStep(3)} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors">Continue</button>
+                <button onClick={() => setStep(3)} disabled={!form.iban.trim() || !bankCertFile} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">Continue</button>
               </div>
             </>
           )}

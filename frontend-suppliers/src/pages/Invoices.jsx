@@ -48,7 +48,7 @@ const Invoices = () => {
     }
   };
 
-  const canDelete = (status) => ['PENDING', 'OC_PENDING'].includes(status);
+  const canDelete = (status) => status === 'PENDING';
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

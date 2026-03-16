@@ -114,42 +114,34 @@ const SupplierInvite = () => {
       {/* Type selector */}
       <div className="mb-4">
         <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Supplier type *</div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => { setType('talent'); setOcCreated(false); setError(''); }}
-            className={`border rounded-md p-3.5 text-left transition-all ${
-              type === 'talent'
-                ? 'border-amber-500 bg-amber-500/[.04]'
-                : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
-            }`}
-          >
-            <div className={`w-3 h-3 border-2 rounded-full mb-2 relative ${type === 'talent' ? 'border-amber-500' : 'border-zinc-600'}`}>
-              {type === 'talent' && <div className="absolute inset-[3px] bg-amber-500 rounded-full" />}
-            </div>
-            <div className={`font-['Bebas_Neue'] text-sm tracking-wide ${type === 'talent' ? 'text-amber-400' : 'text-zinc-300'}`}>Talent / Influencer</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Permanent OC &middot; Invoices to DAZZLE MGMT only</div>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setType('general'); setOcCreated(false); setError(''); }}
-            className={`border rounded-md p-3.5 text-left transition-all ${
-              type === 'general'
-                ? 'border-amber-500 bg-amber-500/[.04]'
-                : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
-            }`}
-          >
-            <div className={`w-3 h-3 border-2 rounded-full mb-2 relative ${type === 'general' ? 'border-amber-500' : 'border-zinc-600'}`}>
-              {type === 'general' && <div className="absolute inset-[3px] bg-amber-500 rounded-full" />}
-            </div>
-            <div className={`font-['Bebas_Neue'] text-sm tracking-wide ${type === 'general' ? 'text-amber-400' : 'text-zinc-300'}`}>General supplier</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Uses project OC per invoice &middot; All companies</div>
-          </button>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { key: 'talent', label: 'Talent / Influencer', desc: 'Permanent OC · DAZZLE MGMT only' },
+            { key: 'mixed', label: 'Mixed', desc: 'Permanent OC + project OCs · All companies' },
+            { key: 'general', label: 'General supplier', desc: 'Project OC per invoice · All companies' },
+          ].map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => { setType(opt.key); setOcCreated(false); setError(''); }}
+              className={`border rounded-md p-3 text-left transition-all ${
+                type === opt.key
+                  ? 'border-amber-500 bg-amber-500/[.04]'
+                  : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+              }`}
+            >
+              <div className={`w-3 h-3 border-2 rounded-full mb-2 relative ${type === opt.key ? 'border-amber-500' : 'border-zinc-600'}`}>
+                {type === opt.key && <div className="absolute inset-[3px] bg-amber-500 rounded-full" />}
+              </div>
+              <div className={`font-['Bebas_Neue'] text-xs tracking-wide ${type === opt.key ? 'text-amber-400' : 'text-zinc-300'}`}>{opt.label}</div>
+              <div className="text-[9px] text-zinc-500 mt-0.5">{opt.desc}</div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ─── TALENT FLOW ─── */}
-      {type === 'talent' && (
+      {/* ─── TALENT / MIXED FLOW (both need OC creation) ─── */}
+      {(type === 'talent' || type === 'mixed') && (
         <>
           {/* Step 1: Create OC */}
           <div className={`bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-3 transition-opacity ${ocCreated ? 'opacity-40 pointer-events-none' : ''}`}>

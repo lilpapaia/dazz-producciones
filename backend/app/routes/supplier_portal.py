@@ -255,12 +255,17 @@ async def get_profile(
         oc = db.query(SupplierOC).filter(SupplierOC.id == supplier.oc_id).first()
         oc_number = oc.oc_number if oc else None
 
-    # Mask IBAN for supplier view (only last 4 digits visible)
+    # Mask IBAN for supplier view: show country code + last 4 digits
     iban_masked = None
     if supplier.iban_encrypted:
         try:
-            raw = supplier.iban_encrypted.decode("utf-8")
-            iban_masked = "**** **** **** **** " + raw[-4:] if len(raw) >= 4 else "****"
+            raw = supplier.iban_encrypted.decode("utf-8").replace(" ", "")
+            if len(raw) >= 6:
+                iban_masked = raw[:2] + "** **** **** **** **" + raw[-4:]
+            elif len(raw) >= 4:
+                iban_masked = "****" + raw[-4:]
+            else:
+                iban_masked = "****"
         except (UnicodeDecodeError, AttributeError):
             iban_masked = "****"
 
@@ -272,6 +277,32 @@ async def get_profile(
         oc_number=oc_number,
         created_at=supplier.created_at,
     )
+
+
+# ============================================
+# BANK CERTIFICATE
+# ============================================
+
+@router.post("/bank-cert")
+async def upload_bank_cert(
+    file: UploadFile = File(...),
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """Upload bank certificate PDF (required after registration)."""
+    if not file.content_type or file.content_type != "application/pdf":
+        raise HTTPException(400, "Only PDF files are accepted")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 10MB)")
+    await file.seek(0)
+
+    cert_key = save_bank_cert(file, supplier.id)
+    supplier.bank_cert_url = cert_key
+    db.commit()
+
+    return {"message": "Bank certificate uploaded", "key": cert_key}
 
 
 # ============================================
@@ -349,10 +380,8 @@ async def upload_invoice(
         await file.seek(0)
         file_public_id = save_invoice_pdf(file, supplier.id)
 
-        # Determine status
+        # All validated invoices start as PENDING (OC must exist)
         invoice_status = InvoiceStatus.PENDING
-        if validation["oc_status"] == "OC_PENDING":
-            invoice_status = InvoiceStatus.OC_PENDING
 
         # Create invoice record (file_url stores public_id, not a URL)
         invoice = SupplierInvoice(
@@ -461,7 +490,7 @@ async def request_invoice_deletion(
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
-    if invoice.status not in (InvoiceStatus.PENDING, InvoiceStatus.OC_PENDING):
+    if invoice.status != InvoiceStatus.PENDING:
         raise HTTPException(400, "Only pending invoices can be deleted")
 
     invoice.status = InvoiceStatus.DELETE_REQUESTED

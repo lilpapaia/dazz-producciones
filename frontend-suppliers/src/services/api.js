@@ -71,6 +71,11 @@ export const logoutSupplier = (refreshToken) => api.post('/portal/logout', { ref
 
 // Profile
 export const getProfile = () => api.get('/portal/profile');
+export const uploadBankCert = (file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post('/portal/bank-cert', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
 
 // Invoices
 export const uploadInvoice = (file) => {
