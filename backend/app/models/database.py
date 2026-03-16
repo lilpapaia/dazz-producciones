@@ -152,9 +152,14 @@ class Ticket(Base):
     pdf_url = Column(String, nullable=True)
     is_reviewed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
+
+    # Campos portal proveedores (Fase 1)
+    from_supplier_portal = Column(Boolean, default=False)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    supplier_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id"), nullable=True)
+
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    
+
     # Relaciones
     project = relationship("Project", back_populates="tickets")
 

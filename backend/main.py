@@ -10,6 +10,7 @@ import os
 from database_config import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics, companies
+from app.routes import suppliers as suppliers_admin, supplier_portal
 
 # ============================================
 # 🔒 RATE LIMITING
@@ -58,6 +59,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 # Orígenes permitidos - SOLO TUS DOMINIOS
 ALLOWED_ORIGINS = [
     "https://dazz-producciones.vercel.app",  # Producción
+    "https://providers.dazzcreative.com",    # Portal proveedores
 ]
 
 # En desarrollo también permitir localhost
@@ -91,6 +93,8 @@ app.include_router(tickets.router)
 app.include_router(users.router)
 app.include_router(statistics.router)
 app.include_router(companies.router)
+app.include_router(suppliers_admin.router)
+app.include_router(supplier_portal.router)
 
 @app.get("/")
 @limiter.limit("10 per minute")

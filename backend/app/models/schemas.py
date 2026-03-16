@@ -243,7 +243,10 @@ class TicketResponse(TicketBase):
     foreign_tax_eur: Optional[float] = None
     exchange_rate: Optional[float] = None
     exchange_rate_date: Optional[date] = None
-    
+    from_supplier_portal: bool = False
+    supplier_id: Optional[int] = None
+    supplier_invoice_id: Optional[int] = None
+
     class Config:
         from_attributes = True
 
