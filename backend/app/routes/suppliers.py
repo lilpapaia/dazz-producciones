@@ -22,7 +22,7 @@ from app.services.auth import get_current_admin_user
 from app.models.supplier_schemas import (
     InviteRequest, InviteResponse, SupplierResponse, SupplierUpdate,
     AssignOCRequest, NoteRequest, InvoiceStatusUpdate, InvoiceResponse,
-    NotificationResponse, DashboardResponse,
+    NotificationResponse, DashboardResponse, CreateOCRequest, CreateOCResponse,
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
 from app.services.supplier_storage import get_invoice_pdf_url
@@ -67,6 +67,45 @@ def _notify(db: Session, recipient_type, recipient_id: int, event_type,
         related_supplier_id=supplier_id,
     )
     db.add(notif)
+
+
+# ============================================
+# OC MANAGEMENT
+# ============================================
+
+@router.post("/ocs", response_model=CreateOCResponse, status_code=201)
+async def create_oc(
+    body: CreateOCRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Create a new OC for a talent/influencer."""
+    existing = db.query(SupplierOC).filter(SupplierOC.oc_number == body.oc_number.strip()).first()
+    if existing:
+        raise HTTPException(400, f"OC {body.oc_number} already exists")
+
+    if body.company_id:
+        company = db.query(Company).filter(Company.id == body.company_id).first()
+        if not company:
+            raise HTTPException(404, "Company not found")
+
+    oc = SupplierOC(
+        oc_number=body.oc_number.strip(),
+        talent_name=body.talent_name.strip(),
+        nif_cif=body.nif_cif.strip() if body.nif_cif else None,
+        company_id=body.company_id,
+    )
+    db.add(oc)
+    db.commit()
+    db.refresh(oc)
+
+    return CreateOCResponse(
+        id=oc.id,
+        oc_number=oc.oc_number,
+        talent_name=oc.talent_name,
+        nif_cif=oc.nif_cif,
+        company_id=oc.company_id,
+    )
 
 
 # ============================================

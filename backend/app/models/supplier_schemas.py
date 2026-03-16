@@ -13,6 +13,20 @@ from datetime import datetime
 # ADMIN SCHEMAS (used by /suppliers endpoints)
 # ============================================
 
+class CreateOCRequest(BaseModel):
+    oc_number: str = Field(min_length=1, max_length=50)
+    talent_name: str = Field(min_length=1, max_length=300)
+    nif_cif: Optional[str] = Field(default=None, max_length=50)
+    company_id: Optional[int] = None
+
+
+class CreateOCResponse(BaseModel):
+    id: int
+    oc_number: str
+    talent_name: str
+    nif_cif: Optional[str] = None
+    company_id: Optional[int] = None
+
 class InviteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     email: EmailStr
