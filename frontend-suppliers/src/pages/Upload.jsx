@@ -1,98 +1,116 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
-import { uploadInvoice } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { uploadInvoice, getProfile } from '../services/api';
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User } from 'lucide-react';
+import { useEffect } from 'react';
 
 const UploadPage = () => {
   const navigate = useNavigate();
+  const { supplier } = useAuth();
   const fileRef = useRef(null);
-  const [files, setFiles] = useState([]); // Array of { file, status, result }
+  const [files, setFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(-1);
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => { getProfile().then(r => setProfile(r.data)).catch(() => {}); }, []);
 
   const addFiles = (fileList) => {
-    const newFiles = Array.from(fileList)
-      .filter(f => f.type === 'application/pdf' && f.size <= 10 * 1024 * 1024)
-      .map(f => ({ file: f, status: 'pending', result: null }));
-    if (newFiles.length === 0) return;
-    setFiles(prev => [...prev, ...newFiles]);
+    const valid = Array.from(fileList).filter(f => f.type === 'application/pdf' && f.size <= 10 * 1024 * 1024);
+    if (!valid.length) return;
+    setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: 'pending', result: null }))]);
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
-  };
-
-  const removeFile = (idx) => {
-    setFiles(prev => prev.filter((_, i) => i !== idx));
-  };
+  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
+  const removeFile = (i) => setFiles(prev => prev.filter((_, idx) => idx !== i));
 
   const handleUploadAll = async () => {
     setUploading(true);
     const updated = [...files];
-
     for (let i = 0; i < updated.length; i++) {
       if (updated[i].status !== 'pending') continue;
       setCurrentIdx(i);
       updated[i].status = 'uploading';
       setFiles([...updated]);
-
       try {
         const { data } = await uploadInvoice(updated[i].file);
-        updated[i].status = 'success';
-        updated[i].result = data;
+        updated[i] = { ...updated[i], status: 'success', result: data };
       } catch (err) {
         const detail = err.response?.data?.detail;
-        updated[i].status = 'error';
-        if (typeof detail === 'object') {
-          updated[i].result = { errors: detail.errors || [], warnings: detail.warnings || [] };
-        } else {
-          updated[i].result = { errors: [detail || 'Upload failed'], warnings: [] };
-        }
+        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [detail || 'Upload failed'] } };
       }
       setFiles([...updated]);
     }
-
     setCurrentIdx(-1);
     setUploading(false);
   };
 
-  const reset = () => { setFiles([]); setCurrentIdx(-1); };
-  const hasResults = files.some(f => f.status === 'success' || f.status === 'error');
+  const reset = () => setFiles([]);
+  const pendingCount = files.filter(f => f.status === 'pending').length;
   const allDone = files.length > 0 && files.every(f => f.status !== 'pending' && f.status !== 'uploading');
   const successCount = files.filter(f => f.status === 'success').length;
   const errorCount = files.filter(f => f.status === 'error').length;
 
   return (
-    <div className="px-4 pt-4 max-w-lg mx-auto">
-      <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100 mb-3">Upload invoices</h1>
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="px-4 mb-4 flex items-center gap-3">
+        <button onClick={() => navigate('/')} className="w-8 h-8 bg-[#27272a] rounded-lg flex items-center justify-center">
+          <ChevronLeft size={16} className="text-zinc-300" strokeWidth={1.5} />
+        </button>
+        <h1 className="font-['Bebas_Neue'] text-[16px] tracking-wider text-zinc-300">Upload invoice</h1>
+      </div>
 
-      {/* Drop zone (always visible if no results yet) */}
-      {!hasResults && (
+      {/* Drop zone */}
+      {!allDone && (
         <div
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all mb-3 ${
-            dragOver ? 'border-amber-500 bg-amber-500/[.03]' : 'border-zinc-700 hover:border-amber-500 bg-white/[.01]'
+          className={`mx-4 border-2 border-dashed rounded-xl p-7 text-center cursor-pointer transition-all mb-3 ${
+            dragOver ? 'border-amber-500 bg-amber-500/[.03]' : 'border-zinc-700 bg-white/[.01] active:border-amber-500'
           }`}
         >
-          <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2" />
-          <p className="text-sm font-medium text-zinc-300 mb-1">Drop PDFs here</p>
-          <p className="text-[11px] text-zinc-500">or tap to select files (multiple allowed)</p>
-          <p className="text-[10px] text-zinc-600 mt-2 bg-zinc-800 inline-block px-2.5 py-1 rounded">PDF only, max 10MB each</p>
+          <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2" strokeWidth={1.5} />
+          <p className="text-sm font-medium text-zinc-300 mb-1">Select your invoice</p>
+          <p className="text-[11px] text-zinc-500">PDF only · Max 10MB · Multiple files allowed</p>
+          <p className="text-[10px] text-zinc-600 mt-2 bg-[#27272a] inline-block px-2.5 py-1 rounded-md">
+            AI will extract and verify all data automatically
+          </p>
           <input ref={fileRef} type="file" accept=".pdf,application/pdf" multiple onChange={e => { if (e.target.files?.length) addFiles(e.target.files); e.target.value = ''; }} className="hidden" />
+        </div>
+      )}
+
+      {/* OC info warning */}
+      {!allDone && (
+        <div className="mx-4 mb-3 rounded-lg p-2.5 text-[11px] flex items-start gap-2 bg-amber-500/[.06] text-amber-400 border border-amber-500/[.12] leading-relaxed">
+          <AlertCircle size={13} className="flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+          Make sure your invoice includes the correct OC. AI will identify the project and company automatically.
+        </div>
+      )}
+
+      {/* OC permanente (if influencer/mixed) */}
+      {!allDone && profile?.oc_number && (
+        <div className="mx-4 mb-4">
+          <div className="text-[9px] text-zinc-400 tracking-widest uppercase mb-2">Your permanent OC</div>
+          <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 flex items-center gap-3">
+            <User size={16} className="text-purple-400 flex-shrink-0" strokeWidth={1.5} />
+            <div>
+              <div className="font-['IBM_Plex_Mono'] text-xs text-purple-400">{profile.oc_number}</div>
+              <div className="text-[10px] text-zinc-500 mt-0.5">DAZZLE MGMT · Permanent</div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* File list */}
       {files.length > 0 && (
-        <div className="space-y-2 mb-3">
+        <div className="px-4 space-y-2 mb-3">
           {files.map((f, i) => (
-            <div key={i} className={`bg-zinc-900 border rounded-xl p-3 flex items-center gap-3 ${
+            <div key={i} className={`bg-[#18181b] border rounded-[10px] p-3 flex items-center gap-3 ${
               f.status === 'success' ? 'border-green-400/20' :
               f.status === 'error' ? 'border-red-400/20' :
               f.status === 'uploading' ? 'border-amber-500/30' :
@@ -102,7 +120,7 @@ const UploadPage = () => {
                 f.status === 'success' ? 'bg-green-400/10' :
                 f.status === 'error' ? 'bg-red-400/10' :
                 f.status === 'uploading' ? 'bg-amber-500/10' :
-                'bg-red-400/[.08] border border-red-400/[.12]'
+                'bg-red-400/[.08]'
               }`}>
                 {f.status === 'success' ? <CheckCircle size={16} className="text-green-400" /> :
                  f.status === 'error' ? <AlertCircle size={16} className="text-red-400" /> :
@@ -113,16 +131,12 @@ const UploadPage = () => {
                 <div className="text-xs font-medium text-zinc-200 truncate">{f.file.name}</div>
                 <div className="text-[10px] text-zinc-500">
                   {f.status === 'pending' && `${(f.file.size / 1024).toFixed(0)} KB`}
-                  {f.status === 'uploading' && 'Verifying with AI...'}
+                  {f.status === 'uploading' && <span className="text-amber-400">Verifying with AI...</span>}
                   {f.status === 'success' && <span className="text-green-400">Uploaded — {f.result?.status || 'PENDING'}</span>}
                   {f.status === 'error' && <span className="text-red-400">{f.result?.errors?.[0] || 'Failed'}</span>}
                 </div>
                 {f.status === 'error' && f.result?.errors?.length > 1 && (
-                  <div className="mt-1 space-y-0.5">
-                    {f.result.errors.slice(1).map((e, j) => (
-                      <div key={j} className="text-[10px] text-red-400/80">- {e}</div>
-                    ))}
-                  </div>
+                  <div className="mt-1">{f.result.errors.slice(1).map((e, j) => <div key={j} className="text-[9px] text-red-400/70">— {e}</div>)}</div>
                 )}
               </div>
               {f.status === 'pending' && !uploading && (
@@ -133,30 +147,25 @@ const UploadPage = () => {
         </div>
       )}
 
-      {/* Action buttons */}
-      {files.length > 0 && !allDone && !uploading && (
-        <button
-          onClick={handleUploadAll}
-          className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-3 rounded-xl transition-colors"
-        >
-          Upload {files.filter(f => f.status === 'pending').length} invoice{files.filter(f => f.status === 'pending').length !== 1 ? 's' : ''}
-        </button>
+      {/* Action */}
+      {pendingCount > 0 && !uploading && (
+        <div className="px-4 mb-4">
+          <button onClick={handleUploadAll} className="w-full bg-amber-500 text-zinc-950 font-bold text-sm py-3.5 rounded-[10px] active:bg-amber-400 transition-colors">
+            Upload {pendingCount} invoice{pendingCount !== 1 ? 's' : ''} and verify with AI
+          </button>
+        </div>
       )}
 
       {allDone && (
-        <div className="space-y-2">
-          <div className="text-center text-xs text-zinc-400 mb-2">
+        <div className="px-4">
+          <div className="text-center text-xs text-zinc-400 mb-3">
             {successCount > 0 && <span className="text-green-400">{successCount} uploaded</span>}
             {successCount > 0 && errorCount > 0 && ' · '}
             {errorCount > 0 && <span className="text-red-400">{errorCount} failed</span>}
           </div>
           <div className="flex gap-2">
-            <button onClick={reset} className="flex-1 text-xs py-2.5 rounded-xl border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">
-              Upload more
-            </button>
-            <button onClick={() => navigate('/invoices')} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs py-2.5 rounded-xl transition-colors">
-              View invoices
-            </button>
+            <button onClick={reset} className="flex-1 text-xs py-3 rounded-[10px] bg-[#27272a] border border-zinc-700 text-zinc-300">Upload more</button>
+            <button onClick={() => navigate('/')} className="flex-1 text-xs py-3 rounded-[10px] bg-amber-500 text-zinc-950 font-bold">View invoices</button>
           </div>
         </div>
       )}
