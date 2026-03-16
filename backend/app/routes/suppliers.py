@@ -13,7 +13,7 @@ import secrets
 import string
 
 from config.database import get_db
-from app.models.database import User, Company
+from app.models.database import User, Company, Ticket, TicketType
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierOC, SupplierNotification,
     SupplierInvitation, InvoiceStatus, SupplierStatus,
@@ -468,6 +468,41 @@ async def update_invoice_status(
 
     db.commit()
 
+    # Auto-create ticket in DAZZ Producciones when APPROVED
+    if new_status == "APPROVED" and invoice.project_id:
+        existing_ticket = db.query(Ticket).filter(
+            Ticket.supplier_invoice_id == invoice.id
+        ).first()
+        if not existing_ticket:
+            ticket = Ticket(
+                project_id=invoice.project_id,
+                date=invoice.date or "",
+                provider=invoice.provider_name or "",
+                invoice_number=invoice.invoice_number,
+                po_notes=invoice.oc_number,
+                base_amount=invoice.base_amount,
+                iva_percentage=invoice.iva_percentage,
+                iva_amount=invoice.iva_amount,
+                irpf_percentage=invoice.irpf_percentage or 0,
+                irpf_amount=invoice.irpf_amount or 0,
+                total_with_iva=invoice.base_amount + invoice.iva_amount,
+                final_total=invoice.final_total,
+                currency=invoice.currency or "EUR",
+                is_foreign=invoice.is_foreign or False,
+                invoice_status="Aprobada",
+                payment_status="Pendiente",
+                type=TicketType.FACTURA,
+                file_path=invoice.file_url or "",
+                file_name=f"{invoice.invoice_number}.pdf",
+                notes="Ticket generated automatically from supplier portal",
+                from_supplier_portal=True,
+                supplier_id=invoice.supplier_id,
+                supplier_invoice_id=invoice.id,
+            )
+            db.add(ticket)
+            db.commit()
+            print(f"Ticket created in DAZZ for invoice {invoice.invoice_number} -> project {invoice.project_id}")
+
     # Notifications + emails
     if supplier:
         if new_status == "APPROVED":
@@ -521,6 +556,20 @@ async def confirm_invoice_deletion(
         raise HTTPException(400, "Invoice must be in DELETE_REQUESTED status")
 
     supplier = db.query(Supplier).filter(Supplier.id == invoice.supplier_id).first()
+
+    # Cascade: delete or void the linked ticket in DAZZ Producciones
+    linked_ticket = db.query(Ticket).filter(
+        Ticket.supplier_invoice_id == invoice.id
+    ).first()
+    if linked_ticket:
+        # If ticket has been reviewed (is_reviewed=True), mark as voided instead of deleting
+        if linked_ticket.is_reviewed:
+            linked_ticket.payment_status = "Anulado"
+            linked_ticket.notes = (linked_ticket.notes or "") + "\n[AUTO] Voided: supplier invoice deleted from portal"
+            print(f"Ticket {linked_ticket.id} marked as Anulado (had activity)")
+        else:
+            db.delete(linked_ticket)
+            print(f"Ticket {linked_ticket.id} deleted (cascade from supplier invoice)")
 
     db.delete(invoice)
     db.commit()

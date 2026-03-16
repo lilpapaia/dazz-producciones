@@ -66,6 +66,35 @@ async def create_project(
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
+
+    # Auto-link: find supplier invoices with OC_PENDING matching this project's creative_code
+    try:
+        from app.models.suppliers import SupplierInvoice, InvoiceStatus, NotificationRecipientType, NotificationEventType, SupplierNotification
+        pending_invoices = db.query(SupplierInvoice).filter(
+            SupplierInvoice.oc_number == db_project.creative_code,
+            SupplierInvoice.status == InvoiceStatus.OC_PENDING,
+        ).all()
+        for inv in pending_invoices:
+            inv.project_id = db_project.id
+            inv.company_id = db_project.owner_company_id
+            inv.status = InvoiceStatus.PENDING
+            # Notify admin
+            notif = SupplierNotification(
+                recipient_type=NotificationRecipientType.ADMIN,
+                recipient_id=0,
+                event_type=NotificationEventType.OC_LINKED,
+                title="OC Linked",
+                message=f"Invoice {inv.invoice_number} linked to project {db_project.creative_code}",
+                related_invoice_id=inv.id,
+                related_supplier_id=inv.supplier_id,
+            )
+            db.add(notif)
+        if pending_invoices:
+            db.commit()
+            print(f"Auto-linked {len(pending_invoices)} OC_PENDING invoices to project {db_project.creative_code}")
+    except Exception as e:
+        print(f"Warning: OC auto-link failed: {e}")
+
     return db_project
 
 

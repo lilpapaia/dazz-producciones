@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Users, LogOut, Truck } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, LogOut, Truck, ExternalLink } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -85,6 +85,20 @@ const Navbar = () => {
                 <Users size={18} />
                 <span className="hidden sm:inline">Usuarios</span>
               </Link>
+            )}
+
+            {/* Portal proveedores — solo ADMIN */}
+            {user.role === 'ADMIN' && (
+              <a
+                href="https://providers.dazzcreative.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-sm text-xs font-medium text-zinc-500 hover:text-amber-400 border border-zinc-800 hover:border-amber-500/50 transition-colors"
+                title="Supplier Portal"
+              >
+                <ExternalLink size={14} />
+                <span className="hidden sm:inline">Portal</span>
+              </a>
             )}
 
             {/* User Info & Logout - Más separado en móvil */}
