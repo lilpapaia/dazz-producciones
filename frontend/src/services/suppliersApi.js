@@ -21,3 +21,4 @@ export const deleteInvoice = (id) => api.delete(`/suppliers/invoices/${id}`);
 // Notifications
 export const getNotifications = (params) => api.get('/suppliers/notifications/all', { params });
 export const markNotificationRead = (id) => api.put(`/suppliers/notifications/${id}/read`);
+export const markAllNotificationsRead = () => api.put('/suppliers/notifications/read-all');

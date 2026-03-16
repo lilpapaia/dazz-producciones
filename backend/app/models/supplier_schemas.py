@@ -48,15 +48,18 @@ class SupplierResponse(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     iban: Optional[str] = None
+    bank_cert_url: Optional[str] = None
     supplier_type: str
     status: str
     oc_id: Optional[int] = None
     oc_number: Optional[str] = None
+    company_name: Optional[str] = None
     is_active: bool
     notes_internal: Optional[str] = None
     gdpr_consent: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    last_activity: Optional[datetime] = None
     invoices_count: int = 0
     pending_invoices: int = 0
 

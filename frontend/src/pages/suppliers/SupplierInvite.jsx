@@ -220,6 +220,11 @@ const SupplierInvite = () => {
                 </div>
               </div>
 
+              <div className="mb-3">
+                <label className={labelCls}>Custom message</label>
+                <input placeholder="Hello, here's your access to the supplier portal..." className={inputCls} />
+              </div>
+
               <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">
                 <Shield size={13} className="flex-shrink-0 mt-0.5" />
                 The supplier will need: NIF/CIF, IBAN and bank certificate PDF. Link valid 72h.
@@ -261,6 +266,11 @@ const SupplierInvite = () => {
                 <label className={labelCls}>Email <span className="text-amber-500">*</span></label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="contacto@empresa.com" required className={inputCls} />
               </div>
+            </div>
+
+            <div className="mb-3">
+              <label className={labelCls}>Custom message</label>
+              <textarea placeholder="Hello, we invite you to register as a supplier for DAZZ Creative..." className={`${inputCls} resize-none`} rows={2} />
             </div>
 
             <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">

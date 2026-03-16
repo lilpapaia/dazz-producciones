@@ -13,27 +13,32 @@ const PILL = {
 };
 
 const KANBAN_COLS = ['PENDING', 'APPROVED', 'PAID', 'REJECTED'];
+const PAGE_SIZE = 20;
 
 const InvoicesList = () => {
   const [invoices, setInvoices] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('list');
-  const [statusFilter, setStatusFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
   const [search, setSearch] = useState('');
-  const [actionModal, setActionModal] = useState(null); // { invoice, action }
+  const [actionModal, setActionModal] = useState(null);
   const [reason, setReason] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalLoaded, setTotalLoaded] = useState(0);
 
   const load = () => {
-    const params = {};
+    const params = { limit: 200 };
     if (statusFilter) params.status = statusFilter;
+    if (companyFilter) params.company_id = companyFilter;
     Promise.all([getAllInvoices(params), getCompanies()])
-      .then(([inv, c]) => { setInvoices(inv.data); setCompanies(c.data); })
+      .then(([inv, c]) => { setInvoices(inv.data); setTotalLoaded(inv.data.length); setCompanies(c.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { setLoading(true); setPage(0); load(); }, [statusFilter, companyFilter]);
 
   const filtered = invoices.filter(inv => {
     if (!search) return true;
@@ -43,29 +48,20 @@ const InvoicesList = () => {
       inv.oc_number?.toLowerCase().includes(q);
   });
 
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
   const handleAction = async () => {
     if (!actionModal) return;
     const { invoice, action } = actionModal;
     try {
-      if (action === 'approve') {
-        await updateInvoiceStatus(invoice.id, { status: 'APPROVED' });
-      } else if (action === 'pay') {
-        await updateInvoiceStatus(invoice.id, { status: 'PAID' });
-      } else if (action === 'reject') {
-        if (!reason.trim()) return;
-        await updateInvoiceStatus(invoice.id, { status: 'REJECTED', reason });
-      } else if (action === 'delete') {
-        await deleteInvoice(invoice.id);
-      }
-    } catch (e) {
-      alert(e.response?.data?.detail || 'Error');
-    }
-    setActionModal(null);
-    setReason('');
-    load();
+      if (action === 'approve') await updateInvoiceStatus(invoice.id, { status: 'APPROVED' });
+      else if (action === 'pay') await updateInvoiceStatus(invoice.id, { status: 'PAID' });
+      else if (action === 'reject') { if (!reason.trim()) return; await updateInvoiceStatus(invoice.id, { status: 'REJECTED', reason }); }
+      else if (action === 'delete') await deleteInvoice(invoice.id);
+    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+    setActionModal(null); setReason(''); load();
   };
-
-  const openPdf = (url) => { if (url) window.open(url, '_blank'); };
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -87,73 +83,106 @@ const InvoicesList = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters — dropdowns (I2) */}
       <div className="flex gap-2 mb-3.5 flex-wrap items-center">
         <div className="relative max-w-[220px] flex-1">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-          <input
-            placeholder="Search invoice, supplier, OC..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none"
-          />
+          <input placeholder="Search invoice, supplier, OC..." value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none" />
         </div>
-        <span className="text-[9px] text-zinc-500 tracking-widest uppercase">Status:</span>
-        {[null, 'PENDING', 'APPROVED', 'PAID', 'REJECTED'].map(s => (
-          <button key={s || 'all'} onClick={() => setStatusFilter(s)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${statusFilter === s ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
-            {s || 'All'}
-          </button>
-        ))}
+        <select value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}
+          className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
+          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")" }}>
+          <option value="">All companies</option>
+          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
+          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")" }}>
+          <option value="">All statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="APPROVED">Approved</option>
+          <option value="PAID">Paid</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
       </div>
 
       {/* LIST VIEW */}
       {view === 'list' && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden">
-          {filtered.map(inv => {
-            const pill = PILL[inv.status] || PILL.PENDING;
-            return (
-              <div key={inv.id} className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-white/[.04] last:border-0 hover:bg-white/[.02] transition-colors">
-                <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
-                  <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-zinc-200 font-mono">{inv.invoice_number}</div>
-                  <div className="text-[10px] text-zinc-500">{inv.supplier_name} &middot; {inv.oc_number}</div>
-                </div>
-                <div className="font-mono text-xs font-medium text-zinc-200 mx-2 hidden sm:block">{inv.final_total.toFixed(2)} EUR</div>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
-                  <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status}
-                </span>
-                {/* Actions */}
-                <div className="flex gap-1 ml-1">
-                  {inv.file_url && (
-                    <button onClick={() => openPdf(inv.file_url)} title="View PDF" className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-zinc-300">
-                      <ExternalLink size={13} />
-                    </button>
-                  )}
-                  {inv.status === 'PENDING' && (
-                    <>
-                      <button onClick={() => setActionModal({ invoice: inv, action: 'approve' })} title="Approve" className="p-1 hover:bg-green-400/10 rounded transition-colors text-green-400">
-                        <Check size={13} />
-                      </button>
-                      <button onClick={() => setActionModal({ invoice: inv, action: 'reject' })} title="Reject" className="p-1 hover:bg-red-400/10 rounded transition-colors text-red-400">
-                        <X size={13} />
-                      </button>
-                    </>
-                  )}
-                  {inv.status === 'APPROVED' && (
-                    <button onClick={() => setActionModal({ invoice: inv, action: 'pay' })} title="Mark as paid" className="p-1 hover:bg-green-300/10 rounded transition-colors text-green-300">
-                      <CreditCard size={13} />
-                    </button>
-                  )}
-                </div>
+        <>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-x-auto">
+            <table className="w-full min-w-[650px]">
+              <thead>
+                <tr>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Invoice</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Supplier</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Project / OC</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-10">IA</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Amount</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Status</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-[140px]">Action</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 w-9"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map(inv => {
+                  const pill = PILL[inv.status] || PILL.PENDING;
+                  return (
+                    <tr key={inv.id} className="hover:bg-white/[.02] transition-colors">
+                      <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[11px] text-zinc-200">
+                        {inv.invoice_number}
+                        {inv.from_supplier_portal && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
+                      </td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04] text-xs text-zinc-200">{inv.supplier_name}</td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04]">
+                        <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                      </td>
+                      {/* IA column (I1) */}
+                      <td className="px-3 py-2.5 border-b border-white/[.04]">
+                        <span className="text-[10px] text-green-400 flex items-center gap-0.5"><Check size={11} strokeWidth={2} />ok</span>
+                      </td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-xs text-zinc-200">{inv.final_total?.toFixed(2)} EUR</td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04]">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
+                          <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04]">
+                        {inv.status === 'PENDING' && (
+                          <button onClick={() => setActionModal({ invoice: inv, action: 'approve' })} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded transition-colors hover:bg-amber-400">Approve</button>
+                        )}
+                        {inv.status === 'APPROVED' && (
+                          <button onClick={() => setActionModal({ invoice: inv, action: 'pay' })} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Mark paid</button>
+                        )}
+                        {inv.status === 'PAID' && <span className="text-[10px] text-zinc-600">Closed</span>}
+                      </td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04]">
+                        <div className="flex gap-1">
+                          {inv.file_url && <button onClick={() => window.open(inv.file_url, '_blank')} className="p-1 text-zinc-600 hover:text-zinc-300 transition-colors"><ExternalLink size={12} /></button>}
+                          {inv.status === 'PENDING' && <button onClick={() => setActionModal({ invoice: inv, action: 'reject' })} className="p-1 text-red-400/60 hover:text-red-400 transition-colors"><X size={12} /></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {paged.length === 0 && <tr><td colSpan="8" className="text-center py-8 text-xs text-zinc-600">No invoices found</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          {/* Pagination (I3) */}
+          <div className="flex items-center justify-between mt-2 text-[11px] text-zinc-500">
+            <span>Showing {Math.min(page * PAGE_SIZE + 1, filtered.length)}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length} invoices</span>
+            {totalPages > 1 && (
+              <div className="flex gap-1">
+                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-2.5 py-1 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 disabled:opacity-30">Prev</button>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+                  <button key={i} onClick={() => setPage(i)} className={`px-2.5 py-1 rounded border transition-colors ${page === i ? 'bg-zinc-800 text-zinc-200 border-zinc-600' : 'border-zinc-700 text-zinc-500 hover:bg-zinc-800'}`}>{i + 1}</button>
+                ))}
+                <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="px-2.5 py-1 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 disabled:opacity-30">Next</button>
               </div>
-            );
-          })}
-          {filtered.length === 0 && (
-            <div className="text-center py-8 text-xs text-zinc-600">No invoices found</div>
-          )}
-        </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* KANBAN VIEW */}
@@ -169,36 +198,23 @@ const InvoicesList = () => {
                   {col}
                   <span className="bg-zinc-800 text-zinc-400 text-[10px] px-1.5 rounded font-mono">{colInvoices.length}</span>
                 </div>
-                {colInvoices.map(inv => (
+                {colInvoices.slice(0, 10).map(inv => (
                   <div key={inv.id} className="bg-zinc-800 border border-zinc-700 rounded p-2.5 mb-1.5 cursor-pointer hover:border-amber-500 transition-colors">
-                    <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-1">
-                      {inv.invoice_number}
-                    </div>
+                    <div className="text-[10px] text-zinc-500 font-mono">{inv.invoice_number}</div>
                     <div className="text-xs font-medium text-zinc-200 mt-0.5">{inv.supplier_name}</div>
-                    <div className="font-mono text-[13px] text-zinc-100 mt-0.5">{inv.final_total.toFixed(2)} EUR</div>
-                    <div className="text-[10px] text-zinc-500 mt-1 pt-1 border-t border-zinc-700">
-                      OC: <span className="text-amber-400">{inv.oc_number}</span>
-                    </div>
-                    {/* Inline actions */}
+                    <div className="font-mono text-[13px] text-zinc-100 mt-0.5">{inv.final_total?.toFixed(2)} EUR</div>
+                    <div className="text-[10px] text-zinc-500 mt-1 pt-1 border-t border-zinc-700">OC: <span className="text-amber-400">{inv.oc_number}</span></div>
                     <div className="flex gap-1 mt-1.5">
-                      {inv.file_url && (
-                        <button onClick={() => openPdf(inv.file_url)} className="text-[9px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 px-1.5 py-0.5 rounded">PDF</button>
-                      )}
-                      {col === 'PENDING' && (
-                        <>
-                          <button onClick={() => setActionModal({ invoice: inv, action: 'approve' })} className="text-[9px] text-green-400 border border-green-400/25 px-1.5 py-0.5 rounded hover:bg-green-400/10">Approve</button>
-                          <button onClick={() => setActionModal({ invoice: inv, action: 'reject' })} className="text-[9px] text-red-400 border border-red-400/25 px-1.5 py-0.5 rounded hover:bg-red-400/10">Reject</button>
-                        </>
-                      )}
-                      {col === 'APPROVED' && (
-                        <button onClick={() => setActionModal({ invoice: inv, action: 'pay' })} className="text-[9px] text-green-300 border border-green-300/25 px-1.5 py-0.5 rounded hover:bg-green-300/10">Paid</button>
-                      )}
+                      {col === 'PENDING' && <>
+                        <button onClick={() => setActionModal({ invoice: inv, action: 'approve' })} className="text-[9px] text-green-400 border border-green-400/25 px-1.5 py-0.5 rounded hover:bg-green-400/10">Approve</button>
+                        <button onClick={() => setActionModal({ invoice: inv, action: 'reject' })} className="text-[9px] text-red-400 border border-red-400/25 px-1.5 py-0.5 rounded hover:bg-red-400/10">Reject</button>
+                      </>}
+                      {col === 'APPROVED' && <button onClick={() => setActionModal({ invoice: inv, action: 'pay' })} className="text-[9px] text-green-300 border border-green-300/25 px-1.5 py-0.5 rounded hover:bg-green-300/10">Paid</button>}
                     </div>
                   </div>
                 ))}
-                {colInvoices.length === 0 && (
-                  <div className="text-[10px] text-zinc-700 text-center py-4">Empty</div>
-                )}
+                {colInvoices.length > 10 && <div className="text-[10px] text-zinc-600 text-center py-2 font-mono">+ {colInvoices.length - 10} more</div>}
+                {colInvoices.length === 0 && <div className="text-[10px] text-zinc-700 text-center py-4">Empty</div>}
               </div>
             );
           })}
@@ -213,38 +229,21 @@ const InvoicesList = () => {
               {actionModal.action === 'approve' && 'Approve invoice'}
               {actionModal.action === 'pay' && 'Mark as paid'}
               {actionModal.action === 'reject' && 'Reject invoice'}
-              {actionModal.action === 'delete' && 'Confirm deletion'}
             </h3>
             <p className="text-xs text-zinc-500 mb-4">
               Invoice <span className="font-mono text-zinc-300">{actionModal.invoice.invoice_number}</span> from {actionModal.invoice.supplier_name}
-              {actionModal.action !== 'reject' && ' — Are you sure?'}
             </p>
             {actionModal.action === 'reject' && (
               <div className="mb-4">
-                <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Rejection reason <span className="text-amber-500">*</span></label>
-                <textarea
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  rows={3}
-                  placeholder="Explain why this invoice is being rejected..."
-                  className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2 rounded focus:border-amber-500 outline-none resize-none"
-                />
+                <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Reason <span className="text-amber-500">*</span></label>
+                <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Explain why..." className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2 rounded focus:border-amber-500 outline-none resize-none" />
               </div>
             )}
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setActionModal(null); setReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancel</button>
-              <button
-                onClick={handleAction}
-                disabled={actionModal.action === 'reject' && !reason.trim()}
-                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${
-                  actionModal.action === 'reject' ? 'bg-red-500 hover:bg-red-400 text-white' :
-                  'bg-amber-500 hover:bg-amber-400 text-zinc-950'
-                }`}
-              >
-                {actionModal.action === 'approve' && 'Approve'}
-                {actionModal.action === 'pay' && 'Confirm payment'}
-                {actionModal.action === 'reject' && 'Reject'}
-                {actionModal.action === 'delete' && 'Delete'}
+              <button onClick={handleAction} disabled={actionModal.action === 'reject' && !reason.trim()}
+                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${actionModal.action === 'reject' ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
+                {actionModal.action === 'approve' ? 'Approve' : actionModal.action === 'pay' ? 'Confirm payment' : 'Reject'}
               </button>
             </div>
           </div>

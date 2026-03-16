@@ -186,33 +186,49 @@ async def list_suppliers(
 
     suppliers = query.order_by(desc(Supplier.created_at)).all()
 
-    result = []
-    for s in suppliers:
-        inv_count = db.query(func.count(SupplierInvoice.id)).filter(
-            SupplierInvoice.supplier_id == s.id).scalar()
-        pending = db.query(func.count(SupplierInvoice.id)).filter(
-            SupplierInvoice.supplier_id == s.id,
-            SupplierInvoice.status == InvoiceStatus.PENDING,
-        ).scalar()
-
-        oc_number = None
-        if s.oc_id:
-            oc = db.query(SupplierOC).filter(SupplierOC.id == s.oc_id).first()
-            oc_number = oc.oc_number if oc else None
-
-        result.append(SupplierResponse(
-            id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
-            phone=s.phone, address=s.address, iban=_decode_iban(s),
-            supplier_type=s.supplier_type.value if s.supplier_type else "GENERAL",
-            status=s.status.value if s.status else "NEW",
-            oc_id=s.oc_id, oc_number=oc_number,
-            is_active=s.is_active, notes_internal=s.notes_internal,
-            gdpr_consent=s.gdpr_consent,
-            created_at=s.created_at, updated_at=s.updated_at,
-            invoices_count=inv_count, pending_invoices=pending,
-        ))
-
+    result = [_build_supplier_response(s, db) for s in suppliers]
     return result
+
+
+def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
+    """Build a full SupplierResponse with computed fields."""
+    inv_count = db.query(func.count(SupplierInvoice.id)).filter(
+        SupplierInvoice.supplier_id == s.id).scalar()
+    pending = db.query(func.count(SupplierInvoice.id)).filter(
+        SupplierInvoice.supplier_id == s.id,
+        SupplierInvoice.status == InvoiceStatus.PENDING,
+    ).scalar()
+
+    oc_number = None
+    company_name = None
+    if s.oc_id:
+        oc = db.query(SupplierOC).filter(SupplierOC.id == s.oc_id).first()
+        if oc:
+            oc_number = oc.oc_number
+            if oc.company_id:
+                co = db.query(Company).filter(Company.id == oc.company_id).first()
+                company_name = co.name if co else None
+
+    # Last activity: most recent notification or invoice for this supplier
+    last_notif = db.query(func.max(SupplierNotification.created_at)).filter(
+        SupplierNotification.related_supplier_id == s.id).scalar()
+    last_inv = db.query(func.max(SupplierInvoice.created_at)).filter(
+        SupplierInvoice.supplier_id == s.id).scalar()
+    last_activity = max(filter(None, [last_notif, last_inv, s.created_at]))
+
+    return SupplierResponse(
+        id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
+        phone=s.phone, address=s.address, iban=_decode_iban(s),
+        bank_cert_url=s.bank_cert_url,
+        supplier_type=s.supplier_type.value if s.supplier_type else "GENERAL",
+        status=s.status.value if s.status else "NEW",
+        oc_id=s.oc_id, oc_number=oc_number, company_name=company_name,
+        is_active=s.is_active, notes_internal=s.notes_internal,
+        gdpr_consent=s.gdpr_consent,
+        created_at=s.created_at, updated_at=s.updated_at,
+        last_activity=last_activity,
+        invoices_count=inv_count, pending_invoices=pending,
+    )
 
 
 @router.get("/{supplier_id}", response_model=SupplierResponse)
@@ -225,30 +241,7 @@ async def get_supplier(
     if not supplier:
         raise HTTPException(404, "Supplier not found")
 
-    inv_count = db.query(func.count(SupplierInvoice.id)).filter(
-        SupplierInvoice.supplier_id == supplier_id).scalar()
-    pending = db.query(func.count(SupplierInvoice.id)).filter(
-        SupplierInvoice.supplier_id == supplier_id,
-        SupplierInvoice.status == InvoiceStatus.PENDING,
-    ).scalar()
-
-    oc_number = None
-    if supplier.oc_id:
-        oc = db.query(SupplierOC).filter(SupplierOC.id == supplier.oc_id).first()
-        oc_number = oc.oc_number if oc else None
-
-    return SupplierResponse(
-        id=supplier.id, name=supplier.name, email=supplier.email,
-        nif_cif=supplier.nif_cif, phone=supplier.phone, address=supplier.address,
-        iban=_decode_iban(supplier),
-        supplier_type=supplier.supplier_type.value if supplier.supplier_type else "GENERAL",
-        status=supplier.status.value if supplier.status else "NEW",
-        oc_id=supplier.oc_id, oc_number=oc_number,
-        is_active=supplier.is_active, notes_internal=supplier.notes_internal,
-        gdpr_consent=supplier.gdpr_consent,
-        created_at=supplier.created_at, updated_at=supplier.updated_at,
-        invoices_count=inv_count, pending_invoices=pending,
-    )
+    return _build_supplier_response(supplier, db)
 
 
 @router.put("/{supplier_id}")
@@ -569,6 +562,20 @@ async def mark_notification_read(
     notif.is_read = True
     db.commit()
     return {"message": "Marked as read"}
+
+
+@router.put("/notifications/read-all")
+async def mark_all_notifications_read(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Mark all admin notifications as read."""
+    db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.is_read == False,
+    ).update({"is_read": True})
+    db.commit()
+    return {"message": "All notifications marked as read"}
 
 
 # ============================================
