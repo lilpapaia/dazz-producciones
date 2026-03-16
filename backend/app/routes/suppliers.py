@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field
 import secrets
 import string
 
@@ -20,6 +19,11 @@ from app.models.suppliers import (
     NotificationRecipientType, NotificationEventType,
 )
 from app.services.auth import get_current_admin_user
+from app.models.supplier_schemas import (
+    InviteRequest, InviteResponse, SupplierResponse, SupplierUpdate,
+    AssignOCRequest, NoteRequest, InvoiceStatusUpdate, InvoiceResponse,
+    NotificationResponse, DashboardResponse,
+)
 from app.services.supplier_auth import invalidate_all_supplier_tokens
 from app.services.supplier_storage import get_invoice_pdf_url
 from app.services.supplier_email import (
@@ -63,117 +67,6 @@ def _notify(db: Session, recipient_type, recipient_id: int, event_type,
         related_supplier_id=supplier_id,
     )
     db.add(notif)
-
-
-# ============================================
-# SCHEMAS (inline — specific to admin endpoints)
-# ============================================
-
-class InviteRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=300)
-    email: EmailStr
-
-
-class InviteResponse(BaseModel):
-    id: int
-    name: str
-    email: str
-    expires_at: datetime
-    message: str
-
-
-class SupplierResponse(BaseModel):
-    id: int
-    name: str
-    email: str
-    nif_cif: Optional[str] = None
-    phone: Optional[str] = None
-    address: Optional[str] = None
-    iban: Optional[str] = None
-    supplier_type: str
-    status: str
-    oc_id: Optional[int] = None
-    oc_number: Optional[str] = None
-    is_active: bool
-    notes_internal: Optional[str] = None
-    gdpr_consent: bool
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    invoices_count: int = 0
-    pending_invoices: int = 0
-
-    class Config:
-        from_attributes = True
-
-
-class SupplierUpdate(BaseModel):
-    name: Optional[str] = None
-    nif_cif: Optional[str] = None
-    phone: Optional[str] = None
-    address: Optional[str] = None
-    supplier_type: Optional[str] = None
-
-
-class AssignOCRequest(BaseModel):
-    oc_id: int
-
-
-class NoteRequest(BaseModel):
-    note: str = Field(min_length=1, max_length=2000)
-
-
-class InvoiceStatusUpdate(BaseModel):
-    status: str  # APPROVED, PAID, REJECTED
-    reason: Optional[str] = None  # Required for REJECTED
-
-
-class InvoiceResponse(BaseModel):
-    id: int
-    supplier_id: int
-    supplier_name: Optional[str] = None
-    invoice_number: str
-    date: str
-    provider_name: str
-    oc_number: str
-    company_id: Optional[int] = None
-    base_amount: float
-    iva_percentage: float
-    iva_amount: float
-    irpf_percentage: float
-    irpf_amount: float
-    final_total: float
-    currency: str
-    is_foreign: bool
-    file_url: str
-    status: str
-    rejection_reason: Optional[str] = None
-    delete_reason: Optional[str] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class NotificationResponse(BaseModel):
-    id: int
-    event_type: str
-    title: str
-    message: str
-    related_invoice_id: Optional[int] = None
-    related_supplier_id: Optional[int] = None
-    is_read: bool
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class DashboardResponse(BaseModel):
-    pending_invoices: int
-    approved_this_month: int
-    active_suppliers: int
-    total_paid_this_month: float
-    unread_notifications: int
 
 
 # ============================================
@@ -480,8 +373,6 @@ async def update_invoice_status(
     if new_status == "REJECTED":
         invoice.rejection_reason = body.reason
 
-    db.commit()
-
     # Auto-create ticket in DAZZ Producciones when APPROVED
     if new_status == "APPROVED" and invoice.project_id:
         existing_ticket = db.query(Ticket).filter(
@@ -514,7 +405,6 @@ async def update_invoice_status(
                 supplier_invoice_id=invoice.id,
             )
             db.add(ticket)
-            db.commit()
             print(f"Ticket created in DAZZ for invoice {invoice.invoice_number} -> project {invoice.project_id}")
 
     # Notifications + emails
@@ -551,6 +441,7 @@ async def update_invoice_status(
             except Exception:
                 pass
 
+    # Single commit: status change + ticket + notifications
     db.commit()
     return {"message": f"Invoice status changed to {new_status}"}
 

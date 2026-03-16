@@ -11,7 +11,7 @@ R2 credentials: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
 import os
 import uuid
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import cloudinary
@@ -53,7 +53,7 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int) -> str:
     Returns:
         Cloudinary public_id (NOT a URL — use get_invoice_pdf_url() for signed access)
     """
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     short_id = uuid.uuid4().hex[:8]
     clean_name = os.path.splitext(file.filename or "invoice")[0].replace(" ", "_")[:40]
     public_id = f"{CLOUDINARY_FOLDER}/{supplier_id}/{clean_name}_{timestamp}_{short_id}"
