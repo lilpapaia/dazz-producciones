@@ -29,6 +29,7 @@ excel_generated/
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 
