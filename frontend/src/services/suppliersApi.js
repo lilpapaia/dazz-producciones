@@ -8,6 +8,7 @@ export const getSuppliers = (params) => api.get('/suppliers', { params });
 export const getSupplier = (id) => api.get(`/suppliers/${id}`);
 export const updateSupplier = (id, data) => api.put(`/suppliers/${id}`, data);
 export const deactivateSupplier = (id) => api.put(`/suppliers/${id}/deactivate`);
+export const reactivateSupplier = (id) => api.put(`/suppliers/${id}/reactivate`);
 export const assignOC = (id, ocNumber) => api.put(`/suppliers/${id}/assign-oc`, { oc_number: ocNumber });
 export const addSupplierNote = (id, note) => api.post(`/suppliers/${id}/notes`, { note });
 export const getBankCertUrl = (id) => api.get(`/suppliers/${id}/bank-cert-url`);

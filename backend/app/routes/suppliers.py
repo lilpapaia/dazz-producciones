@@ -428,6 +428,23 @@ async def deactivate_supplier(
     return {"message": f"Supplier {supplier.name} deactivated, all tokens invalidated"}
 
 
+@router.put("/{supplier_id}/reactivate")
+async def reactivate_supplier(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Reactivate a previously deactivated supplier."""
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+
+    supplier.is_active = True
+    supplier.status = SupplierStatus.ACTIVE
+    db.commit()
+    return {"message": f"Supplier {supplier.name} reactivated"}
+
+
 @router.put("/{supplier_id}/assign-oc")
 async def assign_oc(
     supplier_id: int,

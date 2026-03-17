@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, UserX, Link2, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
-import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
+import { getSupplier, updateSupplier, deactivateSupplier, reactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
 
@@ -84,6 +84,12 @@ const SupplierDetail = () => {
   const handleDeactivate = async () => {
     if (!confirm('¿Desactivar este proveedor? Se invalidarán todos sus tokens.')) return;
     await deactivateSupplier(id);
+    load();
+  };
+
+  const handleReactivate = async () => {
+    if (!confirm('¿Reactivar este proveedor?')) return;
+    await reactivateSupplier(id);
     load();
   };
 
@@ -312,9 +318,13 @@ const SupplierDetail = () => {
             <button onClick={handleAddNote} disabled={saving || !note.trim()} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors disabled:opacity-40 flex items-center gap-1">
               <Save size={11} /> Añadir nota
             </button>
-            {supplier.is_active && (
+            {supplier.is_active ? (
               <button onClick={handleDeactivate} className="text-[11px] text-red-400 border border-red-400/25 hover:bg-red-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
                 <UserX size={11} /> Desactivar
+              </button>
+            ) : (
+              <button onClick={handleReactivate} className="text-[11px] text-green-400 border border-green-400/25 hover:bg-green-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                <Check size={11} /> Activar
               </button>
             )}
           </div>
@@ -417,7 +427,6 @@ const SupplierDetail = () => {
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
                         {inv.invoice_number}
-                        <span className="text-[9px] text-green-400 flex items-center gap-0.5"><Check size={9} strokeWidth={2} />IA ok</span>
                       </div>
                       <div className="text-[10px] text-zinc-500">
                         {inv.oc_number && <span className="text-[9px] px-1 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15 mr-1">{inv.oc_number}</span>}
