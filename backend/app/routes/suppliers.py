@@ -27,6 +27,7 @@ from app.models.supplier_schemas import (
 from app.services.supplier_auth import invalidate_all_supplier_tokens
 from app.services.supplier_storage import get_invoice_pdf_url
 from app.services.encryption import decrypt_iban, encrypt_iban, is_encryption_available
+from app.services.supplier_ai import format_date_for_response, parse_invoice_date
 from app.services.supplier_email import (
     send_supplier_invitation,
     send_supplier_invoice_approved,
@@ -407,7 +408,8 @@ async def list_all_invoices(
         result.append(InvoiceResponse(
             id=inv.id, supplier_id=inv.supplier_id,
             supplier_name=inv.supplier.name if inv.supplier else None,
-            invoice_number=inv.invoice_number, date=inv.date,
+            invoice_number=inv.invoice_number,
+            date=format_date_for_response(inv.date_parsed or inv.date),
             provider_name=inv.provider_name, oc_number=inv.oc_number,
             company_id=inv.company_id,
             base_amount=inv.base_amount, iva_percentage=inv.iva_percentage,
@@ -465,7 +467,7 @@ async def update_invoice_status(
         if not existing_ticket:
             ticket = Ticket(
                 project_id=invoice.project_id,
-                date=invoice.date or "",
+                date=format_date_for_response(invoice.date_parsed or invoice.date),
                 provider=invoice.provider_name or "",
                 invoice_number=invoice.invoice_number,
                 po_notes=invoice.oc_number,
@@ -717,4 +719,47 @@ async def migrate_ibans_to_encrypted(
         "message": f"Migration complete: {migrated} IBANs encrypted, {skipped} skipped",
         "migrated": migrated,
         "skipped": skipped,
+    }
+
+
+# ============================================
+# DATE MIGRATION (one-shot)
+# ============================================
+
+@router.post("/admin/migrate-dates")
+async def migrate_dates_to_parsed(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """
+    One-shot migration: parse existing date strings into date_parsed column.
+
+    Safe to run multiple times — skips invoices that already have date_parsed.
+    """
+    invoices = db.query(SupplierInvoice).filter(
+        SupplierInvoice.date_parsed == None,
+        SupplierInvoice.date != None,
+        SupplierInvoice.date != "",
+    ).all()
+
+    migrated = 0
+    failed = 0
+    failed_samples = []
+
+    for inv in invoices:
+        parsed = parse_invoice_date(inv.date)
+        if parsed:
+            inv.date_parsed = parsed
+            migrated += 1
+        else:
+            failed += 1
+            if len(failed_samples) < 10:
+                failed_samples.append(f"Invoice {inv.id}: '{inv.date}'")
+
+    db.commit()
+    return {
+        "message": f"Migration complete: {migrated} dates parsed, {failed} unparseable",
+        "migrated": migrated,
+        "failed": failed,
+        "failed_samples": failed_samples,
     }

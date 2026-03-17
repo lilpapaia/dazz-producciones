@@ -16,6 +16,8 @@ import anthropic
 import json
 import base64
 import os
+import re
+from datetime import date as date_type
 from typing import Dict, Any, List, Optional, Tuple
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
@@ -338,6 +340,15 @@ def validate_supplier_invoice(
                 oc_number, db, errors
             )
 
+    # --- 4b. Fecha parseable ---
+    raw_date = extracted_data.get("date", "")
+    parsed_date = parse_invoice_date(raw_date)
+    if raw_date and not parsed_date:
+        warnings.append(
+            f"La fecha '{raw_date}' no se pudo interpretar automáticamente — "
+            f"el admin deberá verificarla manualmente"
+        )
+
     # --- 5. Cálculos correctos ---
     base = extracted_data.get("base_amount", 0.0) or 0.0
     iva = extracted_data.get("iva_amount", 0.0) or 0.0
@@ -372,6 +383,7 @@ def validate_supplier_invoice(
         "oc_status": oc_status,
         "company_id": company_id,
         "project_id": project_id,
+        "date_parsed": parsed_date,
     }
 
 
@@ -428,3 +440,119 @@ def _normalize_iban(iban: Optional[str]) -> Optional[str]:
     if not iban:
         return None
     return iban.strip().upper().replace(" ", "")
+
+
+# ============================================
+# PARSEO ROBUSTO DE FECHAS
+# ============================================
+
+# Meses en español e inglés para parseo de formatos textuales
+_MONTH_NAMES = {
+    # Español
+    "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+    "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12,
+    "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
+    "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12,
+    # English
+    "january": 1, "february": 2, "march": 3, "april": 4, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    "jan": 1, "apr": 4, "aug": 8,
+}
+
+
+def parse_invoice_date(date_str: Optional[str]) -> Optional[date_type]:
+    """
+    Parse invoice date string into a date object.
+
+    Tries multiple formats (ordered by likelihood from Claude IA output):
+      1. DD/MM/YYYY  (IA default, Spanish invoices)
+      2. YYYY-MM-DD  (ISO)
+      3. DD-MM-YYYY
+      4. DD.MM.YYYY
+      5. D Month YYYY / DD de Month de YYYY  (Spanish/English textual)
+      6. Month D, YYYY  (English textual)
+      7. MM/DD/YYYY  (US — only if DD/MM fails or month > 12)
+
+    Returns:
+        date object or None if unparseable
+    """
+    if not date_str or not isinstance(date_str, str):
+        return None
+
+    s = date_str.strip()
+    if not s:
+        return None
+
+    # --- Numeric formats with separators ---
+    for sep in ["/", "-", "."]:
+        parts = s.split(sep)
+        if len(parts) == 3:
+            try:
+                a, b, c = [int(p.strip()) for p in parts]
+            except ValueError:
+                continue
+
+            # YYYY-MM-DD (ISO: first part is 4 digits)
+            if a > 1900:
+                try:
+                    return date_type(a, b, c)
+                except ValueError:
+                    continue
+
+            # DD/MM/YYYY or DD-MM-YYYY (European: last part is 4 digits)
+            if c > 1900:
+                # Try DD/MM/YYYY first
+                try:
+                    return date_type(c, b, a)
+                except ValueError:
+                    pass
+                # Fallback MM/DD/YYYY (US)
+                try:
+                    return date_type(c, a, b)
+                except ValueError:
+                    continue
+
+    # --- Textual formats: "15 de marzo de 2026", "15 marzo 2026", "March 15, 2026" ---
+    s_lower = s.lower()
+    # Remove common filler words
+    s_clean = s_lower.replace(" de ", " ").replace(" del ", " ").replace(",", " ")
+    # Collapse multiple spaces
+    s_clean = re.sub(r"\s+", " ", s_clean).strip()
+    tokens = s_clean.split()
+
+    if len(tokens) >= 3:
+        # Try: D MONTH YYYY
+        month_num = _MONTH_NAMES.get(tokens[1])
+        if month_num:
+            try:
+                day = int(tokens[0])
+                year = int(tokens[2])
+                if year < 100:
+                    year += 2000
+                return date_type(year, month_num, day)
+            except (ValueError, IndexError):
+                pass
+
+        # Try: MONTH D YYYY (English: "March 15 2026")
+        month_num = _MONTH_NAMES.get(tokens[0])
+        if month_num:
+            try:
+                day = int(tokens[1])
+                year = int(tokens[2])
+                if year < 100:
+                    year += 2000
+                return date_type(year, month_num, day)
+            except (ValueError, IndexError):
+                pass
+
+    return None
+
+
+def format_date_for_response(d) -> str:
+    """Format a date (Date object or legacy string) as DD/MM/YYYY for API responses."""
+    if d is None:
+        return ""
+    if isinstance(d, date_type):
+        return d.strftime("%d/%m/%Y")
+    # Legacy string — return as-is
+    return str(d)

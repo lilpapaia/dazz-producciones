@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Boolean,
+    Column, Integer, String, Float, DateTime, Boolean, Date,
     ForeignKey, Text, Enum, LargeBinary, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
@@ -117,6 +117,7 @@ class SupplierInvoice(Base):
     supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="CASCADE"), nullable=False, index=True)
     invoice_number = Column(String, nullable=False)
     date = Column(String, nullable=False)
+    date_parsed = Column(Date, nullable=True)  # Migración H-3: Date object (nullable during transition)
     provider_name = Column(String, nullable=False)
     nif_cif = Column(String, nullable=True)
     iban = Column(String, nullable=True)

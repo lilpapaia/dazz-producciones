@@ -36,6 +36,7 @@ from app.services.supplier_ai import (
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url
 from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.validators import validate_pdf_bytes, sanitize_filename
+from app.services.supplier_ai import format_date_for_response
 from app.services.supplier_email import (
     send_supplier_welcome,
     send_supplier_invoice_received,
@@ -385,6 +386,7 @@ async def upload_invoice(
             supplier_id=supplier.id,
             invoice_number=extracted.get("invoice_number", ""),
             date=extracted.get("date", ""),
+            date_parsed=validation.get("date_parsed"),
             provider_name=extracted.get("provider", supplier.name),
             nif_cif=extracted.get("nif_cif"),
             iban=extracted.get("iban"),
@@ -460,7 +462,8 @@ async def list_my_invoices(
     invoices = query.order_by(desc(SupplierInvoice.created_at)).offset(offset).limit(limit).all()
 
     return [PortalInvoiceResponse(
-        id=inv.id, invoice_number=inv.invoice_number, date=inv.date,
+        id=inv.id, invoice_number=inv.invoice_number,
+        date=format_date_for_response(inv.date_parsed or inv.date),
         provider_name=inv.provider_name, oc_number=inv.oc_number,
         base_amount=inv.base_amount, iva_amount=inv.iva_amount,
         final_total=inv.final_total, currency=inv.currency or "EUR",
