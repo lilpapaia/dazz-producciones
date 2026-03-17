@@ -31,6 +31,7 @@ class InviteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     email: EmailStr
     message: Optional[str] = Field(default=None, max_length=500)
+    supplier_type: Optional[str] = Field(default=None, max_length=20)
 
 
 class InviteResponse(BaseModel):
@@ -154,6 +155,7 @@ class ValidateTokenResponse(BaseModel):
     valid: bool
     name: Optional[str] = None
     email: Optional[str] = None
+    supplier_type: Optional[str] = None
 
 
 class RegisterRequest(BaseModel):

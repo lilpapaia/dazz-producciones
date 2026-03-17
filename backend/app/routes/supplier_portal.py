@@ -89,7 +89,17 @@ async def validate_invitation_token(
     if not invitation:
         return ValidateTokenResponse(valid=False)
 
-    return ValidateTokenResponse(valid=True, name=invitation.name, email=invitation.email)
+    # Read supplier_type via raw SQL (column not in ORM)
+    from sqlalchemy import text as sa_text
+    invited_type = None
+    try:
+        row = db.execute(sa_text("SELECT supplier_type FROM supplier_invitations WHERE id = :id"), {"id": invitation.id}).first()
+        if row:
+            invited_type = row[0]
+    except Exception:
+        pass
+
+    return ValidateTokenResponse(valid=True, name=invitation.name, email=invitation.email, supplier_type=invited_type)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
@@ -120,19 +130,36 @@ async def register_supplier(
     # Mark token as used (one-time)
     invitation.used_at = datetime.now(timezone.utc)
 
-    # NIF/CIF matching for influencer OC
+    # Read invited supplier_type from invitation (raw SQL — column not in ORM)
+    from sqlalchemy import text as sa_text
+    invited_type = None
+    try:
+        row = db.execute(sa_text("SELECT supplier_type FROM supplier_invitations WHERE id = :id"), {"id": invitation.id}).first()
+        if row:
+            invited_type = row[0]
+    except Exception:
+        pass
+
+    # NIF/CIF matching for OC assignment
     oc_id = None
-    supplier_type = SupplierType.GENERAL
     if body.nif_cif:
         normalized = body.nif_cif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
-        oc_match = db.query(SupplierOC).all()
-        for oc in oc_match:
-            if oc.nif_cif:
-                oc_nif = oc.nif_cif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
-                if normalized == oc_nif:
-                    oc_id = oc.id
-                    supplier_type = SupplierType.INFLUENCER
-                    break
+        ocs_with_nif = db.query(SupplierOC).filter(SupplierOC.nif_cif != None).all()
+        for oc in ocs_with_nif:
+            oc_nif = oc.nif_cif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
+            if normalized == oc_nif:
+                oc_id = oc.id
+                break
+
+    # Determine supplier_type based on invitation type + NIF match
+    if invited_type == 'talent' and oc_id:
+        supplier_type = SupplierType.INFLUENCER
+    elif invited_type == 'mixed':
+        supplier_type = SupplierType.MIXED
+    elif invited_type == 'general' or not invited_type:
+        supplier_type = SupplierType.INFLUENCER if oc_id else SupplierType.GENERAL
+    else:
+        supplier_type = SupplierType.GENERAL
 
     # Create supplier
     email_hash = hashlib.sha256(invitation.email.lower().encode()).hexdigest()

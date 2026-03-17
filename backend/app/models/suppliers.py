@@ -182,6 +182,7 @@ class SupplierInvitation(Base):
     expires_at = Column(DateTime, nullable=False)
     used_at = Column(DateTime, nullable=True)
     invited_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # supplier_type — added via ALTER TABLE (not in ORM to avoid startup crash)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 

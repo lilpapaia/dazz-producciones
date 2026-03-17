@@ -60,7 +60,7 @@ const SupplierInvite = () => {
     setError('');
     setSending(true);
     try {
-      await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
+      await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined, supplier_type: type });
       setSent(true);
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al enviar invitación');

@@ -135,6 +135,14 @@ async def invite_supplier(
     token = _generate_token()
     expires_at = datetime.now(timezone.utc) + timedelta(hours=72)
 
+    # Ensure supplier_type column exists in invitations
+    from sqlalchemy import text as sa_text
+    try:
+        db.execute(sa_text("ALTER TABLE supplier_invitations ADD COLUMN IF NOT EXISTS supplier_type VARCHAR(20)"))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     invitation = SupplierInvitation(
         email=body.email,
         name=body.name,
@@ -145,6 +153,15 @@ async def invite_supplier(
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
+
+    # Save supplier_type via raw SQL (column not in ORM)
+    if body.supplier_type:
+        try:
+            db.execute(sa_text("UPDATE supplier_invitations SET supplier_type = :st WHERE id = :id"),
+                {"st": body.supplier_type, "id": invitation.id})
+            db.commit()
+        except Exception:
+            pass
 
     # Send email (non-blocking — don't fail if email fails)
     try:
