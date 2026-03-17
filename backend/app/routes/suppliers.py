@@ -25,7 +25,8 @@ from app.models.supplier_schemas import (
     NotificationResponse, DashboardResponse, CreateOCRequest, CreateOCResponse,
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
-from app.services.supplier_storage import get_invoice_pdf_url, get_bank_cert_url
+from app.services.supplier_storage import get_invoice_pdf_url, get_bank_cert_url, delete_invoice_pdf
+from app.services.cloudinary_service import extract_public_id_from_url
 from app.services.encryption import decrypt_iban, encrypt_iban, is_encryption_available
 from app.services.supplier_ai import format_date_for_response, parse_invoice_date
 from app.services.supplier_email import (
@@ -691,6 +692,30 @@ async def confirm_invoice_deletion(
         else:
             db.delete(linked_ticket)
             print(f"Ticket {linked_ticket.id} deleted (cascade from supplier invoice)")
+
+    # Delete Cloudinary files before removing DB record
+    if invoice.file_url:
+        try:
+            delete_invoice_pdf(invoice.file_url)
+        except Exception:
+            pass
+
+    # Delete page images if they exist (file_pages not in ORM)
+    from sqlalchemy import text as sa_text
+    try:
+        row = db.execute(sa_text("SELECT file_pages FROM supplier_invoices WHERE id = :id"), {"id": invoice.id}).first()
+        if row and row[0]:
+            import json
+            for page_url in json.loads(row[0]):
+                try:
+                    pid = extract_public_id_from_url(page_url)
+                    if pid:
+                        import cloudinary.uploader
+                        cloudinary.uploader.destroy(pid, resource_type="image")
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     db.delete(invoice)
     db.commit()
