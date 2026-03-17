@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.models.database import Company, Project
 from app.models.suppliers import Supplier, SupplierOC, SupplierInvoice
+from app.services.encryption import decrypt_iban
 
 load_dotenv()
 
@@ -278,14 +279,9 @@ def validate_supplier_invoice(
 
     # --- 3. IBAN coincide ---
     extracted_iban = _normalize_iban(extracted_data.get("iban"))
-    # TODO: Fase 3 — descifrar iban_encrypted con pgcrypto
-    # Por ahora comparamos texto plano (iban_encrypted almacena bytes en prod)
     supplier_iban = None
     if supplier.iban_encrypted:
-        try:
-            supplier_iban = _normalize_iban(supplier.iban_encrypted.decode("utf-8"))
-        except (UnicodeDecodeError, AttributeError):
-            supplier_iban = None
+        supplier_iban = _normalize_iban(decrypt_iban(supplier.iban_encrypted))
 
     if extracted_iban and supplier_iban:
         if extracted_iban != supplier_iban:

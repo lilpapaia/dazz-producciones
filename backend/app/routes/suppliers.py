@@ -26,6 +26,7 @@ from app.models.supplier_schemas import (
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
 from app.services.supplier_storage import get_invoice_pdf_url
+from app.services.encryption import decrypt_iban, encrypt_iban, is_encryption_available
 from app.services.supplier_email import (
     send_supplier_invitation,
     send_supplier_invoice_approved,
@@ -40,13 +41,10 @@ router = APIRouter(prefix="/suppliers", tags=["Suppliers (Admin)"])
 
 
 def _decode_iban(supplier) -> str | None:
-    """Decode IBAN for admin view (full, unmasked). TODO: decrypt with pgcrypto."""
+    """Decrypt IBAN for admin view (full, unmasked)."""
     if not supplier.iban_encrypted:
         return None
-    try:
-        return supplier.iban_encrypted.decode("utf-8")
-    except (UnicodeDecodeError, AttributeError):
-        return None
+    return decrypt_iban(supplier.iban_encrypted)
 
 
 def _generate_token(length: int = 64) -> str:
@@ -616,3 +614,53 @@ async def dashboard_stats(
         total_paid_this_month=float(paid_month),
         unread_notifications=unread,
     )
+
+
+# ============================================
+# IBAN MIGRATION (one-shot)
+# ============================================
+
+@router.post("/admin/migrate-ibans")
+async def migrate_ibans_to_encrypted(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """
+    One-shot migration: re-encrypt existing plaintext IBANs with Fernet.
+
+    Safe to run multiple times — skips already-encrypted IBANs.
+    Requires ENCRYPTION_KEY env var to be set.
+    """
+    if not is_encryption_available():
+        raise HTTPException(400, "ENCRYPTION_KEY not configured — cannot migrate")
+
+    suppliers = db.query(Supplier).filter(Supplier.iban_encrypted != None).all()
+    migrated = 0
+    skipped = 0
+
+    for s in suppliers:
+        # Try to decode as UTF-8 — if it works, it's plaintext and needs encryption
+        plaintext = decrypt_iban(s.iban_encrypted)
+        if not plaintext:
+            skipped += 1
+            continue
+
+        # Check if already Fernet-encrypted (starts with 'gAAAAA' when base64-decoded)
+        try:
+            raw = s.iban_encrypted
+            if raw[:6] == b"gAAAAA" or raw[:5] == b"gAAAA":
+                skipped += 1
+                continue
+        except (IndexError, TypeError):
+            pass
+
+        # Re-encrypt with Fernet
+        s.iban_encrypted = encrypt_iban(plaintext)
+        migrated += 1
+
+    db.commit()
+    return {
+        "message": f"Migration complete: {migrated} IBANs encrypted, {skipped} skipped",
+        "migrated": migrated,
+        "skipped": skipped,
+    }

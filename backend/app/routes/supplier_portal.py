@@ -34,6 +34,7 @@ from app.services.supplier_ai import (
     extract_supplier_invoice, validate_supplier_invoice, resolve_company_from_oc,
 )
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url
+from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.supplier_email import (
     send_supplier_welcome,
     send_supplier_invoice_received,
@@ -70,7 +71,9 @@ def _notify(db: Session, recipient_type, recipient_id: int, event_type,
 # ============================================
 
 @router.get("/register/validate/{token}", response_model=ValidateTokenResponse)
+@limiter.limit("10/minute")
 async def validate_invitation_token(
+    request: Request,
     token: str,
     db: Session = Depends(get_db),
 ):
@@ -88,7 +91,9 @@ async def validate_invitation_token(
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
+@limiter.limit("5/hour")
 async def register_supplier(
+    request: Request,
     body: RegisterRequest,
     db: Session = Depends(get_db),
 ):
@@ -129,7 +134,7 @@ async def register_supplier(
 
     # Create supplier
     email_hash = hashlib.sha256(invitation.email.lower().encode()).hexdigest()
-    iban_bytes = body.iban.encode("utf-8") if body.iban else None
+    iban_bytes = encrypt_iban(body.iban) if body.iban else None
 
     supplier = Supplier(
         name=body.name,
@@ -139,7 +144,7 @@ async def register_supplier(
         nif_cif=body.nif_cif,
         phone=body.phone,
         address=body.address,
-        iban_encrypted=iban_bytes,  # TODO: Fase 3+ — cifrar con pgcrypto
+        iban_encrypted=iban_bytes,
         supplier_type=supplier_type,
         status=SupplierStatus.ACTIVE,
         oc_id=oc_id,
@@ -258,15 +263,16 @@ async def get_profile(
     # Mask IBAN for supplier view: show country code + last 4 digits
     iban_masked = None
     if supplier.iban_encrypted:
-        try:
-            raw = supplier.iban_encrypted.decode("utf-8").replace(" ", "")
+        raw = decrypt_iban(supplier.iban_encrypted)
+        if raw:
+            raw = raw.replace(" ", "")
             if len(raw) >= 6:
                 iban_masked = raw[:2] + "** **** **** **** **" + raw[-4:]
             elif len(raw) >= 4:
                 iban_masked = "****" + raw[-4:]
             else:
                 iban_masked = "****"
-        except (UnicodeDecodeError, AttributeError):
+        else:
             iban_masked = "****"
 
     return ProfileResponse(
@@ -296,9 +302,8 @@ async def upload_bank_cert(
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(400, "File too large (max 10MB)")
-    await file.seek(0)
 
-    cert_key = save_bank_cert(file, supplier.id)
+    cert_key = save_bank_cert(file, supplier.id, contents=contents)
     supplier.bank_cert_url = cert_key
     db.commit()
 
@@ -328,7 +333,6 @@ async def upload_invoice(
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:  # 10MB max
         raise HTTPException(400, "File too large (max 10MB)")
-    await file.seek(0)
 
     # Save to temp file for AI extraction (Cloudinary upload happens AFTER validation)
     import uuid as _uuid
@@ -336,7 +340,7 @@ async def upload_invoice(
     temp_path = os.path.join("uploads", "suppliers", f"tmp_ai_{temp_id}.pdf")
     os.makedirs(os.path.dirname(temp_path), exist_ok=True)
     with open(temp_path, "wb") as out:
-        shutil.copyfileobj(file.file, out)
+        out.write(contents)
 
     try:
         # AI extraction on local temp file
@@ -377,8 +381,7 @@ async def upload_invoice(
             )
 
         # Validation passed → upload to Cloudinary (authenticated, no public URL)
-        await file.seek(0)
-        file_public_id = save_invoice_pdf(file, supplier.id)
+        file_public_id = save_invoice_pdf(file, supplier.id, contents=contents)
 
         # All validated invoices start as PENDING (OC must exist)
         invoice_status = InvoiceStatus.PENDING

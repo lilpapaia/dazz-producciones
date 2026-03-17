@@ -38,7 +38,7 @@ CLOUDINARY_FOLDER = "dazz-suppliers/invoices"
 INVOICE_SIGNED_URL_EXPIRY = 900  # 15 minutes — same as bank certs
 
 
-def save_invoice_pdf(file: UploadFile, supplier_id: int) -> str:
+def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None) -> str:
     """
     Upload supplier invoice PDF to Cloudinary with authenticated access.
 
@@ -49,6 +49,7 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int) -> str:
     Args:
         file: FastAPI UploadFile (PDF)
         supplier_id: Supplier ID for folder organization
+        contents: Pre-read bytes (avoids consuming file stream twice)
 
     Returns:
         Cloudinary public_id (NOT a URL — use get_invoice_pdf_url() for signed access)
@@ -62,7 +63,10 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int) -> str:
     temp_path = os.path.join(UPLOAD_DIR, f"tmp_{short_id}.pdf")
     try:
         with open(temp_path, "wb") as out:
-            shutil.copyfileobj(file.file, out)
+            if contents:
+                out.write(contents)
+            else:
+                shutil.copyfileobj(file.file, out)
 
         result = cloudinary.uploader.upload(
             temp_path,
@@ -174,7 +178,7 @@ def _get_r2_client():
     )
 
 
-def save_bank_cert(file: UploadFile, supplier_id: int) -> str:
+def save_bank_cert(file: UploadFile, supplier_id: int, contents: bytes = None) -> str:
     """
     Upload bank certificate PDF to Cloudflare R2.
 
@@ -184,6 +188,7 @@ def save_bank_cert(file: UploadFile, supplier_id: int) -> str:
     Args:
         file: FastAPI UploadFile (PDF)
         supplier_id: Supplier ID
+        contents: Pre-read bytes (avoids consuming file stream twice)
 
     Returns:
         R2 object key (NOT a public URL — use get_bank_cert_url to get signed URL)
@@ -194,7 +199,10 @@ def save_bank_cert(file: UploadFile, supplier_id: int) -> str:
     temp_path = os.path.join(UPLOAD_DIR, f"tmp_bank_{short_id}.pdf")
     try:
         with open(temp_path, "wb") as out:
-            shutil.copyfileobj(file.file, out)
+            if contents:
+                out.write(contents)
+            else:
+                shutil.copyfileobj(file.file, out)
 
         client = _get_r2_client()
         client.upload_file(
