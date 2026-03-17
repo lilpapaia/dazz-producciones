@@ -51,6 +51,9 @@ const SupplierDetail = () => {
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleteReason, setDeleteReason] = useState('');
 
+  // PDF lightbox
+  const [pdfModal, setPdfModal] = useState(null);
+
   // Voice search
   const { isListening, startVoiceSearch } = useVoiceSearch({
     lang: 'es-ES',
@@ -232,7 +235,6 @@ const SupplierDetail = () => {
           <div className="w-11 h-11 bg-amber-500 rounded-md flex items-center justify-center font-['Bebas_Neue'] text-lg text-zinc-950 mb-3">{initials}</div>
           <div className="font-['Bebas_Neue'] text-base tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
           <div className="text-[11px] text-zinc-500 mb-2.5 flex gap-1.5 flex-wrap items-center">
-            {supplier.nif_cif && <span className="font-mono text-zinc-400">{supplier.nif_cif}</span>}
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${supplier.is_active ? 'bg-green-400/10 text-green-400 border border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border border-zinc-700'}`}>
               {STATUS_LABEL[supplier.status] || supplier.status}
             </span>
@@ -313,7 +315,7 @@ const SupplierDetail = () => {
               <Save size={11} /> Añadir nota
             </button>
             {supplier.email && (
-              <button onClick={() => window.open(`mailto:${supplier.email}`)} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1">
+              <button onClick={() => { window.location.href = 'mailto:' + supplier.email; }} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1">
                 <Mail size={11} /> Email
               </button>
             )}
@@ -331,26 +333,26 @@ const SupplierDetail = () => {
           <div className="flex items-center gap-2.5 mb-3 flex-wrap">
             <div className="relative flex-1 max-w-[220px]" ref={searchRef}>
               <div className="relative">
-                <Search className="absolute left-2.5 top-2 text-zinc-500 pointer-events-none" size={14} />
+                <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
                 <input
-                  type="search"
+                  type="text"
                   placeholder="Buscar factura, OC, proveedor..."
                   value={invoiceSearch}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => (invoiceSearch || recentSearches.length > 0) && setShowSuggestions(true)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && invoiceSearch.trim()) { saveRecentSearch(invoiceSearch); setShowSuggestions(false); } }}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-16 py-2 rounded focus:border-amber-500 outline-none"
+                  className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
                 />
-                <div className="absolute right-1 top-1 flex items-center gap-0.5">
+                <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
                   {invoiceSearch && (
-                    <button onClick={clearSearch} className="p-0.5 hover:bg-zinc-800 rounded transition-colors" title="Limpiar">
-                      <X size={12} className="text-zinc-500" />
+                    <button onClick={clearSearch} className="p-1 hover:bg-zinc-800 rounded-sm transition-colors" title="Limpiar búsqueda">
+                      <X size={14} className="text-zinc-500" />
                     </button>
                   )}
                   <button onClick={startVoiceSearch} disabled={isListening}
-                    className={`p-0.5 rounded transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
+                    className={`p-1 rounded-sm transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
                     title="Búsqueda por voz">
-                    <Mic size={12} />
+                    <Mic size={14} />
                   </button>
                 </div>
               </div>
@@ -392,24 +394,19 @@ const SupplierDetail = () => {
                 { key: 'PENDING', label: 'Pendientes' },
                 { key: 'APPROVED', label: 'Aprobadas' },
                 { key: 'PAID', label: 'Pagadas' },
-              ].map(f => {
-                const count = f.key ? invoices.filter(i => i.status === f.key).length : invoices.length;
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => setInvoiceFilter(f.key)}
-                    className={`text-[11px] px-3 py-1 rounded-full border transition-all ${
-                      invoiceFilter === f.key
-                        ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
-                        : f.key === 'PENDING' && count > 0
-                          ? 'border-amber-500/50 text-amber-400 hover:border-amber-500'
-                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
-                    }`}
-                  >
-                    {f.label}{count > 0 ? ` (${count})` : ''}
-                  </button>
-                );
-              })}
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setInvoiceFilter(f.key)}
+                  className={`text-[11px] px-3 py-1 rounded-full border transition-all ${
+                    invoiceFilter === f.key
+                      ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
+                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -421,9 +418,10 @@ const SupplierDetail = () => {
               <div className="space-y-1">
                 {filtered.map(inv => (
                   <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors">
-                    <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
+                    <button onClick={() => inv.file_url && setPdfModal({ url: inv.file_url, name: inv.invoice_number })}
+                      className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0 hover:bg-red-400/[.15] transition-colors cursor-pointer">
                       <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </div>
+                    </button>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
                         {inv.invoice_number}
@@ -509,6 +507,35 @@ const SupplierDetail = () => {
                 className="text-xs px-4 py-2 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold transition-colors disabled:opacity-40">
                 {editSaving ? 'Guardando...' : 'Guardar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ LIGHTBOX: Ver PDF factura ═══ */}
+      {pdfModal && (
+        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center" onClick={() => setPdfModal(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[500px] max-w-[95vw] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <span className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-100">{pdfModal.name}</span>
+              <button onClick={() => setPdfModal(null)} className="w-7 h-7 flex items-center justify-center rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="bg-zinc-800 flex flex-col items-center justify-center gap-4 py-16">
+              <svg className="w-16 h-16 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <div className="text-sm text-zinc-300 font-mono">{pdfModal.name}.pdf</div>
+              <div className="flex gap-3 mt-2">
+                <button onClick={() => { window.open(pdfModal.url, '_blank'); setPdfModal(null); }}
+                  className="text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-5 py-2.5 rounded transition-colors flex items-center gap-2">
+                  <ExternalLink size={13} /> Abrir PDF
+                </button>
+                <a href={pdfModal.url} download className="text-xs border border-zinc-700 text-zinc-300 hover:bg-zinc-700 px-5 py-2.5 rounded transition-colors flex items-center gap-2">
+                  <Download size={13} /> Descargar
+                </a>
+              </div>
             </div>
           </div>
         </div>
