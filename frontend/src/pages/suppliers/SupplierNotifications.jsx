@@ -131,7 +131,7 @@ const SupplierNotifications = () => {
                 {/* View button (N3) */}
                 {hasSupplier && (
                   <button
-                    onClick={() => navigate(`/suppliers/${n.related_supplier_id}`)}
+                    onClick={() => { if (!n.is_read) handleMarkRead(n.id); navigate(`/suppliers/${n.related_supplier_id}`); }}
                     className="text-[10px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 px-2 py-1 rounded flex items-center gap-0.5 flex-shrink-0 transition-colors"
                   >
                     Ver <ChevronRight size={10} />
