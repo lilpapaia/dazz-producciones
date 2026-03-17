@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
 from app.services.validators import sanitize_filename
-from app.services.cloudinary_service import upload_image, compress_if_needed
+from app.services.cloudinary_service import compress_if_needed
 
 import cloudinary
 import cloudinary.uploader
@@ -108,9 +108,19 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
                 if final_path != temp_page_path:
                     temp_files.append(final_path)
 
-                page_public_id = f"{pages_folder}/{file_name}_page_{i + 1}"
-                img_result = upload_image(final_path, page_public_id)
-                page_urls.append(img_result["url"])
+                raw_result = cloudinary.uploader.upload(
+                    final_path,
+                    public_id=f"{file_name}_page_{i + 1}",
+                    folder=pages_folder,
+                    resource_type="image",
+                    format="webp",
+                    transformation=[
+                        {"width": 2048, "height": 2048, "crop": "limit"},
+                        {"quality": "auto:best"},
+                    ],
+                    overwrite=True,
+                )
+                page_urls.append(raw_result["secure_url"])
                 print(f"  Page {i + 1}/{len(pages)} uploaded")
 
         except Exception as e:
