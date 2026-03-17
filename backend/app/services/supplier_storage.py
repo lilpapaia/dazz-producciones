@@ -179,6 +179,10 @@ def delete_invoice_pdf(file_url: str) -> bool:
         if not pid:
             return False
 
+        # Raw resources include extension in public_id
+        if not pid.endswith(".pdf"):
+            pid = f"{pid}.pdf"
+
         cloudinary.uploader.destroy(pid, resource_type="raw", type="upload")
         print(f"Cloudinary delete OK: {pid}")
         return True
