@@ -77,6 +77,8 @@ export const uploadBankCert = (file) => {
   return api.post('/portal/bank-cert', form, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 
+export const getBankCertUrl = () => api.get('/portal/bank-cert-url');
+
 // Invoices
 export const uploadInvoice = (file) => {
   const form = new FormData();

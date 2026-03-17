@@ -33,7 +33,7 @@ from app.services.supplier_auth import (
 from app.services.supplier_ai import (
     extract_supplier_invoice, validate_supplier_invoice, resolve_company_from_oc,
 )
-from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url
+from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url
 from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.validators import validate_pdf_bytes, sanitize_filename
 from app.services.supplier_ai import format_date_for_response
@@ -307,6 +307,16 @@ async def upload_bank_cert(
     db.commit()
 
     return {"message": "Bank certificate uploaded", "key": cert_key}
+
+
+@router.get("/bank-cert-url")
+async def get_my_bank_cert_url(
+    supplier: Supplier = Depends(get_current_active_supplier),
+):
+    """Generate a signed URL (15min) for the authenticated supplier's bank certificate."""
+    if not supplier.bank_cert_url:
+        raise HTTPException(404, "No bank certificate uploaded")
+    return {"url": get_bank_cert_url(supplier.bank_cert_url)}
 
 
 # ============================================

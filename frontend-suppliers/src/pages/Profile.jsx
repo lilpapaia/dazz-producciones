@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getProfile } from '../services/api';
+import { getProfile, getBankCertUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Shield, ExternalLink } from 'lucide-react';
 
@@ -17,6 +17,13 @@ const Profile = () => {
       <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
+
+  const handleViewCert = async () => {
+    try {
+      const { data } = await getBankCertUrl();
+      window.open(data.url, '_blank');
+    } catch { alert('Could not load bank certificate'); }
+  };
 
   if (!profile) return null;
 
@@ -85,9 +92,9 @@ const Profile = () => {
           <div key={label} className="flex justify-between items-center py-2 border-b border-white/[.04] last:border-0 text-[13px]">
             <span className="text-zinc-500">{label}</span>
             {isPdf ? (
-              <span className="text-red-400 text-xs cursor-pointer flex items-center gap-1">
+              <button onClick={handleViewCert} className="text-red-400 text-xs cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">
                 View PDF <ExternalLink size={10} />
-              </span>
+              </button>
             ) : (
               <span className={`text-right max-w-[200px] break-all ${
                 mono ? "font-['IBM_Plex_Mono'] text-xs" : 'text-sm'

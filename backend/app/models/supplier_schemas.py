@@ -30,6 +30,7 @@ class CreateOCResponse(BaseModel):
 class InviteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     email: EmailStr
+    message: Optional[str] = Field(default=None, max_length=500)
 
 
 class InviteResponse(BaseModel):

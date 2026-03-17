@@ -25,7 +25,7 @@ from app.models.supplier_schemas import (
     NotificationResponse, DashboardResponse, CreateOCRequest, CreateOCResponse,
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
-from app.services.supplier_storage import get_invoice_pdf_url
+from app.services.supplier_storage import get_invoice_pdf_url, get_bank_cert_url
 from app.services.encryption import decrypt_iban, encrypt_iban, is_encryption_available
 from app.services.supplier_ai import format_date_for_response, parse_invoice_date
 from app.services.supplier_email import (
@@ -148,7 +148,7 @@ async def invite_supplier(
 
     # Send email (non-blocking — don't fail if email fails)
     try:
-        send_supplier_invitation(body.name, body.email, token)
+        send_supplier_invitation(body.name, body.email, token, body.message)
     except Exception as e:
         print(f"Warning: invitation email failed: {e}")
 
@@ -294,6 +294,21 @@ async def get_supplier(
         raise HTTPException(404, "Supplier not found")
 
     return _build_supplier_response(supplier, db)
+
+
+@router.get("/{supplier_id}/bank-cert-url")
+async def get_supplier_bank_cert(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Generate a signed URL (15min) for the supplier's bank certificate PDF."""
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+    if not supplier.bank_cert_url:
+        raise HTTPException(404, "No bank certificate uploaded")
+    return {"url": get_bank_cert_url(supplier.bank_cert_url)}
 
 
 @router.put("/{supplier_id}")

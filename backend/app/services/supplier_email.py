@@ -59,13 +59,14 @@ def _warning(content: str) -> str:
 # SUPPLIER-FACING EMAILS
 # ============================================
 
-def send_supplier_invitation(name: str, email: str, token: str):
+def send_supplier_invitation(name: str, email: str, token: str, custom_message: str = None):
     """Invitation email with registration link (72h expiry)."""
     url = f"{SUPPLIER_PORTAL_URL}/register?token={token}"
     body = (
         _text(f"Hello <strong>{name}</strong>,")
         + _text("You have been invited to join the <strong>DAZZ Group</strong> supplier portal. "
                 "Through this portal you can submit invoices and track their payment status.")
+        + (_text(f"<em>\"{html_mod.escape(custom_message)}\"</em>") if custom_message else "")
         + _button(url, "CREATE YOUR ACCOUNT")
         + _text(f'Or copy this link: <a href="{url}" style="color:#f59e0b;font-size:13px;word-break:break-all;">{url}</a>')
         + _warning("<strong>Important:</strong> This link will expire in <strong>72 hours</strong> "

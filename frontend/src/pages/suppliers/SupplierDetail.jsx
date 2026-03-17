@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Save, UserX, Link2, Mail, ExternalLink, Check, Download } from 'lucide-react';
-import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications } from '../../services/suppliersApi';
+import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl } from '../../services/suppliersApi';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -48,6 +48,13 @@ const SupplierDetail = () => {
     if (!confirm('Deactivate this supplier? All their tokens will be invalidated.')) return;
     await deactivateSupplier(id);
     load();
+  };
+
+  const handleViewCert = async () => {
+    try {
+      const { data } = await getBankCertUrl(id);
+      window.open(data.url, '_blank');
+    } catch { alert('Could not load bank certificate'); }
   };
 
   const handleAddNote = async () => {
@@ -120,7 +127,7 @@ const SupplierDetail = () => {
             <div key={label} className="flex justify-between py-1.5 border-b border-white/[.04] last:border-0 text-xs">
               <span className="text-zinc-500">{label}</span>
               {val === 'pdf' ? (
-                <span className="text-red-400 cursor-pointer flex items-center gap-1">View PDF <ExternalLink size={9} /></span>
+                <button onClick={handleViewCert} className="text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">View PDF <ExternalLink size={9} /></button>
               ) : (
                 <span className={`text-right max-w-[155px] break-all ${mono ? 'font-mono text-[11px]' : ''} ${amber ? 'text-amber-400' : 'text-zinc-300'}`}>
                   {val || '—'}

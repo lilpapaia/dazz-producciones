@@ -17,6 +17,8 @@ const Register = () => {
   const [bankCertFile, setBankCertFile] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [certFailed, setCertFailed] = useState(false);
+  const [certRetrying, setCertRetrying] = useState(false);
 
   useEffect(() => {
     if (!token) { setTokenValid(false); return; }
@@ -48,9 +50,15 @@ const Register = () => {
       });
       login({ access_token: data.access_token, refresh_token: data.refresh_token, supplier: { id: data.supplier_id, name: form.name, email: invitation.email } });
 
-      // Upload bank cert if provided (non-blocking — already registered)
+      // Upload bank cert if provided
       if (bankCertFile) {
-        try { await uploadBankCert(bankCertFile); } catch { /* cert upload failure is not critical */ }
+        try {
+          await uploadBankCert(bankCertFile);
+        } catch {
+          setCertFailed(true);
+          setLoading(false);
+          return; // Don't navigate — show retry banner
+        }
       }
 
       navigate('/');
@@ -73,6 +81,41 @@ const Register = () => {
         <AlertCircle size={40} className="text-red-400 mx-auto mb-3" />
         <h2 className="font-['Bebas_Neue'] text-xl text-zinc-100 mb-2">Invalid or expired link</h2>
         <p className="text-xs text-zinc-500">This registration link is invalid, expired, or has already been used. Please contact the DAZZ admin team.</p>
+      </div>
+    </div>
+  );
+
+  const handleRetryCert = async () => {
+    setCertRetrying(true);
+    try {
+      await uploadBankCert(bankCertFile);
+      setCertFailed(false);
+      navigate('/');
+    } catch {
+      setCertRetrying(false);
+    }
+  };
+
+  if (certFailed) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
+          <CheckCircle size={40} className="text-green-400 mx-auto mb-3" />
+          <h2 className="font-['Bebas_Neue'] text-lg tracking-wider text-zinc-100 mb-2">Account created</h2>
+          <div className="bg-amber-500/[.08] text-amber-400 border border-amber-500/[.15] rounded-md p-3 text-xs mb-4 text-left leading-relaxed">
+            <strong>Bank certificate upload failed.</strong> Your account is active but the certificate was not uploaded. You can retry now or upload it later from your profile.
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleRetryCert} disabled={certRetrying}
+              className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
+              {certRetrying ? 'Uploading...' : 'Retry upload'}
+            </button>
+            <button onClick={() => navigate('/')}
+              className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">
+              Continue anyway
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

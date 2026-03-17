@@ -19,6 +19,7 @@ const SupplierInvite = () => {
   // Shared fields (step 2 talent / step 1 general)
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
 
   const [sending, setSending] = useState(false);
   const [creatingOC, setCreatingOC] = useState(false);
@@ -59,7 +60,7 @@ const SupplierInvite = () => {
     setError('');
     setSending(true);
     try {
-      await inviteSupplier({ name: name.trim(), email: email.trim() });
+      await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
       setSent(true);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to send invitation');
@@ -72,7 +73,7 @@ const SupplierInvite = () => {
     setType('talent');
     setTalentName(''); setTalentNif(''); setTalentOC('');
     setOcCreated(false);
-    setName(''); setEmail('');
+    setName(''); setEmail(''); setMessage('');
     setSent(false); setError('');
   };
 
@@ -222,7 +223,7 @@ const SupplierInvite = () => {
 
               <div className="mb-3">
                 <label className={labelCls}>Custom message</label>
-                <input placeholder="Hello, here's your access to the supplier portal..." className={inputCls} />
+                <input value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello, here's your access to the supplier portal..." className={inputCls} />
               </div>
 
               <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">
@@ -270,7 +271,7 @@ const SupplierInvite = () => {
 
             <div className="mb-3">
               <label className={labelCls}>Custom message</label>
-              <textarea placeholder="Hello, we invite you to register as a supplier for DAZZ Creative..." className={`${inputCls} resize-none`} rows={2} />
+              <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello, we invite you to register as a supplier for DAZZ Creative..." className={`${inputCls} resize-none`} rows={2} />
             </div>
 
             <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">
