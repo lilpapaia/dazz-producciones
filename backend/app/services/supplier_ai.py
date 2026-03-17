@@ -293,44 +293,50 @@ def validate_supplier_invoice(
 
     # --- 4. OC existe y empresa correcta ---
     oc_number = (extracted_data.get("oc_number") or "").strip()
+    supplier_type = supplier.supplier_type.value if supplier.supplier_type else "GENERAL"
+
     if oc_number:
-        expected_company_name = _get_company_name_from_oc(oc_number)
-
-        if expected_company_name is None:
-            errors.append(
-                f"El prefijo del OC '{oc_number}' no corresponde a ninguna empresa registrada"
-            )
-            oc_status = "INVALID_PREFIX"
-        else:
-            # Resolver company_id
-            company_id = resolve_company_from_oc(oc_number, db)
-
-            # Buscar proyecto por creative_code (case-insensitive)
-            project = db.query(Project).filter(
-                Project.creative_code.ilike(oc_number)
+        if supplier_type == "INFLUENCER":
+            # INFLUENCER: OC must exist in supplier_ocs and match their assigned OC
+            oc_match = db.query(SupplierOC).filter(
+                SupplierOC.oc_number.ilike(oc_number)
             ).first()
 
-            if project:
-                project_id = project.id
-                oc_status = "FOUND"
-            else:
+            if not oc_match:
                 oc_status = "NOT_FOUND"
                 errors.append(
-                    f"OC '{oc_number}' does not exist as a project in DAZZ Producciones. "
-                    f"The project must be created before submitting the invoice."
+                    f"OC '{oc_number}' no existe en el sistema de OCs de influencers"
+                )
+            elif not supplier.oc_id or supplier.oc_id != oc_match.id:
+                oc_status = "WRONG_SUPPLIER"
+                errors.append(
+                    f"OC '{oc_number}' no corresponde a este proveedor"
+                )
+            else:
+                oc_status = "FOUND"
+                company_id = oc_match.company_id
+
+        elif supplier_type == "MIXED":
+            # MIXED: try supplier_ocs first, then projects
+            oc_match = db.query(SupplierOC).filter(
+                SupplierOC.oc_number.ilike(oc_number)
+            ).first()
+
+            if oc_match and supplier.oc_id and supplier.oc_id == oc_match.id:
+                # Matched their assigned OC
+                oc_status = "FOUND"
+                company_id = oc_match.company_id
+            else:
+                # Try as project (general supplier flow)
+                oc_status, company_id, project_id = _resolve_oc_as_project(
+                    oc_number, db, errors
                 )
 
-            # Validar empresa para influencers
-            if supplier.supplier_type and supplier.supplier_type.value == "INFLUENCER":
-                if supplier.oc_id:
-                    supplier_oc = db.query(SupplierOC).filter(
-                        SupplierOC.id == supplier.oc_id
-                    ).first()
-                    if supplier_oc and supplier_oc.company_id and company_id:
-                        if supplier_oc.company_id != company_id:
-                            # OC de influencer va a empresa distinta a la asignada
-                            # Esto es válido si usa OC de proyecto (proveedor mixto)
-                            pass
+        else:
+            # GENERAL: OC must exist as a project in DAZZ
+            oc_status, company_id, project_id = _resolve_oc_as_project(
+                oc_number, db, errors
+            )
 
     # --- 5. Cálculos correctos ---
     base = extracted_data.get("base_amount", 0.0) or 0.0
@@ -372,6 +378,39 @@ def validate_supplier_invoice(
 # ============================================
 # UTILIDADES DE NORMALIZACIÓN
 # ============================================
+
+def _resolve_oc_as_project(
+    oc_number: str, db: Session, errors: List[str]
+) -> tuple:
+    """
+    Resolve OC as a DAZZ project (for GENERAL and MIXED suppliers).
+
+    Returns:
+        (oc_status, company_id, project_id)
+    """
+    expected_company_name = _get_company_name_from_oc(oc_number)
+
+    if expected_company_name is None:
+        errors.append(
+            f"El prefijo del OC '{oc_number}' no corresponde a ninguna empresa registrada"
+        )
+        return "INVALID_PREFIX", None, None
+
+    company_id = resolve_company_from_oc(oc_number, db)
+
+    project = db.query(Project).filter(
+        Project.creative_code.ilike(oc_number)
+    ).first()
+
+    if project:
+        return "FOUND", company_id, project.id
+
+    errors.append(
+        f"OC '{oc_number}' does not exist as a project in DAZZ Producciones. "
+        f"The project must be created before submitting the invoice."
+    )
+    return "NOT_FOUND", company_id, None
+
 
 def _normalize_nif(nif: Optional[str]) -> Optional[str]:
     """Normaliza NIF/CIF para comparación: quita espacios, guiones, puntos, prefijo ES, uppercase."""
