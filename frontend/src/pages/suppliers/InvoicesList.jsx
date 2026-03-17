@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, List, Columns3, ExternalLink, Check, X, CreditCard, Mic } from 'lucide-react';
+import { Search, List, Columns3, Trash2, X, CreditCard, Mic } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
@@ -197,7 +197,6 @@ const InvoicesList = () => {
                   <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Nº Factura</th>
                   <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
                   <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Proyecto · OC</th>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-10">IA</th>
                   <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Importe</th>
                   <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
                   <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-[140px]">Acción</th>
@@ -217,10 +216,6 @@ const InvoicesList = () => {
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
                       </td>
-                      {/* IA column (I1) */}
-                      <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        <span className="text-[10px] text-green-400 flex items-center gap-0.5"><Check size={11} strokeWidth={2} />ok</span>
-                      </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-xs text-zinc-200">{inv.final_total?.toFixed(2)} EUR</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
@@ -237,15 +232,21 @@ const InvoicesList = () => {
                         {inv.status === 'PAID' && <span className="text-[10px] text-zinc-600">Cerrada</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        <div className="flex gap-1">
-                          {inv.file_url && <button onClick={(e) => { e.stopPropagation(); window.open(inv.file_url, '_blank'); }} className="p-1 text-zinc-600 hover:text-zinc-300 transition-colors"><ExternalLink size={12} /></button>}
-                          {inv.status === 'PENDING' && <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'reject' }); }} className="p-1 text-red-400/60 hover:text-red-400 transition-colors"><X size={12} /></button>}
-                        </div>
+                        {(inv.status === 'PENDING' || inv.status === 'REJECTED') ? (
+                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'delete' }); }}
+                            className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                            <Trash2 size={12} strokeWidth={1.5} />
+                          </button>
+                        ) : (
+                          <div className="w-7 h-7 flex items-center justify-center">
+                            <Trash2 size={12} className="text-zinc-800" strokeWidth={1.5} />
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
                 })}
-                {paged.length === 0 && <tr><td colSpan="8" className="text-center py-8 text-xs text-zinc-600">Sin facturas</td></tr>}
+                {paged.length === 0 && <tr><td colSpan="7" className="text-center py-8 text-xs text-zinc-600">Sin facturas</td></tr>}
               </tbody>
             </table>
           </div>
@@ -309,11 +310,12 @@ const InvoicesList = () => {
               {actionModal.action === 'approve' && 'Aprobar factura'}
               {actionModal.action === 'pay' && 'Marcar como pagada'}
               {actionModal.action === 'reject' && 'Rechazar factura'}
+              {actionModal.action === 'delete' && 'Eliminar factura'}
             </h3>
             <p className="text-xs text-zinc-500 mb-4">
               Factura <span className="font-mono text-zinc-300">{actionModal.invoice.invoice_number}</span> de {actionModal.invoice.supplier_name}
             </p>
-            {actionModal.action === 'reject' && (
+            {(actionModal.action === 'reject' || actionModal.action === 'delete') && (
               <div className="mb-4">
                 <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Motivo <span className="text-amber-500">*</span></label>
                 <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Explica el motivo..." className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2 rounded focus:border-amber-500 outline-none resize-none" />
@@ -321,9 +323,9 @@ const InvoicesList = () => {
             )}
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setActionModal(null); setReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={handleAction} disabled={actionModal.action === 'reject' && !reason.trim()}
-                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${actionModal.action === 'reject' ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
-                {actionModal.action === 'approve' ? 'Aprobar' : actionModal.action === 'pay' ? 'Confirmar pago' : 'Rechazar'}
+              <button onClick={handleAction} disabled={(actionModal.action === 'reject' || actionModal.action === 'delete') && !reason.trim()}
+                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${(actionModal.action === 'reject' || actionModal.action === 'delete') ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
+                {actionModal.action === 'approve' ? 'Aprobar' : actionModal.action === 'pay' ? 'Confirmar pago' : actionModal.action === 'delete' ? 'Eliminar' : 'Rechazar'}
               </button>
             </div>
           </div>
