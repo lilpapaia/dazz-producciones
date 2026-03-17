@@ -37,14 +37,6 @@ from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_
 from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.validators import validate_pdf_bytes, sanitize_filename
 from app.services.supplier_ai import format_date_for_response
-from app.services.supplier_email import (
-    send_supplier_welcome,
-    send_supplier_invoice_received,
-    send_supplier_ia_rejected,
-    send_admin_new_registration,
-    send_admin_new_invoice,
-    ADMIN_EMAIL,
-)
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -197,16 +189,6 @@ async def register_supplier(
             "New Supplier Registered", f"{supplier.name} ({supplier.email})",
             supplier_id=supplier.id)
     db.commit()
-
-    # Emails (non-blocking)
-    try:
-        send_supplier_welcome(supplier.name, supplier.email)
-    except Exception:
-        pass
-    try:
-        send_admin_new_registration(ADMIN_EMAIL, supplier.name, supplier.email)
-    except Exception:
-        pass
 
     return RegisterResponse(
         message="Registration successful",
@@ -388,16 +370,6 @@ async def upload_invoice(
         validation = validate_supplier_invoice(extracted, supplier.id, db)
 
         if not validation["valid"]:
-            # IA rejected — notify supplier
-            try:
-                send_supplier_ia_rejected(
-                    supplier.name, supplier.email,
-                    extracted.get("invoice_number", "unknown"),
-                    validation["errors"],
-                )
-            except Exception:
-                pass
-
             _notify(db, NotificationRecipientType.ADMIN, 0,
                     NotificationEventType.IA_REJECTED, "AI Rejected Invoice",
                     f"Invoice from {supplier.name}: {'; '.join(validation['errors'])}",
@@ -496,16 +468,6 @@ async def upload_invoice(
             f"Invoice {invoice.invoice_number} submitted successfully",
             invoice_id=invoice.id, supplier_id=supplier.id)
     db.commit()
-
-    # Emails (non-blocking)
-    try:
-        send_supplier_invoice_received(supplier.name, supplier.email, invoice.invoice_number)
-    except Exception:
-        pass
-    try:
-        send_admin_new_invoice(ADMIN_EMAIL, supplier.name, invoice.invoice_number)
-    except Exception:
-        pass
 
     return {
         "message": "Invoice uploaded successfully",

@@ -76,42 +76,6 @@ def send_supplier_invitation(name: str, email: str, token: str, custom_message: 
         f"Welcome, {name}!", "SUPPLIER PORTAL INVITATION", body))
 
 
-def send_supplier_welcome(name: str, email: str):
-    """Welcome email after successful registration."""
-    url = f"{SUPPLIER_PORTAL_URL}/login"
-    body = (
-        _text(f"Hello <strong>{name}</strong>,")
-        + _text("Your account has been successfully created. You can now log in to the supplier portal "
-                "to submit invoices and track payments.")
-        + _button(url, "GO TO PORTAL")
-        + _text("If you need to update your details, please contact the DAZZ admin team.")
-    )
-    return send_email(email, "DAZZ Group — Your Supplier Account is Ready", _base_template(
-        "Account Created", "SUPPLIER PORTAL", body))
-
-
-def send_supplier_invoice_received(name: str, email: str, invoice_number: str):
-    """Confirmation that invoice was received and passed IA validation."""
-    body = (
-        _text(f"Hello <strong>{name}</strong>,")
-        + _text(f"Your invoice <strong>{invoice_number}</strong> has been received and verified. "
-                "It is now pending approval by the DAZZ team.")
-        + _text("You can check the status anytime from your portal dashboard.")
-    )
-    return send_email(email, f"DAZZ Group — Invoice {invoice_number} Received", _base_template(
-        "Invoice Received", "INVOICE CONFIRMATION", body))
-
-
-def send_supplier_invoice_approved(name: str, email: str, invoice_number: str):
-    body = (
-        _text(f"Hello <strong>{name}</strong>,")
-        + _text(f"Great news! Your invoice <strong>{invoice_number}</strong> has been <strong style='color:#22c55e;'>approved</strong>. "
-                "Payment will be processed shortly.")
-    )
-    return send_email(email, f"DAZZ Group — Invoice {invoice_number} Approved", _base_template(
-        "Invoice Approved", "PAYMENT UPDATE", body))
-
-
 def send_supplier_invoice_paid(name: str, email: str, invoice_number: str, amount: float):
     body = (
         _text(f"Hello <strong>{name}</strong>,")
@@ -124,63 +88,3 @@ def send_supplier_invoice_paid(name: str, email: str, invoice_number: str, amoun
         "Payment Confirmed", "PAYMENT UPDATE", body))
 
 
-def send_supplier_invoice_rejected(name: str, email: str, invoice_number: str, reason: str):
-    body = (
-        _text(f"Hello <strong>{html_mod.escape(name)}</strong>,")
-        + _text(f"Unfortunately, your invoice <strong>{html_mod.escape(invoice_number)}</strong> has been "
-                "<strong style='color:#ef4444;'>rejected</strong>.")
-        + _warning(f"<strong>Reason:</strong> {html_mod.escape(reason)}")
-        + _text("Please review the issue and submit a corrected invoice through the portal.")
-    )
-    return send_email(email, f"DAZZ Group — Invoice {invoice_number} Rejected", _base_template(
-        "Invoice Rejected", "ACTION REQUIRED", body))
-
-
-def send_supplier_invoice_deleted(name: str, email: str, invoice_number: str):
-    body = (
-        _text(f"Hello <strong>{name}</strong>,")
-        + _text(f"Your request to delete invoice <strong>{invoice_number}</strong> has been confirmed. "
-                "The invoice has been permanently removed from the system.")
-    )
-    return send_email(email, f"DAZZ Group — Invoice {invoice_number} Deleted", _base_template(
-        "Invoice Deleted", "CONFIRMATION", body))
-
-
-def send_supplier_ia_rejected(name: str, email: str, invoice_number: str, reasons: list):
-    reasons_html = "".join(f"<li style='margin-bottom:6px;'>{html_mod.escape(str(r))}</li>" for r in reasons)
-    body = (
-        _text(f"Hello <strong>{html_mod.escape(name)}</strong>,")
-        + _text(f"Invoice <strong>{html_mod.escape(invoice_number or 'uploaded')}</strong> could not be processed "
-                "due to the following issues:")
-        + f'<ul style="color:#d4d4d8;font-size:14px;line-height:1.8;">{reasons_html}</ul>'
-        + _text("Please fix the issues and upload the invoice again.")
-    )
-    return send_email(email, f"DAZZ Group — Invoice Verification Failed", _base_template(
-        "Verification Failed", "ACTION REQUIRED", body))
-
-
-# ============================================
-# ADMIN-FACING EMAILS
-# ============================================
-
-def send_admin_new_registration(admin_email: str, supplier_name: str, supplier_email: str):
-    body = (
-        _text(f"A new supplier has registered on the portal:")
-        + f'<div style="margin:16px 0;padding:16px;background-color:#3f3f46;border-radius:4px;">'
-          f'<strong style="color:#f59e0b;">{supplier_name}</strong><br>'
-          f'<span style="color:#a1a1aa;">{supplier_email}</span></div>'
-        + _text("Please review their profile in the DAZZ Producciones admin panel.")
-    )
-    return send_email(admin_email, f"DAZZ — New Supplier: {supplier_name}", _base_template(
-        "New Supplier Registration", "ADMIN NOTIFICATION", body))
-
-
-def send_admin_new_invoice(admin_email: str, supplier_name: str, invoice_number: str):
-    body = (
-        _text(f"<strong>{supplier_name}</strong> has submitted a new invoice:")
-        + f'<div style="margin:16px 0;padding:16px;background-color:#3f3f46;border-radius:4px;text-align:center;">'
-          f'<span style="color:#f59e0b;font-size:20px;font-weight:bold;">{invoice_number}</span></div>'
-        + _text("Review it from the supplier invoices section in DAZZ Producciones.")
-    )
-    return send_email(admin_email, f"DAZZ — New Invoice from {supplier_name}", _base_template(
-        "New Invoice Submitted", "ADMIN NOTIFICATION", body))

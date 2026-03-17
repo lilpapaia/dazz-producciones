@@ -30,12 +30,7 @@ from app.services.encryption import decrypt_iban, encrypt_iban, is_encryption_av
 from app.services.supplier_ai import format_date_for_response, parse_invoice_date
 from app.services.supplier_email import (
     send_supplier_invitation,
-    send_supplier_invoice_approved,
     send_supplier_invoice_paid,
-    send_supplier_invoice_rejected,
-    send_supplier_invoice_deleted,
-    send_admin_new_invoice,
-    ADMIN_EMAIL,
 )
 
 router = APIRouter(prefix="/suppliers", tags=["Suppliers (Admin)"])
@@ -644,10 +639,6 @@ async def update_invoice_status(
                     NotificationEventType.APPROVED, "Invoice Approved",
                     f"Invoice {invoice.invoice_number} has been approved",
                     invoice_id=invoice.id, supplier_id=supplier.id)
-            try:
-                send_supplier_invoice_approved(supplier.name, supplier.email, invoice.invoice_number)
-            except Exception:
-                pass
 
         elif new_status == "PAID":
             _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
@@ -665,11 +656,6 @@ async def update_invoice_status(
                     NotificationEventType.REJECTED, "Invoice Rejected",
                     f"Invoice {invoice.invoice_number}: {body.reason}",
                     invoice_id=invoice.id, supplier_id=supplier.id)
-            try:
-                send_supplier_invoice_rejected(supplier.name, supplier.email,
-                                               invoice.invoice_number, body.reason)
-            except Exception:
-                pass
 
     # Single commit: status change + ticket + notifications
     db.commit()
@@ -708,12 +694,6 @@ async def confirm_invoice_deletion(
 
     db.delete(invoice)
     db.commit()
-
-    if supplier:
-        try:
-            send_supplier_invoice_deleted(supplier.name, supplier.email, invoice.invoice_number)
-        except Exception:
-            pass
 
     return {"message": "Invoice deleted"}
 
