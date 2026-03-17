@@ -254,7 +254,7 @@ frontend/
 - ✅ Grupo 1 UI fixes: bank cert View PDF, custom message invitación, cert upload error visible
 - ⏳ UI admin pendiente: SuppliersDashboard revisar, SupplierNotifications revisar
 - ⏳ Portal proveedor: pendiente revisión UI completa
-- ⚠️ Cloudinary: acceso recuperación en curso con soporte
+- ✅ Cloudinary fixes (2026-03-17): DELETE factura borra PDF+páginas, páginas usan folder correcto `dazz-suppliers/pages/{supplier_id}/`, `delete_invoice_pdf` extrae public_id de URL antes de destroy
 
 ---
 
@@ -397,4 +397,4 @@ frontend/
 ---
 
 **Última actualización:** 2026-03-17
-**Estado:** Producción activa — CRITICAL+HIGH arreglados, UI admin en progreso, portal proveedor pendiente, Cloudinary acceso en recuperación
+**Estado:** Producción activa — CRITICAL+HIGH arreglados, Cloudinary fixes completados, UI admin en progreso, portal proveedor pendiente

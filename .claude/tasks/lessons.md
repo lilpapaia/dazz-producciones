@@ -244,6 +244,42 @@ Statistics/
 
 ---
 
+## 2026-03-17: [Storage] - Cloudinary destroy() necesita public_id, no URL
+
+**Error:** `delete_invoice_pdf` recibía la URL completa de Cloudinary y la pasaba a `cloudinary.uploader.destroy()`, que fallaba silenciosamente sin borrar nada
+**Causa raíz:** `destroy()` espera un `public_id` (e.g. `dazz-suppliers/invoices/123/factura`), no una URL (e.g. `https://res.cloudinary.com/.../dazz-suppliers/invoices/123/factura.pdf`)
+**Solución:** Crear helper `extract_public_id_from_url(url)` que parsea la URL y extrae el public_id sin extensión, usarlo antes de llamar a `destroy()`
+**Regla:** SIEMPRE usar `extract_public_id_from_url()` antes de `cloudinary.uploader.destroy()` cuando el dato almacenado es una URL
+**Prevención:**
+- Verificar qué formato se almacena en BD (URL vs public_id)
+- Testear destroy() comprobando que el recurso ya no existe después
+
+---
+
+## 2026-03-17: [Storage] - Cloudinary: PDFs requieren config de seguridad
+
+**Error:** PDFs subidos a Cloudinary devolvían error 404 o acceso denegado al intentar acceder por URL
+**Causa raíz:** Por defecto Cloudinary bloquea delivery de PDFs y ZIPs por seguridad
+**Solución:** En Cloudinary Dashboard → Settings → Security → marcar **"PDF and ZIP files delivery"** habilitado
+**Regla:** Al configurar Cloudinary para un proyecto que sube PDFs, SIEMPRE verificar que "PDF and ZIP files delivery" esté habilitado en Settings → Security
+**Prevención:**
+- Checklist setup Cloudinary: ¿Se suben PDFs? → Habilitar delivery
+- Si PDFs devuelven 404/403 en Cloudinary, verificar esta config primero
+
+---
+
+## 2026-03-17: [Storage] - Cloudinary upload_image() no acepta folder explícito
+
+**Error:** Páginas de PDF se subían a la raíz de Cloudinary en vez del folder `dazz-suppliers/pages/{supplier_id}/`
+**Causa raíz:** La función wrapper `upload_image()` del servicio no pasaba el parámetro `folder` a Cloudinary, o lo concatenaba mal con `public_id`
+**Solución:** Usar `cloudinary.uploader.upload()` directamente con parámetro `folder` separado del `public_id` — Cloudinary combina ambos internamente
+**Regla:** Para control total del path en Cloudinary, usar `cloudinary.uploader.upload(file, folder="path/to/folder", public_id="filename")` directamente, no wrappers que puedan omitir parámetros
+**Prevención:**
+- Verificar en Cloudinary Media Library que los archivos aparecen en el folder correcto después de upload
+- Si un archivo aparece en la raíz, revisar si el folder se está pasando correctamente
+
+---
+
 ## Template para futuras lecciones
 
 ```

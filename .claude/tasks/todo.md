@@ -15,6 +15,10 @@
 - [x] Deploy Railway + Vercel
 - [x] **Módulo Proveedores completo** (6 fases: BD, IA, 23 endpoints, UI admin, portal, integración)
 - [x] **Testing automatizado proveedores** (2026-03-16: 25 issues encontrados)
+- [x] **Cloudinary fixes proveedores** (2026-03-17):
+  - [x] Borrado archivos Cloudinary al eliminar factura (PDF + páginas)
+  - [x] Fix páginas PDF subiendo a raíz en vez de `dazz-suppliers/pages/{supplier_id}/`
+  - [x] Fix `delete_invoice_pdf` recibía URL en vez de public_id — usar `extract_public_id_from_url`
 - [x] Setup Claude Code + .claude/ estructura
 - [x] Análisis completo proyecto
 

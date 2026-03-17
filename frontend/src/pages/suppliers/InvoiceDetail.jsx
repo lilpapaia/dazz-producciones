@@ -156,7 +156,17 @@ const InvoiceDetail = () => {
         {/* Right: download + status pill */}
         <div className="flex items-center gap-2">
           {invoice.file_url && (
-            <button onClick={() => window.open(invoice.file_url, '_blank')}
+            <button onClick={async () => {
+              const res = await fetch(invoice.file_url);
+              const blob = await res.blob();
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = invoice.file_name || 'factura.pdf';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(a.href);
+            }}
               className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
               <Download size={14} /> Descargar PDF
             </button>
