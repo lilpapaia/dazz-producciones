@@ -39,14 +39,15 @@ const SuppliersLayout = () => {
         <Menu size={20} />
       </button>
 
-      {/* Sidebar */}
+      {/* Sidebar — sticky para que no haga scroll */}
       <aside className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40
+        lg:translate-x-0 fixed lg:sticky inset-y-0 left-0 z-40
         w-52 bg-zinc-900 border-r border-zinc-800 p-3 flex flex-col
         transition-transform lg:transition-none pt-20 lg:pt-3
+        lg:top-16 lg:h-[calc(100vh-64px)] lg:self-start
       `}>
-        <div className="text-[9px] text-zinc-600 tracking-widest uppercase px-3 mb-1">General</div>
+        <div className="text-[13px] text-zinc-600 tracking-widest uppercase px-3 mb-1">General</div>
 
         {NAV_ITEMS.filter(i => !i.section).map(item => {
           const active = isActive(item.path, item.exact);
@@ -55,11 +56,12 @@ const SuppliersLayout = () => {
               key={item.path}
               to={item.path}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded text-xs mb-0.5 transition-all ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded mb-0.5 transition-all ${
                 active
                   ? 'bg-amber-500/10 border-l-2 border-amber-500 pl-2.5 text-amber-400'
                   : 'text-zinc-400 hover:bg-zinc-800'
               }`}
+              style={{ fontSize: '0.87em' }}
             >
               <item.icon size={14} className={active ? 'text-amber-500' : 'text-zinc-600'} />
               <span className="flex-1">{item.label}</span>
@@ -70,7 +72,7 @@ const SuppliersLayout = () => {
           );
         })}
 
-        <div className="text-[9px] text-zinc-600 tracking-widest uppercase px-3 mt-4 mb-1">Añadir</div>
+        <div className="text-[13px] text-zinc-600 tracking-widest uppercase px-3 mt-4 mb-1">Añadir</div>
 
         {NAV_ITEMS.filter(i => i.section === 'add').map(item => {
           const active = isActive(item.path);
@@ -79,11 +81,12 @@ const SuppliersLayout = () => {
               key={item.path}
               to={item.path}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded text-xs mb-0.5 transition-all ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded mb-0.5 transition-all ${
                 active
                   ? 'bg-amber-500/10 border-l-2 border-amber-500 pl-2.5 text-amber-400'
                   : 'text-zinc-400 hover:bg-zinc-800'
               }`}
+              style={{ fontSize: '0.87em' }}
             >
               <item.icon size={14} className={active ? 'text-amber-500' : 'text-zinc-600'} />
               <span>{item.label}</span>
@@ -97,7 +100,7 @@ const SuppliersLayout = () => {
         <div className="lg:hidden fixed inset-0 bg-black/60 z-30" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Content */}
+      {/* Content — solo este hace scroll */}
       <main className="flex-1 p-4 sm:p-5 overflow-y-auto bg-zinc-950">
         <Outlet />
       </main>
