@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, UserX, Link2, Mail, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
+import { Save, UserX, Link2, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
 import { getSupplier, updateSupplier, deactivateSupplier, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
@@ -50,9 +50,6 @@ const SupplierDetail = () => {
   // Delete invoice modal
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleteReason, setDeleteReason] = useState('');
-
-  // PDF lightbox
-  const [pdfModal, setPdfModal] = useState(null);
 
   // Voice search
   const { isListening, startVoiceSearch } = useVoiceSearch({
@@ -314,11 +311,6 @@ const SupplierDetail = () => {
             <button onClick={handleAddNote} disabled={saving || !note.trim()} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors disabled:opacity-40 flex items-center gap-1">
               <Save size={11} /> Añadir nota
             </button>
-            {supplier.email && (
-              <button onClick={() => { window.location.href = 'mailto:' + supplier.email; }} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1">
-                <Mail size={11} /> Email
-              </button>
-            )}
             {supplier.is_active && (
               <button onClick={handleDeactivate} className="text-[11px] text-red-400 border border-red-400/25 hover:bg-red-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
                 <UserX size={11} /> Desactivar
@@ -418,7 +410,7 @@ const SupplierDetail = () => {
               <div className="space-y-1">
                 {filtered.map(inv => (
                   <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors">
-                    <button onClick={() => inv.file_url && setPdfModal({ url: inv.file_url, name: inv.invoice_number })}
+                    <button onClick={() => inv.file_url && window.open(inv.file_url, '_blank')}
                       className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0 hover:bg-red-400/[.15] transition-colors cursor-pointer">
                       <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </button>
@@ -507,35 +499,6 @@ const SupplierDetail = () => {
                 className="text-xs px-4 py-2 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold transition-colors disabled:opacity-40">
                 {editSaving ? 'Guardando...' : 'Guardar'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ LIGHTBOX: Ver PDF factura ═══ */}
-      {pdfModal && (
-        <div className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center" onClick={() => setPdfModal(null)}>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[500px] max-w-[95vw] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <span className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-100">{pdfModal.name}</span>
-              <button onClick={() => setPdfModal(null)} className="w-7 h-7 flex items-center justify-center rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors">
-                <X size={14} />
-              </button>
-            </div>
-            <div className="bg-zinc-800 flex flex-col items-center justify-center gap-4 py-16">
-              <svg className="w-16 h-16 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-              <div className="text-sm text-zinc-300 font-mono">{pdfModal.name}.pdf</div>
-              <div className="flex gap-3 mt-2">
-                <button onClick={() => { window.open(pdfModal.url, '_blank'); setPdfModal(null); }}
-                  className="text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-5 py-2.5 rounded transition-colors flex items-center gap-2">
-                  <ExternalLink size={13} /> Abrir PDF
-                </button>
-                <a href={pdfModal.url} download className="text-xs border border-zinc-700 text-zinc-300 hover:bg-zinc-700 px-5 py-2.5 rounded transition-colors flex items-center gap-2">
-                  <Download size={13} /> Descargar
-                </a>
-              </div>
             </div>
           </div>
         </div>
