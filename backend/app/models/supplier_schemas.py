@@ -108,6 +108,7 @@ class InvoiceResponse(BaseModel):
     currency: str
     is_foreign: bool
     file_url: str
+    file_pages: Optional[str] = None
     status: str
     rejection_reason: Optional[str] = None
     delete_reason: Optional[str] = None

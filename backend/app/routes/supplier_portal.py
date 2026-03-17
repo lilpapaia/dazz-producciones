@@ -385,13 +385,21 @@ async def upload_invoice(
                 },
             )
 
-        # Validation passed → upload to Cloudinary (authenticated, no public URL)
-        file_public_id = save_invoice_pdf(file, supplier.id, contents=contents)
+        # Validation passed → upload to Cloudinary (public + page images)
+        upload_result = save_invoice_pdf(file, supplier.id, contents=contents)
 
         # All validated invoices start as PENDING (OC must exist)
         invoice_status = InvoiceStatus.PENDING
 
-        # Create invoice record (file_url stores public_id, not a URL)
+        # Ensure file_pages column exists (ALTER TABLE for first deploy)
+        from sqlalchemy import text as sa_text
+        try:
+            db.execute(sa_text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS file_pages TEXT"))
+            db.commit()
+        except Exception:
+            db.rollback()
+
+        # Create invoice record
         invoice = SupplierInvoice(
             supplier_id=supplier.id,
             invoice_number=extracted.get("invoice_number", ""),
@@ -410,7 +418,8 @@ async def upload_invoice(
             final_total=extracted.get("final_total", 0.0),
             currency=extracted.get("currency", "EUR"),
             is_foreign=extracted.get("is_foreign", False),
-            file_url=file_public_id,
+            file_url=upload_result["public_id"],
+            file_pages=json.dumps(upload_result["pages"]) if upload_result["pages"] else None,
             status=invoice_status,
             ia_validation_result=json.dumps(validation, default=str),
         )

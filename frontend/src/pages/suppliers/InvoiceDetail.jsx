@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn } from 'lucide-react';
 import { getInvoice, getAllInvoices, updateInvoiceStatus } from '../../services/suppliersApi';
 
 const PILL = {
@@ -28,6 +28,12 @@ const InvoiceDetail = () => {
   const [rejectModal, setRejectModal] = useState(false);
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
+
+  // Lightbox (ReviewTicket pattern)
+  const [currentPage, setCurrentPage] = useState(0);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   // Navigation between invoices
   const [allIds, setAllIds] = useState([]);
@@ -60,6 +66,22 @@ const InvoiceDetail = () => {
     if (currentIdx >= 0 && currentIdx < allIds.length - 1) navigate(`/suppliers/invoices/${allIds[currentIdx + 1]}${queryString}`);
   };
 
+  // Block scroll when lightbox open (ReviewTicket pattern)
+  useEffect(() => {
+    document.body.style.overflow = showLightbox ? 'hidden' : 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showLightbox]);
+
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && currentPage < pages.length - 1) setCurrentPage(p => p + 1);
+      else if (diff < 0 && currentPage > 0) setCurrentPage(p => p - 1);
+    }
+  };
+
   const handleAction = async (status, rejectionReason) => {
     setActing(true);
     try {
@@ -80,6 +102,16 @@ const InvoiceDetail = () => {
   );
 
   if (!invoice) return null;
+
+  // Parse file_pages (ReviewTicket pattern)
+  let pages = [];
+  if (invoice.file_pages) {
+    if (Array.isArray(invoice.file_pages)) pages = invoice.file_pages;
+    else if (typeof invoice.file_pages === 'string') {
+      try { const parsed = JSON.parse(invoice.file_pages); if (Array.isArray(parsed)) pages = parsed; } catch { /* ignore */ }
+    }
+  }
+  const totalPages = pages.length;
 
   // Parse IA validation result
   let iaResult = null;
@@ -131,12 +163,36 @@ const InvoiceDetail = () => {
       <div className="grid lg:grid-cols-[1fr_300px] gap-3.5">
         {/* ═══ LEFT: PDF + datos ═══ */}
         <div className="space-y-3.5">
-          {/* PDF viewer */}
-          {invoice.file_url && (
-            <div
-              onClick={() => window.open(invoice.file_url, '_blank')}
-              className="bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden cursor-pointer group"
-            >
+          {/* Visor galería (ReviewTicket pattern) */}
+          {pages.length > 0 ? (
+            <div className="bg-zinc-950 border border-zinc-700 rounded-sm overflow-hidden">
+              <div className="relative cursor-zoom-in group" onClick={() => setShowLightbox(true)}>
+                <img src={pages[currentPage]} alt={`Página ${currentPage + 1}`} className="w-full max-h-96 object-contain bg-zinc-900" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg"><ZoomIn size={24} /></div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-center">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || totalPages <= 1}
+                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={18} /></button>
+                  <span className="text-sm font-mono text-zinc-300">{totalPages > 1 ? `${currentPage + 1}/${totalPages}` : invoice.invoice_number}</span>
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage === totalPages - 1 || totalPages <= 1}
+                    className="p-1.5 rounded-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronRight size={18} /></button>
+                </div>
+              </div>
+              {totalPages > 1 && (
+                <div className="px-4 pb-3 bg-zinc-900/80 flex justify-center gap-1.5">
+                  {pages.map((_, i) => (
+                    <button key={i} onClick={() => setCurrentPage(i)} className={`w-2 h-2 rounded-full transition-colors ${i === currentPage ? 'bg-amber-500' : 'bg-zinc-600 hover:bg-zinc-400'}`} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : invoice.file_url && (
+            <div onClick={() => window.open(invoice.file_url, '_blank')} className="bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden cursor-pointer group">
               <div className="bg-zinc-950 flex flex-col items-center justify-center py-16 gap-3">
                 <svg className="w-14 h-14 text-red-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
@@ -145,6 +201,35 @@ const InvoiceDetail = () => {
                   <ExternalLink size={12} /> Abrir PDF en nueva pestaña
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* LIGHTBOX fullscreen (ReviewTicket pattern) */}
+          {showLightbox && pages.length > 0 && (
+            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center backdrop-blur-sm"
+              style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+              onClick={() => setShowLightbox(false)}>
+              <button onClick={(e) => { e.stopPropagation(); setShowLightbox(false); }}
+                className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
+                style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><X size={32} /></button>
+              {totalPages > 1 && currentPage > 0 && (
+                <button onClick={(e) => { e.stopPropagation(); setCurrentPage(p => p - 1); }}
+                  className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center">
+                  <ChevronLeft size={28} /></button>
+              )}
+              <img src={pages[currentPage]} alt={`Página ${currentPage + 1}`}
+                className="max-w-full max-h-[90vh] object-contain shadow-2xl select-none"
+                onClick={(e) => e.stopPropagation()} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} />
+              {totalPages > 1 && currentPage < totalPages - 1 && (
+                <button onClick={(e) => { e.stopPropagation(); setCurrentPage(p => p + 1); }}
+                  className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center">
+                  <ChevronRight size={28} /></button>
+              )}
+              {totalPages > 1 && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900/80 px-4 py-2 rounded-full text-sm font-mono text-zinc-300 border border-zinc-700">
+                  Página {currentPage + 1} / {totalPages}
+                </div>
+              )}
             </div>
           )}
 
