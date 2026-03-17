@@ -130,7 +130,7 @@ const InvoicesList = () => {
                 {paged.map(inv => {
                   const pill = PILL[inv.status] || PILL.PENDING;
                   return (
-                    <tr key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}`)} className="hover:bg-white/[.02] transition-colors cursor-pointer">
+                    <tr key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=list`)} className="hover:bg-white/[.02] transition-colors cursor-pointer">
                       <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[11px] text-zinc-200">
                         {inv.invoice_number}
                         {inv.from_supplier_portal && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}

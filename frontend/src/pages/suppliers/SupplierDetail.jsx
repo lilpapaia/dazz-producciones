@@ -409,7 +409,7 @@ const SupplierDetail = () => {
             ) : (
               <div className="space-y-1">
                 {filtered.map(inv => (
-                  <div key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}`)} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors cursor-pointer">
+                  <div key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors cursor-pointer">
                     <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
                       <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, AlertTriangle, ExternalLink } from 'lucide-react';
-import { getInvoice, updateInvoiceStatus } from '../../services/suppliersApi';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink } from 'lucide-react';
+import { getInvoice, getAllInvoices, updateInvoiceStatus } from '../../services/suppliersApi';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -19,11 +19,21 @@ const PILL_LABEL = {
 const InvoiceDetail = () => {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const from = searchParams.get('from');
+  const supplierId = searchParams.get('supplierId');
+
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rejectModal, setRejectModal] = useState(false);
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
+
+  // Navigation between invoices
+  const [allIds, setAllIds] = useState([]);
+  const currentIdx = allIds.indexOf(parseInt(invoiceId));
+
+  const queryString = from === 'supplier' && supplierId ? `?from=supplier&supplierId=${supplierId}` : from === 'list' ? '?from=list' : '';
 
   const load = () => {
     getInvoice(invoiceId)
@@ -33,6 +43,22 @@ const InvoiceDetail = () => {
   };
 
   useEffect(() => { load(); }, [invoiceId]);
+
+  // Load sibling invoice IDs for navigation
+  useEffect(() => {
+    const params = { limit: 200 };
+    if (from === 'supplier' && supplierId) params.supplier_id = supplierId;
+    getAllInvoices(params).then(r => {
+      setAllIds((r.data || []).map(inv => inv.id));
+    }).catch(() => {});
+  }, [from, supplierId]);
+
+  const goToPrev = () => {
+    if (currentIdx > 0) navigate(`/suppliers/invoices/${allIds[currentIdx - 1]}${queryString}`);
+  };
+  const goToNext = () => {
+    if (currentIdx >= 0 && currentIdx < allIds.length - 1) navigate(`/suppliers/invoices/${allIds[currentIdx + 1]}${queryString}`);
+  };
 
   const handleAction = async (status, rejectionReason) => {
     setActing(true);
@@ -68,12 +94,34 @@ const InvoiceDetail = () => {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Header: breadcrumb | nav | status */}
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        {/* Left: breadcrumb */}
         <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">
-          <span onClick={() => navigate('/suppliers/invoices')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">FACTURAS</span>
+          <span onClick={() => navigate(from === 'supplier' && supplierId ? `/suppliers/${supplierId}` : '/suppliers/invoices')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">
+            {from === 'supplier' ? 'PROVEEDOR' : 'FACTURAS'}
+          </span>
           {' / '}{invoice.invoice_number}
         </h1>
+
+        {/* Center: navigation */}
+        {allIds.length > 1 && currentIdx >= 0 && (
+          <div className="flex items-center gap-1.5">
+            <button onClick={goToPrev} disabled={currentIdx <= 0}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
+              <ChevronLeft size={20} /> Anterior
+            </button>
+            <span className="font-mono text-sm text-amber-400 px-3 min-w-[50px] text-center">
+              {currentIdx + 1} / {allIds.length}
+            </span>
+            <button onClick={goToNext} disabled={currentIdx >= allIds.length - 1}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
+              Siguiente <ChevronRight size={20} />
+            </button>
+          </div>
+        )}
+
+        {/* Right: status pill */}
         <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
           {PILL_LABEL[invoice.status] || invoice.status}
