@@ -418,7 +418,7 @@ async def upload_invoice(
             final_total=extracted.get("final_total", 0.0),
             currency=extracted.get("currency", "EUR"),
             is_foreign=extracted.get("is_foreign", False),
-            file_url=upload_result["public_id"],
+            file_url=upload_result["url"],
             status=invoice_status,
             ia_validation_result=json.dumps(validation, default=str),
         )
@@ -509,7 +509,7 @@ async def list_my_invoices(
         status=inv.status.value if inv.status else "PENDING",
         rejection_reason=inv.rejection_reason,
         created_at=inv.created_at,
-        file_url=get_invoice_pdf_url(inv.file_url) if inv.file_url else None,
+        file_url=inv.file_url if (inv.file_url and inv.file_url.startswith("http")) else get_invoice_pdf_url(inv.file_url) if inv.file_url else None,
     ) for inv in invoices]
 
 
