@@ -673,8 +673,8 @@ async def confirm_invoice_deletion(
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
-    if invoice.status != InvoiceStatus.DELETE_REQUESTED:
-        raise HTTPException(400, "Invoice must be in DELETE_REQUESTED status")
+    if invoice.status not in (InvoiceStatus.PENDING, InvoiceStatus.REJECTED, InvoiceStatus.DELETE_REQUESTED):
+        raise HTTPException(400, "Only PENDING, REJECTED or DELETE_REQUESTED invoices can be deleted")
 
     supplier = db.query(Supplier).filter(Supplier.id == invoice.supplier_id).first()
 
