@@ -163,14 +163,24 @@ def get_invoice_pdf_url(public_id: str) -> str:
     return url
 
 
-def delete_invoice_pdf(public_id: str) -> bool:
-    """Delete an invoice PDF from Cloudinary by its public_id."""
-    if not public_id:
+def delete_invoice_pdf(file_url: str) -> bool:
+    """Delete an invoice PDF from Cloudinary. Accepts URL or public_id."""
+    if not file_url:
         return False
 
     try:
-        cloudinary.uploader.destroy(public_id, resource_type="raw", type="upload")
-        print(f"Cloudinary delete OK: {public_id}")
+        # Extract public_id from URL if needed
+        if file_url.startswith("http"):
+            from app.services.cloudinary_service import extract_public_id_from_url
+            pid = extract_public_id_from_url(file_url)
+        else:
+            pid = file_url
+
+        if not pid:
+            return False
+
+        cloudinary.uploader.destroy(pid, resource_type="raw", type="upload")
+        print(f"Cloudinary delete OK: {pid}")
         return True
     except Exception as e:
         print(f"Cloudinary delete error: {e}")
