@@ -800,6 +800,22 @@ async def dashboard_stats(
 
 
 # ============================================
+# FILE_PAGES MIGRATION (one-shot)
+# ============================================
+
+@router.post("/admin/migrate-file-pages")
+async def migrate_file_pages_column(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Add file_pages column to supplier_invoices if it doesn't exist."""
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS file_pages TEXT"))
+    db.commit()
+    return {"message": "file_pages column ready"}
+
+
+# ============================================
 # IBAN MIGRATION (one-shot)
 # ============================================
 
