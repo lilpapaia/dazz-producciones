@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, List, Columns3, Trash2, X, CreditCard, Mic } from 'lucide-react';
+import { Search, Trash2, X, CreditCard, Mic } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
@@ -15,7 +15,6 @@ const PILL = {
   DELETE_REQUESTED: { cls: 'bg-red-300/10 text-red-300 border-red-300/20', dot: 'bg-red-300' },
 };
 
-const KANBAN_COLS = ['PENDING', 'APPROVED', 'PAID', 'REJECTED'];
 const PAGE_SIZE = 20;
 
 const InvoicesList = () => {
@@ -23,7 +22,6 @@ const InvoicesList = () => {
   const [invoices, setInvoices] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('list');
   const [statusFilter, setStatusFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -99,14 +97,6 @@ const InvoicesList = () => {
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Facturas</h1>
-        <div className="flex gap-1 bg-zinc-800 rounded p-0.5">
-          <button onClick={() => setView('list')} className={`text-[13px] px-2.5 py-1 rounded flex items-center gap-1 ${view === 'list' ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-500'}`}>
-            <List size={13} /> Lista
-          </button>
-          <button onClick={() => setView('kanban')} className={`text-[13px] px-2.5 py-1 rounded flex items-center gap-1 ${view === 'kanban' ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-500'}`}>
-            <Columns3 size={13} /> Kanban
-          </button>
-        </div>
       </div>
 
       {/* Filters */}
@@ -188,8 +178,7 @@ const InvoicesList = () => {
       </div>
 
       {/* LIST VIEW */}
-      {view === 'list' && (
-        <>
+      <>
           <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-x-auto">
             <table className="w-full min-w-[650px]">
               <thead>
@@ -264,43 +253,6 @@ const InvoicesList = () => {
             )}
           </div>
         </>
-      )}
-
-      {/* KANBAN VIEW */}
-      {view === 'kanban' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {KANBAN_COLS.map(col => {
-            const pill = PILL[col] || PILL.PENDING;
-            const colInvoices = filtered.filter(i => i.status === col);
-            return (
-              <div key={col} className="bg-zinc-900 border border-zinc-800 rounded-md p-2.5">
-                <div className="text-[9px] font-semibold text-zinc-400 mb-2 flex items-center gap-1.5 tracking-widest uppercase">
-                  <span className={`w-1.5 h-1.5 rounded-full ${pill.dot}`} />
-                  {col}
-                  <span className="bg-zinc-800 text-zinc-400 text-[10px] px-1.5 rounded font-mono">{colInvoices.length}</span>
-                </div>
-                {colInvoices.slice(0, 10).map(inv => (
-                  <div key={inv.id} className="bg-zinc-800 border border-zinc-700 rounded p-2.5 mb-1.5 cursor-pointer hover:border-amber-500 transition-colors">
-                    <div className="text-[10px] text-zinc-500 font-mono">{inv.invoice_number}</div>
-                    <div className="text-xs font-medium text-zinc-200 mt-0.5">{inv.supplier_name}</div>
-                    <div className="font-mono text-[13px] text-zinc-100 mt-0.5">{inv.final_total?.toFixed(2)} EUR</div>
-                    <div className="text-[10px] text-zinc-500 mt-1 pt-1 border-t border-zinc-700">OC: <span className="text-amber-400">{inv.oc_number}</span></div>
-                    <div className="flex gap-1 mt-1.5">
-                      {col === 'PENDING' && <>
-                        <button onClick={() => setActionModal({ invoice: inv, action: 'approve' })} className="text-[9px] text-green-400 border border-green-400/25 px-1.5 py-0.5 rounded hover:bg-green-400/10">Aprobar</button>
-                        <button onClick={() => setActionModal({ invoice: inv, action: 'reject' })} className="text-[9px] text-red-400 border border-red-400/25 px-1.5 py-0.5 rounded hover:bg-red-400/10">Rechazar</button>
-                      </>}
-                      {col === 'APPROVED' && <button onClick={() => setActionModal({ invoice: inv, action: 'pay' })} className="text-[9px] text-green-300 border border-green-300/25 px-1.5 py-0.5 rounded hover:bg-green-300/10">Pagada</button>}
-                    </div>
-                  </div>
-                ))}
-                {colInvoices.length > 10 && <div className="text-[10px] text-zinc-600 text-center py-2 font-mono">+ {colInvoices.length - 10} más</div>}
-                {colInvoices.length === 0 && <div className="text-[10px] text-zinc-700 text-center py-4">Vacío</div>}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* Action modal */}
       {actionModal && (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, X, Mic } from 'lucide-react';
+import { Search, X, Mic } from 'lucide-react';
 import { getSuppliers } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
@@ -85,15 +85,15 @@ const SuppliersList = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">Proveedores</h1>
-        <button onClick={() => navigate('/suppliers/invite')} className="bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-semibold px-4 py-2 rounded transition-colors">
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Proveedores</h1>
+        <button onClick={() => navigate('/suppliers/invite')} className="bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[13px] font-semibold px-4 py-2 rounded transition-colors">
           + Invitar proveedor
         </button>
       </div>
 
       {/* Filters */}
       <div className="flex gap-2.5 mb-3.5 flex-wrap items-center">
-        <div className="relative max-w-[240px] flex-1" ref={searchRef}>
+        <div className="relative w-[300px]" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
             <input
@@ -103,7 +103,7 @@ const SuppliersList = () => {
               onChange={(e) => handleSearchChange(e.target.value)}
               onFocus={() => (search || recentSearches.length > 0) && setShowSuggestions(true)}
               onKeyDown={(e) => { if (e.key === 'Enter' && search.trim()) { saveRecentSearch(search); setShowSuggestions(false); } }}
-              className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
+              className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[13px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
             />
             <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
               {search && (
@@ -152,10 +152,10 @@ const SuppliersList = () => {
             </div>
           )}
         </div>
-        <span className="text-[9px] text-zinc-500 tracking-widest uppercase">Empresa:</span>
-        <button onClick={() => setCompanyFilter(null)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>
+        <span className="text-[12px] text-zinc-500 tracking-widest uppercase">Empresa:</span>
+        <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>
         {companies.map(c => (
-          <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
+          <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[13px] px-3 py-1 rounded-full border transition-all ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
             {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
           </button>
         ))}
@@ -166,15 +166,14 @@ const SuppliersList = () => {
         <table className="w-full min-w-[700px]">
           <thead>
             <tr>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-5"></th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">NIF/CIF</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Tipo</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Empresa</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">OC</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Últ. actividad</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-16"></th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium w-5"></th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">NIF/CIF</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Tipo</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Empresa</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">OC</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Últ. actividad</th>
             </tr>
           </thead>
           <tbody>
@@ -184,28 +183,23 @@ const SuppliersList = () => {
                   {s.pending_invoices > 0 && <div className="w-2 h-2 rounded-full bg-amber-500" />}
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  <div className="text-xs font-medium text-zinc-200">{s.name}</div>
-                  <div className="text-[10px] text-zinc-500">{s.email}</div>
+                  <div className="text-[13px] font-medium text-zinc-200">{s.name}</div>
+                  <div className="text-[11px] text-zinc-500">{s.email}</div>
                 </td>
-                <td className="px-3 py-2.5 border-b border-white/[.04] text-xs text-zinc-400 font-mono">{s.nif_cif || '—'}</td>
+                <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400 font-mono">{s.nif_cif || '—'}</td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${TYPE_BADGE[s.supplier_type] || TYPE_BADGE.GENERAL}`}>{s.supplier_type}</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${TYPE_BADGE[s.supplier_type] || TYPE_BADGE.GENERAL}`}>{s.supplier_type}</span>
                 </td>
-                <td className="px-3 py-2.5 border-b border-white/[.04] text-[11px] text-zinc-400">{s.company_name || 'All'}</td>
+                <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400">{s.company_name || 'All'}</td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
                   {s.oc_number ? (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-semibold font-mono border border-amber-500/15">{s.oc_number}</span>
-                  ) : <span className="text-[11px] text-zinc-600">—</span>}
+                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-semibold font-mono border border-amber-500/15">{s.oc_number}</span>
+                  ) : <span className="text-[13px] text-zinc-600">—</span>}
                 </td>
-                <td className="px-3 py-2.5 border-b border-white/[.04] text-[11px] text-zinc-500">{timeAgo(s.last_activity)}</td>
-                <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  <button className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors">
-                    Ver → <ChevronRight size={12} />
-                  </button>
-                </td>
+                <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-500">{timeAgo(s.last_activity)}</td>
               </tr>
             ))}
             {filtered.length === 0 && (
