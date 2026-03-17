@@ -60,7 +60,6 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 SUPPLIER_PORTAL_URL = os.getenv("SUPPLIER_PORTAL_URL", "https://providers.dazzcreative.com")
 ALLOWED_ORIGINS = [
     "https://dazz-producciones.vercel.app",  # Producción DAZZ
-    "https://producciones.dazzcreative.com", # Dominio custom DAZZ
     SUPPLIER_PORTAL_URL,                     # Portal proveedores (env var)
 ]
 

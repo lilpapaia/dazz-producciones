@@ -161,7 +161,11 @@ const InvoiceDetail = () => {
               const blob = await res.blob();
               const a = document.createElement('a');
               a.href = URL.createObjectURL(blob);
-              a.download = invoice.file_name || 'factura.pdf';
+              const supplier = (invoice.supplier_name || invoice.provider_name || 'proveedor').replace(/\s+/g, '_');
+              const date = invoice.date || '';
+              a.download = invoice.invoice_number
+                ? `${supplier}_${date}_${invoice.invoice_number}.pdf`
+                : `${supplier}_${date}.pdf`;
               document.body.appendChild(a);
               a.click();
               a.remove();

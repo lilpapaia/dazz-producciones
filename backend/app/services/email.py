@@ -18,7 +18,7 @@ BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 # Configuración remitente
 FROM_EMAIL = os.getenv("FROM_EMAIL", "aibot2@dazzcreative.com")
 FROM_NAME = os.getenv("FROM_NAME", "DAZZ Creative")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://producciones.dazzcreative.com")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://dazz-producciones.vercel.app")
 
 
 def send_email(to_email: str, subject: str, html_content: str):

@@ -300,7 +300,7 @@ def extract_public_id_from_url(url: str) -> str:
         # Encontrar 'upload' o 'raw' en la URL
         upload_index = -1
         for i, part in enumerate(parts):
-            if part in ['upload', 'raw']:
+            if part == 'upload':
                 upload_index = i
                 break
         
