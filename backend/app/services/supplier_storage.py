@@ -59,7 +59,8 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     short_id = uuid.uuid4().hex[:8]
     clean_name = os.path.splitext(sanitize_filename(file.filename or "invoice"))[0][:40]
-    public_id = f"{CLOUDINARY_FOLDER}/{supplier_id}/{clean_name}_{timestamp}_{short_id}"
+    file_name = f"{clean_name}_{timestamp}_{short_id}"
+    folder = f"{CLOUDINARY_FOLDER}/{supplier_id}"
 
     # Save to temp file first (Cloudinary needs a file path or bytes)
     temp_path = os.path.join(UPLOAD_DIR, f"tmp_{short_id}.pdf")
@@ -72,7 +73,8 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
 
         result = cloudinary.uploader.upload(
             temp_path,
-            public_id=public_id,
+            public_id=file_name,
+            folder=folder,
             resource_type="raw",
             type="authenticated",
             overwrite=False,
