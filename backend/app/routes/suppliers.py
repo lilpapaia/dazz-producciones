@@ -734,8 +734,13 @@ async def migrate_dates_to_parsed(
     """
     One-shot migration: parse existing date strings into date_parsed column.
 
+    Creates the column if it doesn't exist (PostgreSQL won't add it via create_all).
     Safe to run multiple times — skips invoices that already have date_parsed.
     """
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS date_parsed DATE"))
+    db.commit()
+
     invoices = db.query(SupplierInvoice).filter(
         SupplierInvoice.date_parsed == None,
         SupplierInvoice.date != None,
