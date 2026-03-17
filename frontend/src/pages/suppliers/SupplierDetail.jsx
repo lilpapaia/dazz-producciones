@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save, UserX, Link2, Mail, ExternalLink, Check, Download, Search, X, Edit3 } from 'lucide-react';
-import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus } from '../../services/suppliersApi';
+import { Save, UserX, Link2, Mail, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
+import { getSupplier, updateSupplier, deactivateSupplier, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
+import useVoiceSearch from '../../hooks/useVoiceSearch';
+import useClickOutside from '../../hooks/useClickOutside';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -11,7 +13,11 @@ const PILL = {
   REJECTED: 'bg-red-400/10 text-red-400 border-red-400/20',
   DELETE_REQUESTED: 'bg-red-300/10 text-red-300 border-red-300/20',
 };
-
+const PILL_LABEL = {
+  PENDING: 'Pendiente', OC_PENDING: 'OC pendiente', APPROVED: 'Aprobada',
+  PAID: 'Pagada', REJECTED: 'Rechazada', DELETE_REQUESTED: 'Borrado solicitado',
+};
+const STATUS_LABEL = { ACTIVE: 'Activo', NEW: 'Nuevo', DEACTIVATED: 'Desactivado' };
 const HISTORY_DOT = {
   NEW_INVOICE: 'bg-blue-400', REGISTRATION: 'bg-green-400', APPROVED: 'bg-green-400',
   PAID: 'bg-green-300', REJECTED: 'bg-red-400', DELETED: 'bg-red-400',
@@ -21,14 +27,39 @@ const HISTORY_DOT = {
 const SupplierDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [supplier, setSupplier] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Invoice search (ProjectView pattern)
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [invoiceFilter, setInvoiceFilter] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const searchRef = useRef(null);
+
+  // Edit modal
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', address: '', supplier_type: '' });
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Delete invoice modal
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('');
+
+  // Voice search
+  const { isListening, startVoiceSearch } = useVoiceSearch({
+    lang: 'es-ES',
+    onResult: useCallback((transcript) => {
+      setInvoiceSearch(transcript);
+      setShowSuggestions(false);
+    }, []),
+  });
+  useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
 
   const load = () => {
     Promise.all([
@@ -38,16 +69,20 @@ const SupplierDetail = () => {
     ]).then(([s, inv, notifs]) => {
       setSupplier(s.data);
       setInvoices(inv.data || []);
-      // Filter notifications related to this supplier
       setHistory((notifs.data || []).filter(n => n.related_supplier_id === parseInt(id)));
     }).catch(() => navigate('/suppliers/list'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    load();
+    const saved = localStorage.getItem(`recentSearches_supplier_${id}`);
+    if (saved) setRecentSearches(JSON.parse(saved));
+  }, [id]);
 
+  // --- Handlers ---
   const handleDeactivate = async () => {
-    if (!confirm('Deactivate this supplier? All their tokens will be invalidated.')) return;
+    if (!confirm('¿Desactivar este proveedor? Se invalidarán todos sus tokens.')) return;
     await deactivateSupplier(id);
     load();
   };
@@ -56,7 +91,7 @@ const SupplierDetail = () => {
     try {
       const { data } = await getBankCertUrl(id);
       window.open(data.url, '_blank');
-    } catch { alert('Could not load bank certificate'); }
+    } catch { alert('No se pudo cargar el certificado bancario'); }
   };
 
   const handleAddNote = async () => {
@@ -68,6 +103,14 @@ const SupplierDetail = () => {
     setSaving(false);
   };
 
+  const handleDeleteNote = async (lineIndex) => {
+    if (!supplier.notes_internal) return;
+    const lines = supplier.notes_internal.split('\n');
+    const updated = lines.filter((_, i) => i !== lineIndex).join('\n').trim();
+    await updateSupplier(id, { notes_internal: updated || null });
+    load();
+  };
+
   const handleInvoiceAction = async (invoiceId, status) => {
     try {
       await updateInvoiceStatus(invoiceId, { status });
@@ -75,12 +118,62 @@ const SupplierDetail = () => {
     } catch (e) { alert(e.response?.data?.detail || 'Error'); }
   };
 
-  const handleDeleteNote = async (lineIndex) => {
-    if (!supplier.notes_internal) return;
-    const lines = supplier.notes_internal.split('\n');
-    const updated = lines.filter((_, i) => i !== lineIndex).join('\n').trim();
-    await updateSupplier(id, { notes_internal: updated || null });
-    load();
+  const handleDeleteInvoice = async () => {
+    if (!deleteModal || !deleteReason.trim()) return;
+    try {
+      await deleteInvoice(deleteModal.id);
+      load();
+    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+    setDeleteModal(null);
+    setDeleteReason('');
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const response = await exportSupplierExcel(id);
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${supplier.name.replace(/\s/g, '_')}_facturas.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch { alert('Error al exportar Excel'); }
+  };
+
+  const handleEditSave = async () => {
+    setEditSaving(true);
+    try {
+      await updateSupplier(id, editForm);
+      setEditModal(false);
+      load();
+    } catch (e) { alert(e.response?.data?.detail || 'Error al guardar'); }
+    setEditSaving(false);
+  };
+
+  const openEditModal = () => {
+    setEditForm({
+      name: supplier.name || '',
+      phone: supplier.phone || '',
+      address: supplier.address || '',
+      supplier_type: supplier.supplier_type || 'GENERAL',
+    });
+    setEditModal(true);
+  };
+
+  // Search helpers (ProjectView pattern)
+  const handleSearchChange = (value) => {
+    setInvoiceSearch(value);
+    setShowSuggestions(value.length > 0);
+  };
+  const clearSearch = () => { setInvoiceSearch(''); setShowSuggestions(false); };
+  const saveRecentSearch = (term) => {
+    if (!term.trim()) return;
+    const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem(`recentSearches_supplier_${id}`, JSON.stringify(updated));
   };
 
   const timeAgo = (d) => {
@@ -90,7 +183,7 @@ const SupplierDetail = () => {
     if (mins < 60) return `${mins}min`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h`;
-    return new Date(d).toLocaleDateString('en-GB');
+    return new Date(d).toLocaleDateString('es-ES');
   };
 
   if (loading) return (
@@ -103,29 +196,48 @@ const SupplierDetail = () => {
 
   const initials = supplier.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
+  // Filter invoices
+  const filtered = invoices.filter(inv => {
+    if (invoiceFilter && inv.status !== invoiceFilter) return false;
+    if (!invoiceSearch) return true;
+    const q = invoiceSearch.toLowerCase();
+    return inv.invoice_number?.toLowerCase().includes(q) || inv.oc_number?.toLowerCase().includes(q) || inv.provider_name?.toLowerCase().includes(q);
+  });
+
+  // Suggestions for search dropdown
+  const suggestions = invoiceSearch ? invoices.filter(inv => {
+    const q = invoiceSearch.toLowerCase();
+    return inv.invoice_number?.toLowerCase().includes(q) || inv.oc_number?.toLowerCase().includes(q);
+  }).slice(0, 5) : [];
+
+  const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2.5 rounded focus:border-amber-500 outline-none";
+  const labelCls = "text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
+
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">
           <span onClick={() => navigate('/suppliers/list')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">PROVEEDORES</span>
           {' / '}{supplier.name.toUpperCase()}
         </h1>
-        <button className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1">
+        <button onClick={openEditModal} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1">
           <Edit3 size={11} /> Editar datos
         </button>
       </div>
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-3.5">
-        {/* Left: Supplier card */}
+        {/* ═══ LEFT: Supplier card ═══ */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
           <div className="w-11 h-11 bg-amber-500 rounded-md flex items-center justify-center font-['Bebas_Neue'] text-lg text-zinc-950 mb-3">{initials}</div>
           <div className="font-['Bebas_Neue'] text-base tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
           <div className="text-[11px] text-zinc-500 mb-2.5 flex gap-1.5 flex-wrap items-center">
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border border-blue-400/20'}`}>
-              {supplier.supplier_type}
-            </span>
+            {supplier.nif_cif && <span className="font-mono text-zinc-400">{supplier.nif_cif}</span>}
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${supplier.is_active ? 'bg-green-400/10 text-green-400 border border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border border-zinc-700'}`}>
-              {supplier.status}
+              {STATUS_LABEL[supplier.status] || supplier.status}
+            </span>
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border border-blue-400/20'}`}>
+              {supplier.supplier_type === 'INFLUENCER' ? 'Talent' : supplier.supplier_type === 'GENERAL' ? 'General' : 'Mixed'}
             </span>
           </div>
 
@@ -139,13 +251,14 @@ const SupplierDetail = () => {
 
           {/* Data rows */}
           {[
-            ['Empresa', supplier.company_name || 'All'],
+            ['Empresa', supplier.company_name || 'Todas'],
             ['Email', supplier.email, false, true],
+            ['NIF/CIF', supplier.nif_cif, true],
             ['Teléfono', supplier.phone],
             ['Dirección', supplier.address],
-            ['IBAN', supplier.iban, true],
+            ['IBAN', supplier.iban, true, true],
             ['Cert. bancario', supplier.bank_cert_url ? 'pdf' : null],
-            ['Alta', supplier.created_at ? new Date(supplier.created_at).toLocaleDateString('en-GB') : '—', true],
+            ['Alta', supplier.created_at ? new Date(supplier.created_at).toLocaleDateString('es-ES') : '—', true],
           ].map(([label, val, mono, amber]) => (
             <div key={label} className="flex justify-between py-1.5 border-b border-white/[.04] last:border-0 text-xs">
               <span className="text-zinc-500">{label}</span>
@@ -159,7 +272,7 @@ const SupplierDetail = () => {
             </div>
           ))}
 
-          {/* Notes */}
+          {/* Notas */}
           {supplier.notes_internal && supplier.notes_internal.split('\n').filter(Boolean).map((line, i) => (
             <div key={i} className="flex items-start gap-1.5 bg-zinc-800 rounded p-2 text-[11px] text-zinc-400 mt-1.5 border-l-2 border-amber-500 group">
               <span className="flex-1 whitespace-pre-wrap">{line}</span>
@@ -171,7 +284,7 @@ const SupplierDetail = () => {
 
           <hr className="border-white/[.04] my-3" />
 
-          {/* Historial de eventos (S1) */}
+          {/* Historial de eventos */}
           {history.length > 0 && (
             <div className="mb-3">
               <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Historial de eventos</div>
@@ -187,7 +300,7 @@ const SupplierDetail = () => {
             </div>
           )}
 
-          {/* Add note */}
+          {/* Añadir nota + acciones */}
           <textarea
             value={note}
             onChange={e => setNote(e.target.value)}
@@ -200,9 +313,9 @@ const SupplierDetail = () => {
               <Save size={11} /> Añadir nota
             </button>
             {supplier.email && (
-              <a href={`mailto:${supplier.email}`} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1">
+              <button onClick={() => window.open(`mailto:${supplier.email}`)} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1">
                 <Mail size={11} /> Email
-              </a>
+              </button>
             )}
             {supplier.is_active && (
               <button onClick={handleDeactivate} className="text-[11px] text-red-400 border border-red-400/25 hover:bg-red-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
@@ -212,22 +325,65 @@ const SupplierDetail = () => {
           </div>
         </div>
 
-        {/* Right: Invoice history */}
+        {/* ═══ RIGHT: Facturas ═══ */}
         <div>
-          {/* Search + filter pills (like ProjectView) */}
+          {/* Buscador ProjectView pattern */}
           <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-            <div className="relative flex-1 max-w-[180px]">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-              <input
-                placeholder="Buscar factura..."
-                value={invoiceSearch}
-                onChange={e => setInvoiceSearch(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none"
-              />
-              {invoiceSearch && (
-                <button onClick={() => setInvoiceSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
-                  <X size={11} />
-                </button>
+            <div className="relative flex-1 max-w-[220px]" ref={searchRef}>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2 text-zinc-500 pointer-events-none" size={14} />
+                <input
+                  type="search"
+                  placeholder="Buscar factura, OC, proveedor..."
+                  value={invoiceSearch}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => (invoiceSearch || recentSearches.length > 0) && setShowSuggestions(true)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && invoiceSearch.trim()) { saveRecentSearch(invoiceSearch); setShowSuggestions(false); } }}
+                  className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-16 py-2 rounded focus:border-amber-500 outline-none"
+                />
+                <div className="absolute right-1 top-1 flex items-center gap-0.5">
+                  {invoiceSearch && (
+                    <button onClick={clearSearch} className="p-0.5 hover:bg-zinc-800 rounded transition-colors" title="Limpiar">
+                      <X size={12} className="text-zinc-500" />
+                    </button>
+                  )}
+                  <button onClick={startVoiceSearch} disabled={isListening}
+                    className={`p-0.5 rounded transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
+                    title="Búsqueda por voz">
+                    <Mic size={12} />
+                  </button>
+                </div>
+              </div>
+              {/* Dropdown sugerencias */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded shadow-xl max-h-64 overflow-y-auto z-50">
+                  {invoiceSearch && suggestions.length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5 text-[9px] text-zinc-500 tracking-widest uppercase border-b border-zinc-800">Facturas encontradas</div>
+                      {suggestions.map(inv => (
+                        <div key={inv.id} onClick={() => { setInvoiceSearch(inv.invoice_number); saveRecentSearch(inv.invoice_number); setShowSuggestions(false); }}
+                          className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs text-zinc-300 border-b border-zinc-800/50 last:border-0">
+                          <span className="font-mono text-amber-400">{inv.invoice_number}</span>
+                          {inv.oc_number && <span className="text-zinc-500 ml-2">· {inv.oc_number}</span>}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {!invoiceSearch && recentSearches.length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5 text-[9px] text-zinc-500 tracking-widest uppercase border-b border-zinc-800">Búsquedas recientes</div>
+                      {recentSearches.map((term, i) => (
+                        <div key={i} onClick={() => { setInvoiceSearch(term); setShowSuggestions(false); }}
+                          className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs text-zinc-400 border-b border-zinc-800/50 last:border-0">
+                          {term}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {invoiceSearch && suggestions.length === 0 && (
+                    <div className="px-3 py-3 text-xs text-zinc-600 text-center">Sin resultados</div>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex gap-1.5 flex-1 justify-end">
@@ -245,7 +401,9 @@ const SupplierDetail = () => {
                     className={`text-[11px] px-3 py-1 rounded-full border transition-all ${
                       invoiceFilter === f.key
                         ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
-                        : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                        : f.key === 'PENDING' && count > 0
+                          ? 'border-amber-500/50 text-amber-400 hover:border-amber-500'
+                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
                     }`}
                   >
                     {f.label}{count > 0 ? ` (${count})` : ''}
@@ -255,64 +413,128 @@ const SupplierDetail = () => {
             </div>
           </div>
 
+          {/* Lista facturas */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-            {(() => {
-              const filtered = invoices.filter(inv => {
-                if (invoiceFilter && inv.status !== invoiceFilter) return false;
-                if (!invoiceSearch) return true;
-                const q = invoiceSearch.toLowerCase();
-                return inv.invoice_number?.toLowerCase().includes(q) || inv.oc_number?.toLowerCase().includes(q);
-              });
-              return filtered.length === 0 ? (
-                <p className="text-xs text-zinc-600">Sin facturas</p>
-              ) : (
-                <div className="space-y-1">
-                  {filtered.map(inv => (
-                    <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors">
-                      <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
-                        <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
-                          {inv.invoice_number}
-                          <span className="text-[9px] text-green-400 flex items-center gap-0.5"><Check size={9} strokeWidth={2} />ok</span>
-                        </div>
-                        <div className="text-[10px] text-zinc-500">
-                          {inv.oc_number && <span className="text-[9px] px-1 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15 mr-1">{inv.oc_number}</span>}
-                          {inv.date}
-                        </div>
-                      </div>
-                      <div className="font-mono text-xs font-medium text-zinc-200 mx-2">{inv.final_total?.toFixed(2)} €</div>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
-                        <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
-                        {inv.status}
-                      </span>
-                      {inv.status === 'PENDING' && (
-                        <button onClick={() => handleInvoiceAction(inv.id, 'APPROVED')} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors ml-1">Aprobar</button>
-                      )}
-                      {inv.status === 'APPROVED' && (
-                        <button onClick={() => handleInvoiceAction(inv.id, 'PAID')} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors ml-1">Marcar pagada</button>
-                      )}
-                      {inv.status === 'PAID' && (
-                        <span className="text-[10px] text-zinc-600 ml-1">Cerrada</span>
-                      )}
+            {filtered.length === 0 ? (
+              <p className="text-xs text-zinc-600 text-center py-6">Sin facturas</p>
+            ) : (
+              <div className="space-y-1">
+                {filtered.map(inv => (
+                  <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors">
+                    <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
+                        {inv.invoice_number}
+                        <span className="text-[9px] text-green-400 flex items-center gap-0.5"><Check size={9} strokeWidth={2} />IA ok</span>
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {inv.oc_number && <span className="text-[9px] px-1 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15 mr-1">{inv.oc_number}</span>}
+                        {inv.date}
+                      </div>
+                    </div>
+                    <div className="font-mono text-xs font-medium text-zinc-200 mx-2">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
+                      <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                      {PILL_LABEL[inv.status] || inv.status}
+                    </span>
+                    {inv.status === 'PENDING' && (
+                      <button onClick={() => handleInvoiceAction(inv.id, 'APPROVED')} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors ml-1">Aprobar</button>
+                    )}
+                    {inv.status === 'APPROVED' && (
+                      <button onClick={() => handleInvoiceAction(inv.id, 'PAID')} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors ml-1">Marcar pagada</button>
+                    )}
+                    {inv.status === 'PAID' && (
+                      <span className="text-[10px] text-zinc-600 ml-1">Cerrada</span>
+                    )}
+                    {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
+                      <button onClick={() => setDeleteModal(inv)} className="w-6 h-6 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors ml-1">
+                        <Trash2 size={11} strokeWidth={1.5} />
+                      </button>
+                    )}
+                    {inv.status === 'PAID' && (
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <Trash2 size={11} className="text-zinc-800" strokeWidth={1.5} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Export button (S6) */}
+          {/* Exportar a Excel */}
           {invoices.length > 0 && (
             <div className="flex justify-end mt-2">
-              <button className="text-[11px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
+              <button onClick={handleExportExcel} className="text-[11px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
                 <Download size={12} /> Exportar a Excel
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* ═══ MODAL: Editar datos ═══ */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center" onClick={() => setEditModal(false)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[420px] max-w-[95vw] p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-4">Editar datos del proveedor</h3>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>Nombre <span className="text-amber-500">*</span></label>
+                <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Teléfono</label>
+                <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="+34 600..." className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Dirección</label>
+                <input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Tipo de proveedor</label>
+                <select value={editForm.supplier_type} onChange={e => setEditForm(f => ({ ...f, supplier_type: e.target.value }))}
+                  className={`${inputCls} appearance-none`}>
+                  <option value="GENERAL">General</option>
+                  <option value="INFLUENCER">Talent / Influencer</option>
+                  <option value="MIXED">Mixed</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button onClick={() => setEditModal(false)} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
+              <button onClick={handleEditSave} disabled={editSaving || !editForm.name.trim()}
+                className="text-xs px-4 py-2 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold transition-colors disabled:opacity-40">
+                {editSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: Eliminar factura ═══ */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center" onClick={() => { setDeleteModal(null); setDeleteReason(''); }}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[420px] max-w-[95vw] p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">Eliminar factura</h3>
+            <p className="text-xs text-zinc-500 mb-4">
+              Factura <span className="font-mono text-zinc-300">{deleteModal.invoice_number}</span> de {deleteModal.supplier_name || supplier.name}
+            </p>
+            <div className="mb-4">
+              <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Motivo <span className="text-amber-500">*</span></label>
+              <textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} rows={3} placeholder="Motivo de la eliminación..."
+                className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2 rounded focus:border-amber-500 outline-none resize-none" />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setDeleteModal(null); setDeleteReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
+              <button onClick={handleDeleteInvoice} disabled={!deleteReason.trim()}
+                className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors disabled:opacity-40">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -14,6 +14,8 @@ export const getBankCertUrl = (id) => api.get(`/suppliers/${id}/bank-cert-url`);
 export const inviteSupplier = (data) => api.post('/suppliers/invite', data);
 export const createOC = (data) => api.post('/suppliers/ocs', data);
 
+export const exportSupplierExcel = (id) => api.get(`/suppliers/${id}/export-excel`, { responseType: 'blob' });
+
 // Invoices
 export const getAllInvoices = (params) => api.get('/suppliers/invoices/all', { params });
 export const updateInvoiceStatus = (id, data) => api.put(`/suppliers/invoices/${id}/status`, data);

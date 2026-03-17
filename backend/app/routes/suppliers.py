@@ -311,6 +311,72 @@ async def get_supplier_bank_cert(
     return {"url": get_bank_cert_url(supplier.bank_cert_url)}
 
 
+@router.get("/{supplier_id}/export-excel")
+async def export_supplier_excel(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Export supplier invoices as Excel (BytesIO, no filesystem)."""
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from fastapi.responses import StreamingResponse
+
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+
+    invoices = db.query(SupplierInvoice).filter(
+        SupplierInvoice.supplier_id == supplier_id
+    ).order_by(desc(SupplierInvoice.created_at)).all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Facturas"
+
+    # Header style
+    header_font = Font(bold=True, color="FFFFFF", size=10)
+    header_fill = PatternFill(start_color="27272A", end_color="27272A", fill_type="solid")
+
+    headers = ["Nº Factura", "Fecha", "Proveedor", "OC", "Base", "IVA %", "IVA", "IRPF %", "IRPF", "Total", "Moneda", "Estado"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    for row, inv in enumerate(invoices, 2):
+        ws.cell(row=row, column=1, value=inv.invoice_number)
+        ws.cell(row=row, column=2, value=format_date_for_response(inv.date))
+        ws.cell(row=row, column=3, value=inv.provider_name)
+        ws.cell(row=row, column=4, value=inv.oc_number)
+        ws.cell(row=row, column=5, value=inv.base_amount)
+        ws.cell(row=row, column=6, value=inv.iva_percentage)
+        ws.cell(row=row, column=7, value=inv.iva_amount)
+        ws.cell(row=row, column=8, value=inv.irpf_percentage or 0)
+        ws.cell(row=row, column=9, value=inv.irpf_amount or 0)
+        ws.cell(row=row, column=10, value=inv.final_total)
+        ws.cell(row=row, column=11, value=inv.currency or "EUR")
+        ws.cell(row=row, column=12, value=inv.status.value if inv.status else "PENDING")
+
+    # Auto-width
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 30)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    safe_name = supplier.name.replace(" ", "_")[:30]
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}_facturas.xlsx"'},
+    )
+
+
 @router.put("/{supplier_id}")
 async def update_supplier(
     supplier_id: int,
