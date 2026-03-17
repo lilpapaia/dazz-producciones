@@ -224,12 +224,12 @@ const SupplierDetail = () => {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">
           <span onClick={() => navigate('/suppliers/list')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">PROVEEDORES</span>
           {' / '}{supplier.name.toUpperCase()}
         </h1>
-        <button onClick={openEditModal} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1">
-          <Edit3 size={11} /> Editar datos
+        <button onClick={openEditModal} className="text-[13px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1">
+          <Edit3 size={13} /> Editar datos
         </button>
       </div>
 
@@ -242,10 +242,10 @@ const SupplierDetail = () => {
             <div>
               <div className="font-['Bebas_Neue'] text-[18px] tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
               <div className="flex gap-1.5 flex-wrap items-center mt-1">
-                <span className={`text-[11px] font-bold px-[8px] py-[3px] rounded border ${supplier.is_active ? 'bg-green-400/10 text-green-400 border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border-zinc-700'}`}>
+                <span className={`text-[13px] font-bold px-[8px] py-[3px] rounded border ${supplier.is_active ? 'bg-green-400/10 text-green-400 border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border-zinc-700'}`}>
                   {STATUS_LABEL[supplier.status] || supplier.status}
                 </span>
-                <span className={`text-[11px] font-bold px-[8px] py-[3px] rounded border ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border-blue-400/20'}`}>
+                <span className={`text-[13px] font-bold px-[8px] py-[3px] rounded border ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border-blue-400/20'}`}>
                   {supplier.supplier_type === 'INFLUENCER' ? 'Talent' : supplier.supplier_type === 'GENERAL' ? 'General' : 'Mixed'}
                 </span>
               </div>
@@ -339,7 +339,7 @@ const SupplierDetail = () => {
         <div>
           {/* Buscador ProjectView pattern */}
           <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-            <div className="relative flex-1 max-w-[220px]" ref={searchRef}>
+            <div className="relative w-[300px]" ref={searchRef}>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
                 <input
@@ -349,7 +349,7 @@ const SupplierDetail = () => {
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => (invoiceSearch || recentSearches.length > 0) && setShowSuggestions(true)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && invoiceSearch.trim()) { saveRecentSearch(invoiceSearch); setShowSuggestions(false); } }}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
+                  className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[13px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
                 />
                 <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
                   {invoiceSearch && (
@@ -406,7 +406,7 @@ const SupplierDetail = () => {
                 <button
                   key={f.key}
                   onClick={() => setInvoiceFilter(f.key)}
-                  className={`text-[11px] px-3 py-1 rounded-full border transition-all ${
+                  className={`text-[13px] px-3 py-1 rounded-full border transition-all ${
                     invoiceFilter === f.key
                       ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
                       : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
@@ -451,12 +451,12 @@ const SupplierDetail = () => {
                     {/* Importe */}
                     <div className="font-mono text-[12px] font-medium text-zinc-200 whitespace-nowrap">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
                     {/* Estado */}
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
+                    <span className={`text-[12px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
                       <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
                       {PILL_LABEL[inv.status] || inv.status}
                     </span>
                     {/* Acciones */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       {inv.status === 'PENDING' && (
                         <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                       )}
@@ -486,8 +486,8 @@ const SupplierDetail = () => {
           {/* Exportar a Excel */}
           {invoices.length > 0 && (
             <div className="flex justify-end mt-2">
-              <button onClick={handleExportExcel} className="text-[11px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
-                <Download size={12} /> Exportar a Excel
+              <button onClick={handleExportExcel} className="text-[13px] text-zinc-400 border border-zinc-700 hover:bg-zinc-800 px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                <Download size={13} /> Exportar a Excel
               </button>
             </div>
           )}
