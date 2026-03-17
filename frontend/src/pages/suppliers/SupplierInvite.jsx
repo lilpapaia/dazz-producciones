@@ -84,14 +84,14 @@ const SupplierInvite = () => {
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-6 text-center">
           <CheckCircle size={40} className="text-green-400 mx-auto mb-3" />
           <h2 className="font-['Bebas_Neue'] text-lg tracking-wider text-zinc-100 mb-2">Invitación enviada</h2>
-          <p className="text-xs text-zinc-400 mb-4">
+          <p className="text-[13px] text-zinc-400 mb-4">
             Se ha enviado un email a <span className="text-amber-400">{email}</span> con un link de registro válido durante 72 horas.
           </p>
           <div className="flex gap-2 justify-center">
-            <button onClick={reset} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">
+            <button onClick={reset} className="text-[13px] px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">
               Invitar otro
             </button>
-            <button onClick={() => navigate('/suppliers/list')} className="text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 py-2 rounded transition-colors">
+            <button onClick={() => navigate('/suppliers/list')} className="text-[13px] bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 py-2 rounded transition-colors">
               Ir a proveedores
             </button>
           </div>
@@ -100,21 +100,21 @@ const SupplierInvite = () => {
     );
   }
 
-  const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2.5 rounded focus:border-amber-500 outline-none";
-  const labelCls = "text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
+  const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2.5 rounded focus:border-amber-500 outline-none";
+  const labelCls = "text-[11px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
 
   return (
     <div className="max-w-lg mx-auto">
-      <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100 mb-4">Invitar proveedor</h1>
+      <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 mb-4">Invitar proveedor</h1>
 
       {/* Info bar */}
-      <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded p-3 text-xs mb-4 leading-relaxed">
+      <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded p-3 text-[13px] mb-4 leading-relaxed">
         El proveedor recibe un link único seguro (72h) para registrarse — rellena todos sus datos, sube el certificado bancario y crea su propia contraseña.
       </div>
 
       {/* Type selector */}
       <div className="mb-4">
-        <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Tipo de proveedor *</div>
+        <div className="text-[12px] text-zinc-500 tracking-widest uppercase mb-2">Tipo de proveedor *</div>
         <div className="grid grid-cols-3 gap-2">
           {[
             { key: 'talent', label: 'Talent / Influencer', desc: 'OC permanente · Solo factura a DAZZLE MGMT' },
@@ -192,7 +192,7 @@ const SupplierInvite = () => {
               <button
                 onClick={handleCreateOC}
                 disabled={creatingOC || !talentName.trim() || !talentOC.trim()}
-                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs px-4 py-2 rounded transition-colors disabled:opacity-50"
+                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[13px] px-4 py-2 rounded transition-colors disabled:opacity-50"
               >
                 {creatingOC ? 'Creando...' : 'Crear OC →'}
               </button>
@@ -235,7 +235,7 @@ const SupplierInvite = () => {
                 <button
                   type="submit"
                   disabled={sending || !email.trim() || !name.trim()}
-                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[13px] px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   <Send size={13} />
                   {sending ? 'Enviando...' : 'Enviar invitación'}
@@ -283,7 +283,7 @@ const SupplierInvite = () => {
               <button
                 type="submit"
                 disabled={sending || !name.trim() || !email.trim()}
-                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[13px] px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <Send size={13} />
                 {sending ? 'Enviando...' : 'Enviar invitación'}
