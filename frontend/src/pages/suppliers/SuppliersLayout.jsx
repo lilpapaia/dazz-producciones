@@ -47,7 +47,7 @@ const SuppliersLayout = () => {
         transition-transform lg:transition-none pt-20 lg:pt-3
         lg:top-16 lg:h-[calc(100vh-64px)] lg:self-start
       `}>
-        <div className="text-[13px] text-zinc-600 tracking-widest uppercase px-3 mb-1">General</div>
+        <div className="text-[12px] text-zinc-600 tracking-widest uppercase px-3 mb-1">General</div>
 
         {NAV_ITEMS.filter(i => !i.section).map(item => {
           const active = isActive(item.path, item.exact);
@@ -72,7 +72,7 @@ const SuppliersLayout = () => {
           );
         })}
 
-        <div className="text-[13px] text-zinc-600 tracking-widest uppercase px-3 mt-4 mb-1">Añadir</div>
+        <div className="text-[12px] text-zinc-600 tracking-widest uppercase px-3 mt-4 mb-1">Añadir</div>
 
         {NAV_ITEMS.filter(i => i.section === 'add').map(item => {
           const active = isActive(item.path);

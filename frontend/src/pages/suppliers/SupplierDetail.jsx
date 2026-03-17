@@ -240,7 +240,7 @@ const SupplierDetail = () => {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 bg-amber-500 rounded-md flex items-center justify-center font-['Bebas_Neue'] text-xl text-zinc-950 flex-shrink-0">{initials}</div>
             <div>
-              <div className="font-['Bebas_Neue'] text-[18px] tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
+              <div className="font-['Bebas_Neue'] text-[22px] tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
               <div className="flex gap-1.5 flex-wrap items-center mt-1">
                 <span className={`text-[13px] font-bold px-[8px] py-[3px] rounded border ${supplier.is_active ? 'bg-green-400/10 text-green-400 border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border-zinc-700'}`}>
                   {STATUS_LABEL[supplier.status] || supplier.status}
@@ -429,7 +429,7 @@ const SupplierDetail = () => {
                     key={inv.id}
                     onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)}
                     className="grid items-center gap-3 px-[12px] py-[12px] rounded hover:bg-white/[.02] transition-colors cursor-pointer"
-                    style={{ gridTemplateColumns: '32px 200px 200px 130px auto auto 1fr' }}
+                    style={{ gridTemplateColumns: '32px 200px 200px 130px auto 1fr auto' }}
                   >
                     {/* Icono */}
                     <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
@@ -442,38 +442,40 @@ const SupplierDetail = () => {
                     {/* OC */}
                     <div>
                       {inv.oc_number
-                        ? <span className="text-[10px] px-[7px] py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
-                        : <span className="text-[10px] text-zinc-600">—</span>
+                        ? <span className="text-[13px] px-[7px] py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        : <span className="text-[13px] text-zinc-600">—</span>
                       }
                     </div>
                     {/* Fecha */}
                     <div className="text-[11px] text-zinc-400">{inv.date}</div>
                     {/* Importe */}
                     <div className="font-mono text-[12px] font-medium text-zinc-200 whitespace-nowrap">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
-                    {/* Estado */}
-                    <span className={`text-[12px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
-                      <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
-                      {PILL_LABEL[inv.status] || inv.status}
-                    </span>
-                    {/* Acciones — pegadas a la derecha */}
+                    {/* Estado — centrado en su columna 1fr */}
+                    <div className="flex justify-center">
+                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
+                        <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                        {PILL_LABEL[inv.status] || inv.status}
+                      </span>
+                    </div>
+                    {/* Acciones — pegadas a la derecha, misma altura */}
                     <div className="flex items-center gap-1 justify-end">
                       {inv.status === 'PENDING' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[13px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                       )}
                       {inv.status === 'APPROVED' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[13px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
                       )}
                       {inv.status === 'PAID' && (
-                        <span className="text-[10px] text-zinc-600">Cerrada</span>
+                        <span className="text-[13px] text-zinc-600">Cerrada</span>
                       )}
                       {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-6 h-6 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
-                          <Trash2 size={11} strokeWidth={1.5} />
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="text-[13px] px-2.5 py-1 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                          <Trash2 size={13} strokeWidth={1.5} />
                         </button>
                       )}
                       {inv.status === 'PAID' && (
-                        <div className="w-6 h-6 flex items-center justify-center">
-                          <Trash2 size={11} className="text-zinc-800" strokeWidth={1.5} />
+                        <div className="text-[13px] px-2.5 py-1 flex items-center justify-center">
+                          <Trash2 size={13} className="text-zinc-800" strokeWidth={1.5} />
                         </div>
                       )}
                     </div>
