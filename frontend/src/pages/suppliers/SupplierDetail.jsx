@@ -442,8 +442,8 @@ const SupplierDetail = () => {
                     {/* OC */}
                     <div>
                       {inv.oc_number
-                        ? <span className="text-[13px] px-[7px] py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
-                        : <span className="text-[13px] text-zinc-600">—</span>
+                        ? <span className="text-[12px] px-[7px] py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        : <span className="text-[12px] text-zinc-600">—</span>
                       }
                     </div>
                     {/* Fecha */}
