@@ -48,7 +48,7 @@ const SupplierInvite = () => {
       setOcCreated(true);
       setName(talentName);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create OC');
+      setError(err.response?.data?.detail || 'Error al crear OC');
     } finally {
       setCreatingOC(false);
     }
@@ -63,7 +63,7 @@ const SupplierInvite = () => {
       await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
       setSent(true);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to send invitation');
+      setError(err.response?.data?.detail || 'Error al enviar invitación');
     } finally {
       setSending(false);
     }
@@ -83,16 +83,16 @@ const SupplierInvite = () => {
       <div className="max-w-lg mx-auto mt-12">
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-6 text-center">
           <CheckCircle size={40} className="text-green-400 mx-auto mb-3" />
-          <h2 className="font-['Bebas_Neue'] text-lg tracking-wider text-zinc-100 mb-2">Invitation sent</h2>
+          <h2 className="font-['Bebas_Neue'] text-lg tracking-wider text-zinc-100 mb-2">Invitación enviada</h2>
           <p className="text-xs text-zinc-400 mb-4">
-            An email has been sent to <span className="text-amber-400">{email}</span> with a registration link valid for 72 hours.
+            Se ha enviado un email a <span className="text-amber-400">{email}</span> con un link de registro válido durante 72 horas.
           </p>
           <div className="flex gap-2 justify-center">
             <button onClick={reset} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">
-              Invite another
+              Invitar otro
             </button>
             <button onClick={() => navigate('/suppliers/list')} className="text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 py-2 rounded transition-colors">
-              Go to suppliers
+              Ir a proveedores
             </button>
           </div>
         </div>
@@ -105,21 +105,21 @@ const SupplierInvite = () => {
 
   return (
     <div className="max-w-lg mx-auto">
-      <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100 mb-4">Invite supplier</h1>
+      <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100 mb-4">Invitar proveedor</h1>
 
       {/* Info bar */}
       <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded p-3 text-xs mb-4 leading-relaxed">
-        The supplier receives a unique secure link (72h) to register — they fill in their details, upload bank certificate and create their own password.
+        El proveedor recibe un link único seguro (72h) para registrarse — rellena todos sus datos, sube el certificado bancario y crea su propia contraseña.
       </div>
 
       {/* Type selector */}
       <div className="mb-4">
-        <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Supplier type *</div>
+        <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Tipo de proveedor *</div>
         <div className="grid grid-cols-3 gap-2">
           {[
-            { key: 'talent', label: 'Talent / Influencer', desc: 'Permanent OC · DAZZLE MGMT only' },
-            { key: 'mixed', label: 'Mixed', desc: 'Permanent OC + project OCs · All companies' },
-            { key: 'general', label: 'General supplier', desc: 'Project OC per invoice · All companies' },
+            { key: 'talent', label: 'Talent / Influencer', desc: 'OC permanente · Solo factura a DAZZLE MGMT' },
+            { key: 'mixed', label: 'Mixed', desc: 'OC permanente + OC proyecto · Todas las empresas' },
+            { key: 'general', label: 'Proveedor general', desc: 'Usa el OC del proyecto en cada factura · Todas las empresas' },
           ].map(opt => (
             <button
               key={opt.key}
@@ -151,38 +151,38 @@ const SupplierInvite = () => {
                 {ocCreated ? '✓' : '1'}
               </div>
               <div>
-                <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Create permanent OC</div>
-                <div className="text-[10px] text-zinc-500">Invoices to DAZZLE MGMT only &middot; OC auto-assigned on registration via NIF</div>
+                <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Crear OC permanente</div>
+                <div className="text-[10px] text-zinc-500">Solo factura a DAZZLE MGMT &middot; OC asignado automáticamente al registrarse via NIF</div>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 mb-3">
               <div>
-                <label className={labelCls}>Talent name <span className="text-amber-500">*</span></label>
+                <label className={labelCls}>Nombre del talent <span className="text-amber-500">*</span></label>
                 <input value={talentName} onChange={e => setTalentName(e.target.value)} placeholder="@mariagomez" className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>NIF / DNI</label>
                 <input value={talentNif} onChange={e => setTalentNif(e.target.value)} placeholder="12345678A" className={inputCls} />
-                <div className="text-[9px] text-zinc-600 mt-0.5">For auto-matching on registration</div>
+                <div className="text-[9px] text-zinc-600 mt-0.5">Para el matching automático al registrarse</div>
               </div>
               <div>
-                <label className={labelCls}>Company</label>
+                <label className={labelCls}>Empresa</label>
                 <input value="DAZZLE MGMT" disabled className="w-full bg-zinc-700 border border-zinc-700 text-zinc-500 text-xs px-3 py-2.5 rounded cursor-not-allowed" />
               </div>
             </div>
 
             <div className="grid grid-cols-[1fr_2fr] gap-2.5 mb-3">
               <div>
-                <label className={labelCls}>OC code <span className="text-amber-500">*</span></label>
+                <label className={labelCls}>Código OC <span className="text-amber-500">*</span></label>
                 <input value={talentOC} onChange={e => setTalentOC(e.target.value)} placeholder="OC-MGMTINT2026047" className={`${inputCls} font-mono`} />
-                <div className="text-[9px] text-zinc-600 mt-0.5">Sequential accounting number</div>
+                <div className="text-[9px] text-zinc-600 mt-0.5">Número secuencial de contabilidad</div>
               </div>
               {talentNif && talentOC && (
                 <div className="flex items-end pb-0.5">
                   <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] flex items-start gap-2 flex-1">
                     <Shield size={13} className="flex-shrink-0 mt-0.5" />
-                    On registration with NIF {talentNif}, the system auto-assigns {talentOC}
+                    Al registrarse con NIF {talentNif} el sistema asigna {talentOC} automáticamente
                   </div>
                 </div>
               )}
@@ -194,7 +194,7 @@ const SupplierInvite = () => {
                 disabled={creatingOC || !talentName.trim() || !talentOC.trim()}
                 className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs px-4 py-2 rounded transition-colors disabled:opacity-50"
               >
-                {creatingOC ? 'Creating...' : 'Create OC →'}
+                {creatingOC ? 'Creando...' : 'Crear OC →'}
               </button>
             </div>
           </div>
@@ -204,8 +204,8 @@ const SupplierInvite = () => {
             <div className="flex items-center gap-3 mb-4">
               <div className="w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center font-['Bebas_Neue'] text-sm text-zinc-950 flex-shrink-0">2</div>
               <div>
-                <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Send invitation email</div>
-                <div className="text-[10px] text-zinc-500">The supplier creates their own password during registration</div>
+                <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Enviar invitación por email</div>
+                <div className="text-[10px] text-zinc-500">El proveedor crea su propia contraseña durante el registro</div>
               </div>
             </div>
 
@@ -216,19 +216,19 @@ const SupplierInvite = () => {
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="talent@email.com" required className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Name</label>
-                  <input value={name} onChange={e => setName(e.target.value)} placeholder={talentName || 'Supplier name'} className={inputCls} />
+                  <label className={labelCls}>Nombre</label>
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder={talentName || 'Nombre del proveedor'} className={inputCls} />
                 </div>
               </div>
 
               <div className="mb-3">
-                <label className={labelCls}>Custom message</label>
-                <input value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello, here's your access to the supplier portal..." className={inputCls} />
+                <label className={labelCls}>Mensaje personalizado</label>
+                <input value={message} onChange={e => setMessage(e.target.value)} placeholder="Hola, aquí tienes tu acceso al portal de proveedores..." className={inputCls} />
               </div>
 
               <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">
                 <Shield size={13} className="flex-shrink-0 mt-0.5" />
-                The supplier will need: NIF/CIF, IBAN and bank certificate PDF. Link valid 72h.
+                El proveedor necesitará: NIF/CIF, IBAN y certificado de titularidad bancaria en PDF. Crea su propia contraseña. Link válido 72h.
               </div>
 
               <div className="flex justify-end">
@@ -238,7 +238,7 @@ const SupplierInvite = () => {
                   className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   <Send size={13} />
-                  {sending ? 'Sending...' : 'Send invitation'}
+                  {sending ? 'Enviando...' : 'Enviar invitación'}
                 </button>
               </div>
             </form>
@@ -252,15 +252,15 @@ const SupplierInvite = () => {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center font-['Bebas_Neue'] text-sm text-zinc-950 flex-shrink-0">1</div>
             <div>
-              <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Send invitation email</div>
-              <div className="text-[10px] text-zinc-500">General suppliers don't have a fixed OC — they use the project OC on each invoice</div>
+              <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Enviar invitación por email</div>
+              <div className="text-[10px] text-zinc-500">Los proveedores generales no tienen OC fijo — usan el OC del proyecto en cada factura</div>
             </div>
           </div>
 
           <form onSubmit={handleInvite}>
             <div className="grid grid-cols-2 gap-2.5 mb-3">
               <div>
-                <label className={labelCls}>Name / Company name <span className="text-amber-500">*</span></label>
+                <label className={labelCls}>Nombre / razón social <span className="text-amber-500">*</span></label>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Audiovisual Pérez SL" required className={inputCls} />
               </div>
               <div>
@@ -270,13 +270,13 @@ const SupplierInvite = () => {
             </div>
 
             <div className="mb-3">
-              <label className={labelCls}>Custom message</label>
-              <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello, we invite you to register as a supplier for DAZZ Creative..." className={`${inputCls} resize-none`} rows={2} />
+              <label className={labelCls}>Mensaje personalizado</label>
+              <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Hola, te invitamos a registrarte como proveedor de DAZZ Creative..." className={`${inputCls} resize-none`} rows={2} />
             </div>
 
             <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">
               <Shield size={13} className="flex-shrink-0 mt-0.5" />
-              The supplier will need: NIF/CIF, IBAN and bank certificate PDF. Creates their own password. Link valid 72h.
+              El proveedor necesitará: NIF/CIF, IBAN y certificado de titularidad bancaria en PDF. Crea su propia contraseña. Link válido 72h.
             </div>
 
             <div className="flex justify-end">
@@ -286,7 +286,7 @@ const SupplierInvite = () => {
                 className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <Send size={13} />
-                {sending ? 'Sending...' : 'Send invitation'}
+                {sending ? 'Enviando...' : 'Enviar invitación'}
               </button>
             </div>
           </form>

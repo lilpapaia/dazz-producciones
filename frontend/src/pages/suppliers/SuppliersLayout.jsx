@@ -83,7 +83,7 @@ const SuppliersLayout = () => {
           );
         })}
 
-        <div className="text-[9px] text-zinc-600 tracking-widest uppercase px-3 mt-4 mb-1">Actions</div>
+        <div className="text-[9px] text-zinc-600 tracking-widest uppercase px-3 mt-4 mb-1">Añadir</div>
 
         {NAV_ITEMS.filter(i => i.section === 'add').map(item => {
           const active = isActive(item.path);

@@ -70,9 +70,9 @@ const SupplierDetail = () => {
     if (!d) return '';
     const diff = Date.now() - new Date(d).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}min ago`;
+    if (mins < 60) return `${mins}min`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
+    if (hrs < 24) return `${hrs}h`;
     return new Date(d).toLocaleDateString('en-GB');
   };
 
@@ -89,7 +89,7 @@ const SupplierDetail = () => {
   return (
     <div>
       <button onClick={() => navigate('/suppliers/list')} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-amber-400 mb-3 transition-colors">
-        <ChevronLeft size={14} /> Back to list
+        <ChevronLeft size={14} /> ← Volver al listado
       </button>
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-3.5">
@@ -116,18 +116,18 @@ const SupplierDetail = () => {
 
           {/* Data rows */}
           {[
-            ['Company', supplier.company_name || 'All'],
+            ['Empresa', supplier.company_name || 'All'],
             ['Email', supplier.email, false, true],
-            ['Phone', supplier.phone],
-            ['Address', supplier.address],
+            ['Teléfono', supplier.phone],
+            ['Dirección', supplier.address],
             ['IBAN', supplier.iban, true],
-            ['Bank cert', supplier.bank_cert_url ? 'pdf' : null],
-            ['Registered', supplier.created_at ? new Date(supplier.created_at).toLocaleDateString('en-GB') : '—', true],
+            ['Cert. bancario', supplier.bank_cert_url ? 'pdf' : null],
+            ['Alta', supplier.created_at ? new Date(supplier.created_at).toLocaleDateString('en-GB') : '—', true],
           ].map(([label, val, mono, amber]) => (
             <div key={label} className="flex justify-between py-1.5 border-b border-white/[.04] last:border-0 text-xs">
               <span className="text-zinc-500">{label}</span>
               {val === 'pdf' ? (
-                <button onClick={handleViewCert} className="text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">View PDF <ExternalLink size={9} /></button>
+                <button onClick={handleViewCert} className="text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">Ver PDF → <ExternalLink size={9} /></button>
               ) : (
                 <span className={`text-right max-w-[155px] break-all ${mono ? 'font-mono text-[11px]' : ''} ${amber ? 'text-amber-400' : 'text-zinc-300'}`}>
                   {val || '—'}
@@ -145,10 +145,10 @@ const SupplierDetail = () => {
 
           <hr className="border-white/[.04] my-3" />
 
-          {/* Event history (S1) */}
+          {/* Historial de eventos (S1) */}
           {history.length > 0 && (
             <div className="mb-3">
-              <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Event history</div>
+              <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Historial de eventos</div>
               {history.slice(0, 5).map(h => (
                 <div key={h.id} className="flex items-start gap-2 py-1.5 border-b border-white/[.04] last:border-0 text-[11px]">
                   <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${HISTORY_DOT[h.event_type] || 'bg-zinc-600'}`} />
@@ -165,13 +165,13 @@ const SupplierDetail = () => {
           <textarea
             value={note}
             onChange={e => setNote(e.target.value)}
-            placeholder="Add internal note..."
+            placeholder="Añadir nota interna..."
             rows={2}
             className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[11px] px-2.5 py-2 rounded focus:border-amber-500 outline-none resize-none"
           />
           <div className="flex gap-1.5 mt-1.5 flex-wrap">
             <button onClick={handleAddNote} disabled={saving || !note.trim()} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors disabled:opacity-40 flex items-center gap-1">
-              <Save size={11} /> Add note
+              <Save size={11} /> Añadir nota
             </button>
             {supplier.email && (
               <a href={`mailto:${supplier.email}`} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1">
@@ -180,7 +180,7 @@ const SupplierDetail = () => {
             )}
             {supplier.is_active && (
               <button onClick={handleDeactivate} className="text-[11px] text-red-400 border border-red-400/25 hover:bg-red-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
-                <UserX size={11} /> Deactivate
+                <UserX size={11} /> Desactivar
               </button>
             )}
           </div>
@@ -189,10 +189,10 @@ const SupplierDetail = () => {
         {/* Right: Invoice history */}
         <div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-            <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Invoices ({invoices.length})</div>
+            <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Facturas ({invoices.length})</div>
 
             {invoices.length === 0 ? (
-              <p className="text-xs text-zinc-600">No invoices yet</p>
+              <p className="text-xs text-zinc-600">Sin facturas</p>
             ) : (
               <div className="space-y-1">
                 {invoices.map(inv => (
@@ -226,7 +226,7 @@ const SupplierDetail = () => {
           {invoices.length > 0 && (
             <div className="flex justify-end mt-2">
               <button className="text-[11px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
-                <Download size={12} /> Export to Excel
+                <Download size={12} /> Exportar a Excel
               </button>
             </div>
           )}

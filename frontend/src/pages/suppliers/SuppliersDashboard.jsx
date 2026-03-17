@@ -38,19 +38,19 @@ const SuppliersDashboard = () => {
   );
 
   const kpis = [
-    { label: 'Pending invoices', value: stats?.pending_invoices || 0, sub: 'Awaiting review', accent: true, warn: true },
-    { label: 'Approved this month', value: stats?.approved_this_month || 0, sub: `${stats?.pending_invoices || 0} still pending` },
-    { label: 'Active suppliers', value: stats?.active_suppliers || 0, sub: 'Registered on portal', ok: true },
-    { label: 'Total paid', value: `${((stats?.total_paid_this_month || 0) / 1000).toFixed(1)}K`, sub: 'This month (EUR)', suffix: true },
+    { label: 'Facturas pendientes', value: stats?.pending_invoices || 0, sub: 'Sin revisar', accent: true, warn: true },
+    { label: 'Aprobadas este mes', value: stats?.approved_this_month || 0, sub: `${stats?.pending_invoices || 0} aún pendientes` },
+    { label: 'Proveedores activos', value: stats?.active_suppliers || 0, sub: 'Registrados en portal', ok: true },
+    { label: 'Total pagado', value: `${((stats?.total_paid_this_month || 0) / 1000).toFixed(1)}K`, sub: 'Este mes', suffix: true },
   ];
 
   const timeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}min ago`;
+    if (mins < 60) return `${mins}min`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
+    if (hours < 24) return `${hours}h`;
+    return `${Math.floor(hours / 24)}d`;
   };
 
   return (
@@ -74,9 +74,9 @@ const SuppliersDashboard = () => {
       <div className="grid lg:grid-cols-2 gap-3">
         {/* Activity feed */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-          <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Recent activity</div>
+          <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Actividad reciente</div>
           {feed.length === 0 ? (
-            <p className="text-xs text-zinc-600">No recent activity</p>
+            <p className="text-xs text-zinc-600">Sin actividad reciente</p>
           ) : (
             feed.slice(0, 6).map(n => {
               const cfg = FEED_ICONS[n.event_type] || { icon: Bell, bg: 'bg-zinc-800', color: 'text-zinc-400' };
@@ -90,7 +90,7 @@ const SuppliersDashboard = () => {
                     <div className="text-xs text-zinc-300 leading-snug">{n.message || n.title}</div>
                     <div className="text-[10px] text-zinc-600 mt-0.5">
                       {timeAgo(n.created_at)}
-                      {!n.is_read && <b className="text-amber-400 ml-2">unread</b>}
+                      {!n.is_read && <b className="text-amber-400 ml-2">sin leer</b>}
                     </div>
                   </div>
                 </div>
@@ -99,19 +99,19 @@ const SuppliersDashboard = () => {
           )}
           {feed.length > 6 && (
             <button onClick={() => navigate('/suppliers/notifications')} className="text-[11px] text-amber-500 hover:text-amber-400 mt-2">
-              View all notifications
+              Ver todas las notificaciones
             </button>
           )}
         </div>
 
         {/* Invoice status chart */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-          <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Invoice status</div>
+          <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Estado de facturas</div>
           <div className="flex flex-col gap-2.5 mt-1">
             {[
-              { label: 'Pending', value: stats?.pending_invoices || 0, color: 'bg-amber-500', text: 'text-amber-400' },
-              { label: 'Approved', value: stats?.approved_this_month || 0, color: 'bg-green-400', text: 'text-green-400' },
-              { label: 'Paid', value: stats?.total_paid_this_month > 0 ? Math.ceil(stats.total_paid_this_month / 100) : 0, color: 'bg-green-300', text: 'text-green-300' },
+              { label: 'Pendiente', value: stats?.pending_invoices || 0, color: 'bg-amber-500', text: 'text-amber-400' },
+              { label: 'Aprobada', value: stats?.approved_this_month || 0, color: 'bg-green-400', text: 'text-green-400' },
+              { label: 'Pagada', value: stats?.total_paid_this_month > 0 ? Math.ceil(stats.total_paid_this_month / 100) : 0, color: 'bg-green-300', text: 'text-green-300' },
             ].map((s, i) => {
               const maxVal = Math.max(...[stats?.pending_invoices || 0, stats?.approved_this_month || 0, 10]);
               const pct = maxVal > 0 ? Math.min((s.value / maxVal) * 100, 100) : 0;
