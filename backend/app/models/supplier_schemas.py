@@ -5,7 +5,7 @@ Used by both admin routes (/suppliers) and portal routes (/portal).
 
 import re
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 
@@ -84,7 +84,7 @@ class NoteRequest(BaseModel):
 
 
 class InvoiceStatusUpdate(BaseModel):
-    status: str  # APPROVED, PAID, REJECTED
+    status: Literal["APPROVED", "PAID", "REJECTED"]
     reason: Optional[str] = None  # Required for REJECTED
 
 

@@ -35,6 +35,7 @@ from app.services.supplier_ai import (
 )
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url
 from app.services.encryption import encrypt_iban, decrypt_iban
+from app.services.validators import validate_pdf_bytes, sanitize_filename
 from app.services.supplier_email import (
     send_supplier_welcome,
     send_supplier_invoice_received,
@@ -238,9 +239,10 @@ async def refresh_token(
 @router.post("/logout")
 async def logout_supplier(
     body: RefreshRequest,
+    supplier: Supplier = Depends(get_current_active_supplier),
     db: Session = Depends(get_db),
 ):
-    revoked = revoke_supplier_refresh_token(db, body.refresh_token)
+    revoked = revoke_supplier_refresh_token(db, body.refresh_token, supplier_id=supplier.id)
     if not revoked:
         raise HTTPException(400, "Refresh token not found or already revoked")
     return {"message": "Logged out successfully"}
@@ -296,12 +298,8 @@ async def upload_bank_cert(
     db: Session = Depends(get_db),
 ):
     """Upload bank certificate PDF (required after registration)."""
-    if not file.content_type or file.content_type != "application/pdf":
-        raise HTTPException(400, "Only PDF files are accepted")
-
     contents = await file.read()
-    if len(contents) > 10 * 1024 * 1024:
-        raise HTTPException(400, "File too large (max 10MB)")
+    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
     cert_key = save_bank_cert(file, supplier.id, contents=contents)
     supplier.bank_cert_url = cert_key
@@ -326,13 +324,9 @@ async def upload_invoice(
     import json
     import shutil
 
-    # Validate file
-    if not file.content_type or file.content_type != "application/pdf":
-        raise HTTPException(400, "Only PDF files are accepted")
-
+    # Validate file (magic bytes + size)
     contents = await file.read()
-    if len(contents) > 10 * 1024 * 1024:  # 10MB max
-        raise HTTPException(400, "File too large (max 10MB)")
+    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
     # Save to temp file for AI extraction (Cloudinary upload happens AFTER validation)
     import uuid as _uuid

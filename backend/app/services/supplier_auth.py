@@ -81,11 +81,14 @@ def validate_supplier_refresh_token(db: Session, token: str) -> Optional[Supplie
     ).first()
 
 
-def revoke_supplier_refresh_token(db: Session, token: str) -> bool:
-    rt = db.query(SupplierRefreshToken).filter(
+def revoke_supplier_refresh_token(db: Session, token: str, supplier_id: int = None) -> bool:
+    query = db.query(SupplierRefreshToken).filter(
         SupplierRefreshToken.token == token,
         SupplierRefreshToken.revoked_at == None,
-    ).first()
+    )
+    if supplier_id is not None:
+        query = query.filter(SupplierRefreshToken.supplier_id == supplier_id)
+    rt = query.first()
     if rt:
         rt.revoked_at = datetime.now(timezone.utc)
         db.commit()

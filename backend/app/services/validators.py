@@ -345,6 +345,42 @@ async def validate_file_upload(
         )
 
 
+def validate_pdf_bytes(contents: bytes, max_size: int = MAX_PDF_SIZE) -> None:
+    """
+    Validate pre-read PDF bytes: magic bytes + file size.
+
+    Use this when contents have already been read from the UploadFile
+    (avoids double file.read() from validate_file_upload).
+
+    Args:
+        contents: Raw file bytes
+        max_size: Max allowed size in bytes (default: MAX_PDF_SIZE)
+
+    Raises:
+        HTTPException: If validation fails
+    """
+    if not contents or len(contents) < 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File is empty or too small to be a valid PDF"
+        )
+
+    # Magic bytes: every PDF starts with %PDF
+    if contents[:4] != b"%PDF":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File is not a valid PDF (invalid magic bytes)"
+        )
+
+    if len(contents) > max_size:
+        max_mb = max_size / (1024 * 1024)
+        file_mb = len(contents) / (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large ({file_mb:.1f}MB). Max allowed: {max_mb:.0f}MB"
+        )
+
+
 def sanitize_filename(filename: str) -> str:
     """
     Sanitiza nombre de archivo para evitar path traversal

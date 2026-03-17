@@ -5,7 +5,7 @@ Prefijo: /suppliers
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, case
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import secrets
@@ -172,19 +172,72 @@ async def list_suppliers(
     admin: User = Depends(get_current_admin_user),
 ):
     """List all suppliers with optional filters."""
-    query = db.query(Supplier)
+    query = db.query(Supplier).options(
+        joinedload(Supplier.oc).joinedload(SupplierOC.company)
+    )
 
     if status_filter:
         query = query.filter(Supplier.status == status_filter)
 
     if company_id:
-        # Filter by suppliers whose OC belongs to this company
         oc_ids = [oc.id for oc in db.query(SupplierOC).filter(SupplierOC.company_id == company_id).all()]
         query = query.filter(Supplier.oc_id.in_(oc_ids)) if oc_ids else query.filter(False)
 
     suppliers = query.order_by(desc(Supplier.created_at)).all()
 
-    result = [_build_supplier_response(s, db) for s in suppliers]
+    if not suppliers:
+        return []
+
+    # Batch pre-fetch: invoice counts (total + pending) per supplier
+    supplier_ids = [s.id for s in suppliers]
+
+    counts = db.query(
+        SupplierInvoice.supplier_id,
+        func.count(SupplierInvoice.id).label("total"),
+        func.count(case((SupplierInvoice.status == InvoiceStatus.PENDING, 1))).label("pending"),
+    ).filter(
+        SupplierInvoice.supplier_id.in_(supplier_ids)
+    ).group_by(SupplierInvoice.supplier_id).all()
+    counts_map = {c.supplier_id: (c.total, c.pending) for c in counts}
+
+    # Batch pre-fetch: last activity timestamps
+    last_inv_map = dict(db.query(
+        SupplierInvoice.supplier_id,
+        func.max(SupplierInvoice.created_at),
+    ).filter(
+        SupplierInvoice.supplier_id.in_(supplier_ids)
+    ).group_by(SupplierInvoice.supplier_id).all())
+
+    last_notif_map = dict(db.query(
+        SupplierNotification.related_supplier_id,
+        func.max(SupplierNotification.created_at),
+    ).filter(
+        SupplierNotification.related_supplier_id.in_(supplier_ids)
+    ).group_by(SupplierNotification.related_supplier_id).all())
+
+    # Build responses using pre-loaded data (no per-supplier queries)
+    result = []
+    for s in suppliers:
+        oc_number = s.oc.oc_number if s.oc else None
+        company_name = s.oc.company.name if s.oc and s.oc.company else None
+        inv_total, inv_pending = counts_map.get(s.id, (0, 0))
+        last_activity = max(filter(None, [
+            last_notif_map.get(s.id), last_inv_map.get(s.id), s.created_at
+        ]))
+
+        result.append(SupplierResponse(
+            id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
+            phone=s.phone, address=s.address, iban=_decode_iban(s),
+            bank_cert_url=s.bank_cert_url,
+            supplier_type=s.supplier_type.value if s.supplier_type else "GENERAL",
+            status=s.status.value if s.status else "NEW",
+            oc_id=s.oc_id, oc_number=oc_number, company_name=company_name,
+            is_active=s.is_active, notes_internal=s.notes_internal,
+            gdpr_consent=s.gdpr_consent,
+            created_at=s.created_at, updated_at=s.updated_at,
+            last_activity=last_activity,
+            invoices_count=inv_total, pending_invoices=inv_pending,
+        ))
     return result
 
 
@@ -345,14 +398,15 @@ async def list_all_invoices(
     if oc_number:
         query = query.filter(SupplierInvoice.oc_number.ilike(f"%{oc_number}%"))
 
-    invoices = query.order_by(desc(SupplierInvoice.created_at)).offset(offset).limit(limit).all()
+    invoices = query.options(
+        joinedload(SupplierInvoice.supplier)
+    ).order_by(desc(SupplierInvoice.created_at)).offset(offset).limit(limit).all()
 
     result = []
     for inv in invoices:
-        supplier = db.query(Supplier).filter(Supplier.id == inv.supplier_id).first()
         result.append(InvoiceResponse(
             id=inv.id, supplier_id=inv.supplier_id,
-            supplier_name=supplier.name if supplier else None,
+            supplier_name=inv.supplier.name if inv.supplier else None,
             invoice_number=inv.invoice_number, date=inv.date,
             provider_name=inv.provider_name, oc_number=inv.oc_number,
             company_id=inv.company_id,
