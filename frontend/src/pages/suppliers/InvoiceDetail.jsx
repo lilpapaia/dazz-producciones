@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download } from 'lucide-react';
 import { getInvoice, getAllInvoices, updateInvoiceStatus } from '../../services/suppliersApi';
 
 const PILL = {
@@ -153,11 +153,19 @@ const InvoiceDetail = () => {
           </div>
         )}
 
-        {/* Right: status pill */}
-        <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
-          {PILL_LABEL[invoice.status] || invoice.status}
-        </span>
+        {/* Right: download + status pill */}
+        <div className="flex items-center gap-2">
+          {invoice.file_url && (
+            <button onClick={() => window.open(invoice.file_url, '_blank')}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
+              <Download size={14} /> Descargar PDF
+            </button>
+          )}
+          <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+            {PILL_LABEL[invoice.status] || invoice.status}
+          </span>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_300px] gap-3.5">
