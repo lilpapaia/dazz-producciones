@@ -79,7 +79,7 @@ class SupplierUpdate(BaseModel):
 
 
 class AssignOCRequest(BaseModel):
-    oc_id: int
+    oc_number: str = Field(min_length=1, max_length=50)
 
 
 class NoteRequest(BaseModel):

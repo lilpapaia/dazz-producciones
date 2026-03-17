@@ -434,14 +434,14 @@ async def assign_oc(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Manually assign an OC to a supplier (for talents without NIF match)."""
+    """Manually assign an OC to a supplier by OC number."""
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not supplier:
         raise HTTPException(404, "Supplier not found")
 
-    oc = db.query(SupplierOC).filter(SupplierOC.id == body.oc_id).first()
+    oc = db.query(SupplierOC).filter(SupplierOC.oc_number == body.oc_number.strip()).first()
     if not oc:
-        raise HTTPException(404, "OC not found")
+        raise HTTPException(404, f"OC '{body.oc_number}' not found")
 
     supplier.oc_id = oc.id
     db.commit()

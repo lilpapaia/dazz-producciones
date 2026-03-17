@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, UserX, Link2, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
-import { getSupplier, updateSupplier, deactivateSupplier, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
+import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
 
@@ -44,7 +44,7 @@ const SupplierDetail = () => {
 
   // Edit modal
   const [editModal, setEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', address: '', supplier_type: '' });
+  const [editForm, setEditForm] = useState({ supplier_type: '', oc_number: '' });
   const [editSaving, setEditSaving] = useState(false);
 
   // Delete invoice modal
@@ -146,7 +146,10 @@ const SupplierDetail = () => {
   const handleEditSave = async () => {
     setEditSaving(true);
     try {
-      await updateSupplier(id, editForm);
+      await updateSupplier(id, { supplier_type: editForm.supplier_type });
+      if (editForm.oc_number.trim() && editForm.oc_number.trim() !== (supplier.oc_number || '')) {
+        await assignOC(id, editForm.oc_number.trim());
+      }
       setEditModal(false);
       load();
     } catch (e) { alert(e.response?.data?.detail || 'Error al guardar'); }
@@ -155,10 +158,8 @@ const SupplierDetail = () => {
 
   const openEditModal = () => {
     setEditForm({
-      name: supplier.name || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
       supplier_type: supplier.supplier_type || 'GENERAL',
+      oc_number: supplier.oc_number || '',
     });
     setEditModal(true);
   };
@@ -468,20 +469,8 @@ const SupplierDetail = () => {
       {editModal && (
         <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center" onClick={() => setEditModal(false)}>
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[420px] max-w-[95vw] p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-4">Editar datos del proveedor</h3>
+            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-4">Editar proveedor</h3>
             <div className="space-y-3">
-              <div>
-                <label className={labelCls}>Nombre <span className="text-amber-500">*</span></label>
-                <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Teléfono</label>
-                <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="+34 600..." className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Dirección</label>
-                <input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} className={inputCls} />
-              </div>
               <div>
                 <label className={labelCls}>Tipo de proveedor</label>
                 <select value={editForm.supplier_type} onChange={e => setEditForm(f => ({ ...f, supplier_type: e.target.value }))}
@@ -491,10 +480,15 @@ const SupplierDetail = () => {
                   <option value="MIXED">Mixed</option>
                 </select>
               </div>
+              <div>
+                <label className={labelCls}>OC asignado</label>
+                <input value={editForm.oc_number} onChange={e => setEditForm(f => ({ ...f, oc_number: e.target.value }))} placeholder="OC-MGMTINT2026047" className={`${inputCls} font-mono`} />
+                <div className="text-[9px] text-zinc-600 mt-1">El OC debe existir en el sistema. Dejar vacío para no cambiar.</div>
+              </div>
             </div>
             <div className="flex gap-2 justify-end mt-4">
               <button onClick={() => setEditModal(false)} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={handleEditSave} disabled={editSaving || !editForm.name.trim()}
+              <button onClick={handleEditSave} disabled={editSaving}
                 className="text-xs px-4 py-2 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold transition-colors disabled:opacity-40">
                 {editSaving ? 'Guardando...' : 'Guardar'}
               </button>
