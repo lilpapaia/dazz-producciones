@@ -81,7 +81,7 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
         )
 
         # Return public_id — the caller must use get_invoice_pdf_url() to access it
-        returned_id = result.get("public_id", public_id)
+        returned_id = result.get("public_id", f"{folder}/{file_name}")
         print(f"Cloudinary upload OK (authenticated): {returned_id}")
         return returned_id
 
