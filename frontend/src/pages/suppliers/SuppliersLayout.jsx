@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Bell, UserPlus, ChevronLeft, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Bell, UserPlus, Menu } from 'lucide-react';
 import { getSuppliersDashboard, getNotifications } from '../../services/suppliersApi';
 
 const NAV_ITEMS = [
@@ -47,15 +47,6 @@ const SuppliersLayout = () => {
         w-52 bg-zinc-900 border-r border-zinc-800 p-3 flex flex-col
         transition-transform lg:transition-none pt-20 lg:pt-3
       `}>
-        {/* Back to DAZZ */}
-        <Link
-          to="/dashboard"
-          className="flex items-center gap-2 px-3 py-2 mb-3 text-xs text-zinc-500 hover:text-amber-400 transition-colors rounded"
-        >
-          <ChevronLeft size={14} />
-          DAZZ Producciones
-        </Link>
-
         <div className="text-[9px] text-zinc-600 tracking-widest uppercase px-3 mb-1">General</div>
 
         {NAV_ITEMS.filter(i => !i.section).map(item => {
