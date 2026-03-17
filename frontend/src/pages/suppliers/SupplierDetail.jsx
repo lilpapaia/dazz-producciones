@@ -429,7 +429,7 @@ const SupplierDetail = () => {
                     key={inv.id}
                     onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)}
                     className="grid items-center gap-3 px-[12px] py-[12px] rounded hover:bg-white/[.02] transition-colors cursor-pointer"
-                    style={{ gridTemplateColumns: '32px 200px 200px 130px auto auto auto' }}
+                    style={{ gridTemplateColumns: '32px 200px 200px 130px auto auto 1fr' }}
                   >
                     {/* Icono */}
                     <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
@@ -455,8 +455,8 @@ const SupplierDetail = () => {
                       <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
                       {PILL_LABEL[inv.status] || inv.status}
                     </span>
-                    {/* Acciones */}
-                    <div className="flex items-center gap-1">
+                    {/* Acciones — pegadas a la derecha */}
+                    <div className="flex items-center gap-1 justify-end">
                       {inv.status === 'PENDING' && (
                         <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                       )}
