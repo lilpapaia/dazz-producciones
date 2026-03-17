@@ -243,28 +243,36 @@ frontend/
 - ❌ `/health` y `/` devuelven 500 (bug rate limiter slowapi)
 - ⚠️ Rate limiting no se activa (workers gunicorn no comparten memoria)
 
-### Estado actual
-- ✅ Implementación completa + testing automatizado hecho
-- 🔴 3 CRITICAL pendientes de arreglar antes de lanzar
-- ⏳ Testing manual UI pendiente (admin + portal proveedor)
+### Estado actual (2026-03-17)
+- ✅ 3 CRITICAL arreglados: C-1 IBAN encriptado Fernet, C-2 file stream fix, C-3 rate limiting
+- ✅ 7 HIGH arreglados: H-1/H-2 N+1 joinedload, H-3 date String→Date migración, H-4 magic bytes PDF, H-5 filename sanitize, H-6 logout auth, H-7 enum Literal
+- ✅ Bug OC validation: lógica INFLUENCER/GENERAL/MIXED implementada
+- ✅ UI Admin proveedores en español (mockup v4): 7 páginas traducidas
+- ✅ SupplierDetail completado: buscador ProjectView, modal editar, export Excel, notas con ✕, acciones factura, lightbox PDF
+- ✅ InvoiceDetail nuevo: detalle factura con datos, importes, validación IA, acciones, navegación anterior/siguiente
+- ✅ InvoicesList completado: sin columna IA, Trash2 funcional con modal motivo, buscador con voz
+- ✅ Grupo 1 UI fixes: bank cert View PDF, custom message invitación, cert upload error visible
+- ⏳ UI admin pendiente: SuppliersDashboard revisar, SupplierNotifications revisar
+- ⏳ Portal proveedor: pendiente revisión UI completa
+- ⚠️ Cloudinary: acceso recuperación en curso con soporte
 
 ---
 
 ## 🚨 Issues Módulo Proveedores (25 encontrados 2026-03-16)
 
-### CRITICAL (3) — Arreglar antes de lanzar
-1. **C-1: IBAN sin encriptar** — Campo `iban_encrypted` almacena plaintext UTF-8, se expone en GET /suppliers
-2. **C-2: File stream consumido** — Upload PDF a Cloudinary puede producir archivos vacíos (seek en stream consumido)
-3. **C-3: Sin rate limiting registro** — `/portal/register/validate/{token}` y `/portal/register` sin límite
+### CRITICAL (3) — ✅ TODOS ARREGLADOS (2026-03-17)
+1. ~~**C-1: IBAN sin encriptar**~~ → Fernet encryption + migrate-ibans endpoint
+2. ~~**C-2: File stream consumido**~~ → contents bytes directos, sin seek
+3. ~~**C-3: Sin rate limiting registro**~~ → 10/min validate, 5/hour register
 
-### HIGH (7) — Arreglar pronto
-4. **H-1: N+1 list_suppliers** — 5 queries por proveedor en listado
-5. **H-2: N+1 list_invoices** — 1 query por factura para nombre proveedor
-6. **H-3: date es String** — Columna `date` en invoices es String, no Date
-7. **H-4: Content-type spoofing** — Upload no valida magic bytes PDF (%PDF)
-8. **H-5: Filename no sanitizado** — Cloudinary public_id sin sanitizar
-9. **H-6: Logout sin auth** — No verifica ownership del refresh token
-10. **H-7: Status sin validar enum** — `InvoiceStatusUpdate.status` acepta cualquier string
+### HIGH (7) — ✅ TODOS ARREGLADOS (2026-03-17)
+4. ~~**H-1: N+1 list_suppliers**~~ → joinedload + batch aggregation (351→4 queries)
+5. ~~**H-2: N+1 list_invoices**~~ → joinedload(supplier) (51→1 query)
+6. ~~**H-3: date String→Date**~~ → date_parsed columna via ALTER TABLE + parse_invoice_date 11 formatos
+7. ~~**H-4: Content-type spoofing**~~ → validate_pdf_bytes magic bytes %PDF
+8. ~~**H-5: Filename no sanitizado**~~ → sanitize_filename de validators.py
+9. ~~**H-6: Logout sin auth**~~ → Depends(get_current_active_supplier) + supplier_id ownership
+10. ~~**H-7: Status sin validar enum**~~ → Literal["APPROVED","PAID","REJECTED"]
 
 ### MEDIUM (8)
 11. Índice compuesto faltante (supplier_id, status) en invoices
@@ -377,13 +385,16 @@ frontend/
 
 ## 🎯 Objetivos Claude Code
 
-1. **Fixes CRITICAL proveedores:** Arreglar C-1 (IBAN), C-2 (file stream), C-3 (rate limiting)
-2. **Fixes HIGH proveedores:** N+1 queries, content-type, logout auth, enum validation
-3. **Testing general:** 70%+ coverage backend, E2E críticos frontend
-3. **Quality:** Code review, best practices, documentación actualizada
-4. **Features:** Push notifications, analytics dashboard, búsqueda avanzada
+1. ~~**Fixes CRITICAL proveedores:**~~ ✅ C-1, C-2, C-3 arreglados
+2. ~~**Fixes HIGH proveedores:**~~ ✅ H-1 a H-7 arreglados
+3. **UI Admin proveedores:** En progreso — SupplierDetail, InvoicesList, InvoiceDetail completados. Pendiente: SuppliersDashboard, SupplierNotifications revisar
+4. **Portal proveedor UI:** Pendiente revisión completa
+5. **Fixes MEDIUM proveedores:** 8 pendientes (índices, atomicidad, etc.)
+6. **Testing general:** 70%+ coverage backend, E2E críticos frontend
+7. **Quality:** Code review, best practices, documentación actualizada
+8. **Features:** Push notifications, analytics dashboard, búsqueda avanzada
 
 ---
 
 **Última actualización:** 2026-03-17
-**Estado:** Producción activa - Testing completado, 3 CRITICAL pendientes de fix
+**Estado:** Producción activa — CRITICAL+HIGH arreglados, UI admin en progreso, portal proveedor pendiente, Cloudinary acceso en recuperación
