@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight, X, Mic } from 'lucide-react';
 import { getSuppliers } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
+import useVoiceSearch from '../../hooks/useVoiceSearch';
+import useClickOutside from '../../hooks/useClickOutside';
 
 const TYPE_BADGE = {
   INFLUENCER: 'bg-purple-400/10 text-purple-400 border border-purple-400/20',
@@ -34,6 +36,24 @@ const SuppliersList = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [companyFilter, setCompanyFilter] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const searchRef = useRef(null);
+
+  const { isListening, startVoiceSearch } = useVoiceSearch({
+    lang: 'es-ES',
+    onResult: useCallback((transcript) => { setSearch(transcript); setShowSuggestions(false); }, []),
+  });
+  useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
+
+  const handleSearchChange = (value) => { setSearch(value); setShowSuggestions(value.length > 0); };
+  const clearSearch = () => { setSearch(''); setShowSuggestions(false); };
+  const saveRecentSearch = (term) => {
+    if (!term.trim()) return;
+    const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('recentSearches_suppliers', JSON.stringify(updated));
+  };
 
   const load = () => {
     const params = {};
@@ -45,6 +65,10 @@ const SuppliersList = () => {
   };
 
   useEffect(() => { setLoading(true); load(); }, [companyFilter]);
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSearches_suppliers');
+    if (saved) setRecentSearches(JSON.parse(saved));
+  }, []);
 
   const filtered = suppliers.filter(s => {
     if (!search) return true;
@@ -69,14 +93,64 @@ const SuppliersList = () => {
 
       {/* Filters */}
       <div className="flex gap-2.5 mb-3.5 flex-wrap items-center">
-        <div className="relative max-w-[240px] flex-1">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-          <input
-            placeholder="Buscar por nombre o NIF..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-3 py-2 rounded focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-          />
+        <div className="relative max-w-[240px] flex-1" ref={searchRef}>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o NIF..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={() => (search || recentSearches.length > 0) && setShowSuggestions(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && search.trim()) { saveRecentSearch(search); setShowSuggestions(false); } }}
+              className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
+            />
+            <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
+              {search && (
+                <button onClick={clearSearch} className="p-1 hover:bg-zinc-800 rounded-sm transition-colors" title="Limpiar búsqueda">
+                  <X size={14} className="text-zinc-500" />
+                </button>
+              )}
+              <button onClick={startVoiceSearch} disabled={isListening}
+                className={`p-1 rounded-sm transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
+                title="Búsqueda por voz">
+                <Mic size={14} />
+              </button>
+            </div>
+          </div>
+          {showSuggestions && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded shadow-xl max-h-64 overflow-y-auto z-50">
+              {search && (() => {
+                const hits = suppliers.filter(s => {
+                  const q = search.toLowerCase();
+                  return s.name.toLowerCase().includes(q) || (s.nif_cif || '').toLowerCase().includes(q);
+                }).slice(0, 5);
+                return hits.length > 0 ? (
+                  <>
+                    <div className="px-3 py-1.5 text-[9px] text-zinc-500 tracking-widest uppercase border-b border-zinc-800">Proveedores encontrados</div>
+                    {hits.map(s => (
+                      <div key={s.id} onClick={() => { setSearch(s.name); saveRecentSearch(s.name); setShowSuggestions(false); }}
+                        className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs text-zinc-300 border-b border-zinc-800/50 last:border-0">
+                        <span className="text-amber-400">{s.name}</span>
+                        {s.nif_cif && <span className="text-zinc-500 font-mono ml-2">· {s.nif_cif}</span>}
+                      </div>
+                    ))}
+                  </>
+                ) : <div className="px-3 py-3 text-xs text-zinc-600 text-center">Sin resultados</div>;
+              })()}
+              {!search && recentSearches.length > 0 && (
+                <>
+                  <div className="px-3 py-1.5 text-[9px] text-zinc-500 tracking-widest uppercase border-b border-zinc-800">Búsquedas recientes</div>
+                  {recentSearches.map((term, i) => (
+                    <div key={i} onClick={() => { setSearch(term); setShowSuggestions(false); }}
+                      className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs text-zinc-400 border-b border-zinc-800/50 last:border-0">
+                      {term}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
         <span className="text-[9px] text-zinc-500 tracking-widest uppercase">Empresa:</span>
         <button onClick={() => setCompanyFilter(null)} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>

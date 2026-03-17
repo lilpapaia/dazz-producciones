@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, List, Columns3, ExternalLink, Check, X, CreditCard } from 'lucide-react';
+import { Search, List, Columns3, ExternalLink, Check, X, CreditCard, Mic } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
+import useVoiceSearch from '../../hooks/useVoiceSearch';
+import useClickOutside from '../../hooks/useClickOutside';
 
 const PILL = {
   PENDING: { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-500' },
@@ -25,10 +27,28 @@ const InvoicesList = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const searchRef = useRef(null);
   const [actionModal, setActionModal] = useState(null);
   const [reason, setReason] = useState('');
   const [page, setPage] = useState(0);
   const [totalLoaded, setTotalLoaded] = useState(0);
+
+  const { isListening, startVoiceSearch } = useVoiceSearch({
+    lang: 'es-ES',
+    onResult: useCallback((transcript) => { setSearch(transcript); setShowSuggestions(false); }, []),
+  });
+  useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
+
+  const handleSearchChange = (value) => { setSearch(value); setShowSuggestions(value.length > 0); };
+  const clearSearch = () => { setSearch(''); setShowSuggestions(false); };
+  const saveRecentSearch = (term) => {
+    if (!term.trim()) return;
+    const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('recentSearches_invoices', JSON.stringify(updated));
+  };
 
   const load = () => {
     const params = { limit: 200 };
@@ -41,6 +61,10 @@ const InvoicesList = () => {
   };
 
   useEffect(() => { setLoading(true); setPage(0); load(); }, [statusFilter, companyFilter]);
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSearches_invoices');
+    if (saved) setRecentSearches(JSON.parse(saved));
+  }, []);
 
   const filtered = invoices.filter(inv => {
     if (!search) return true;
@@ -85,12 +109,66 @@ const InvoicesList = () => {
         </div>
       </div>
 
-      {/* Filters — dropdowns (I2) */}
+      {/* Filters */}
       <div className="flex gap-2 mb-3.5 flex-wrap items-center">
-        <div className="relative max-w-[220px] flex-1">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-          <input placeholder="Buscar factura, OC, proveedor..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none" />
+        <div className="relative max-w-[220px] flex-1" ref={searchRef}>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
+            <input
+              type="text"
+              placeholder="Buscar factura, OC, proveedor..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={() => (search || recentSearches.length > 0) && setShowSuggestions(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && search.trim()) { saveRecentSearch(search); setShowSuggestions(false); } }}
+              className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
+            />
+            <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
+              {search && (
+                <button onClick={clearSearch} className="p-1 hover:bg-zinc-800 rounded-sm transition-colors" title="Limpiar búsqueda">
+                  <X size={14} className="text-zinc-500" />
+                </button>
+              )}
+              <button onClick={startVoiceSearch} disabled={isListening}
+                className={`p-1 rounded-sm transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
+                title="Búsqueda por voz">
+                <Mic size={14} />
+              </button>
+            </div>
+          </div>
+          {showSuggestions && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded shadow-xl max-h-64 overflow-y-auto z-50">
+              {search && (() => {
+                const hits = invoices.filter(inv => {
+                  const q = search.toLowerCase();
+                  return inv.invoice_number?.toLowerCase().includes(q) || inv.supplier_name?.toLowerCase().includes(q) || inv.oc_number?.toLowerCase().includes(q);
+                }).slice(0, 5);
+                return hits.length > 0 ? (
+                  <>
+                    <div className="px-3 py-1.5 text-[9px] text-zinc-500 tracking-widest uppercase border-b border-zinc-800">Facturas encontradas</div>
+                    {hits.map(inv => (
+                      <div key={inv.id} onClick={() => { setSearch(inv.invoice_number); saveRecentSearch(inv.invoice_number); setShowSuggestions(false); }}
+                        className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs text-zinc-300 border-b border-zinc-800/50 last:border-0">
+                        <span className="font-mono text-amber-400">{inv.invoice_number}</span>
+                        {inv.supplier_name && <span className="text-zinc-500 ml-2">· {inv.supplier_name}</span>}
+                      </div>
+                    ))}
+                  </>
+                ) : <div className="px-3 py-3 text-xs text-zinc-600 text-center">Sin resultados</div>;
+              })()}
+              {!search && recentSearches.length > 0 && (
+                <>
+                  <div className="px-3 py-1.5 text-[9px] text-zinc-500 tracking-widest uppercase border-b border-zinc-800">Búsquedas recientes</div>
+                  {recentSearches.map((term, i) => (
+                    <div key={i} onClick={() => { setSearch(term); setShowSuggestions(false); }}
+                      className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs text-zinc-400 border-b border-zinc-800/50 last:border-0">
+                      {term}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
         <select value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}
           className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
