@@ -134,7 +134,7 @@ class SupplierInvoice(Base):
     currency = Column(String, default="EUR")
     is_foreign = Column(Boolean, default=False)
     file_url = Column(String, nullable=False)
-    file_pages = Column(Text, nullable=True)  # JSON array of page image URLs
+    # file_pages — added via ALTER TABLE in upload endpoint (not in ORM to avoid startup crash)
     status = Column(Enum(InvoiceStatus), default=InvoiceStatus.PENDING, nullable=False, index=True)
     rejection_reason = Column(Text, nullable=True)
     delete_reason = Column(Text, nullable=True)

@@ -385,13 +385,7 @@ async def upload_invoice(
                 },
             )
 
-        # Validation passed → upload to Cloudinary (public + page images)
-        upload_result = save_invoice_pdf(file, supplier.id, contents=contents)
-
-        # All validated invoices start as PENDING (OC must exist)
-        invoice_status = InvoiceStatus.PENDING
-
-        # Ensure file_pages column exists (ALTER TABLE for first deploy)
+        # Ensure file_pages column exists (ALTER TABLE before any ORM query)
         from sqlalchemy import text as sa_text
         try:
             db.execute(sa_text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS file_pages TEXT"))
@@ -399,7 +393,13 @@ async def upload_invoice(
         except Exception:
             db.rollback()
 
-        # Create invoice record
+        # Validation passed → upload to Cloudinary (public + page images)
+        upload_result = save_invoice_pdf(file, supplier.id, contents=contents)
+
+        # All validated invoices start as PENDING (OC must exist)
+        invoice_status = InvoiceStatus.PENDING
+
+        # Create invoice record (file_pages not in ORM — saved via raw SQL after)
         invoice = SupplierInvoice(
             supplier_id=supplier.id,
             invoice_number=extracted.get("invoice_number", ""),
@@ -419,13 +419,21 @@ async def upload_invoice(
             currency=extracted.get("currency", "EUR"),
             is_foreign=extracted.get("is_foreign", False),
             file_url=upload_result["public_id"],
-            file_pages=json.dumps(upload_result["pages"]) if upload_result["pages"] else None,
             status=invoice_status,
             ia_validation_result=json.dumps(validation, default=str),
         )
         db.add(invoice)
         db.commit()
         db.refresh(invoice)
+
+        # Save file_pages via raw SQL (column not in ORM)
+        if upload_result.get("pages"):
+            try:
+                db.execute(sa_text("UPDATE supplier_invoices SET file_pages = :fp WHERE id = :id"),
+                    {"fp": json.dumps(upload_result["pages"]), "id": invoice.id})
+                db.commit()
+            except Exception:
+                pass
 
         # Store parsed date via raw SQL (column not in ORM model during migration)
         date_parsed = validation.get("date_parsed")

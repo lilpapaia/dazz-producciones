@@ -498,7 +498,6 @@ async def list_all_invoices(
             irpf_amount=inv.irpf_amount or 0, final_total=inv.final_total,
             currency=inv.currency or "EUR", is_foreign=inv.is_foreign or False,
             file_url=get_invoice_pdf_url(inv.file_url) if inv.file_url else "",
-            file_pages=inv.file_pages,
             status=inv.status.value if inv.status else "PENDING",
             rejection_reason=inv.rejection_reason, delete_reason=inv.delete_reason,
             created_at=inv.created_at,
@@ -520,6 +519,16 @@ async def get_invoice(
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
+    # file_pages not in ORM — fetch via raw SQL
+    from sqlalchemy import text as sa_text
+    file_pages = None
+    try:
+        row = db.execute(sa_text("SELECT file_pages FROM supplier_invoices WHERE id = :id"), {"id": invoice_id}).first()
+        if row:
+            file_pages = row[0]
+    except Exception:
+        pass
+
     return InvoiceDetailResponse(
         id=invoice.id, supplier_id=invoice.supplier_id,
         supplier_name=invoice.supplier.name if invoice.supplier else None,
@@ -534,7 +543,7 @@ async def get_invoice(
         final_total=invoice.final_total,
         currency=invoice.currency or "EUR", is_foreign=invoice.is_foreign or False,
         file_url=get_invoice_pdf_url(invoice.file_url) if invoice.file_url else "",
-        file_pages=invoice.file_pages,
+        file_pages=file_pages,
         status=invoice.status.value if invoice.status else "PENDING",
         rejection_reason=invoice.rejection_reason, delete_reason=invoice.delete_reason,
         nif_cif=invoice.nif_cif, iban=invoice.iban,
