@@ -156,7 +156,10 @@ async def register_supplier(
         supplier_type = SupplierType.INFLUENCER
     elif invited_type == 'mixed':
         supplier_type = SupplierType.MIXED
-    elif invited_type == 'general' or not invited_type:
+    elif invited_type == 'general':
+        supplier_type = SupplierType.GENERAL
+    elif not invited_type:
+        # Legacy invitations without type — fallback to NIF match
         supplier_type = SupplierType.INFLUENCER if oc_id else SupplierType.GENERAL
     else:
         supplier_type = SupplierType.GENERAL
