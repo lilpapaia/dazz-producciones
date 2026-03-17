@@ -409,7 +409,7 @@ async def list_all_invoices(
             id=inv.id, supplier_id=inv.supplier_id,
             supplier_name=inv.supplier.name if inv.supplier else None,
             invoice_number=inv.invoice_number,
-            date=format_date_for_response(inv.date_parsed or inv.date),
+            date=format_date_for_response(inv.date),
             provider_name=inv.provider_name, oc_number=inv.oc_number,
             company_id=inv.company_id,
             base_amount=inv.base_amount, iva_percentage=inv.iva_percentage,
@@ -467,7 +467,7 @@ async def update_invoice_status(
         if not existing_ticket:
             ticket = Ticket(
                 project_id=invoice.project_id,
-                date=format_date_for_response(invoice.date_parsed or invoice.date),
+                date=format_date_for_response(invoice.date),
                 provider=invoice.provider_name or "",
                 invoice_number=invoice.invoice_number,
                 po_notes=invoice.oc_number,
@@ -734,32 +734,39 @@ async def migrate_dates_to_parsed(
     """
     One-shot migration: parse existing date strings into date_parsed column.
 
-    Creates the column if it doesn't exist (PostgreSQL won't add it via create_all).
+    Uses raw SQL throughout — ORM can't reference date_parsed until the column exists.
+    Creates the column if it doesn't exist, then parses all date strings.
     Safe to run multiple times — skips invoices that already have date_parsed.
     """
     from sqlalchemy import text
+
+    # Step 1: Create column if missing (raw SQL — ORM can't do this)
     db.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS date_parsed DATE"))
     db.commit()
 
-    invoices = db.query(SupplierInvoice).filter(
-        SupplierInvoice.date_parsed == None,
-        SupplierInvoice.date != None,
-        SupplierInvoice.date != "",
-    ).all()
+    # Step 2: Fetch rows needing migration (raw SQL — ORM mapping may not reflect new column)
+    rows = db.execute(text(
+        "SELECT id, date FROM supplier_invoices "
+        "WHERE date_parsed IS NULL AND date IS NOT NULL AND date != ''"
+    )).fetchall()
 
     migrated = 0
     failed = 0
     failed_samples = []
 
-    for inv in invoices:
-        parsed = parse_invoice_date(inv.date)
+    for row in rows:
+        inv_id, date_str = row[0], row[1]
+        parsed = parse_invoice_date(date_str)
         if parsed:
-            inv.date_parsed = parsed
+            db.execute(
+                text("UPDATE supplier_invoices SET date_parsed = :dp WHERE id = :id"),
+                {"dp": parsed, "id": inv_id},
+            )
             migrated += 1
         else:
             failed += 1
             if len(failed_samples) < 10:
-                failed_samples.append(f"Invoice {inv.id}: '{inv.date}'")
+                failed_samples.append(f"Invoice {inv_id}: '{date_str}'")
 
     db.commit()
     return {

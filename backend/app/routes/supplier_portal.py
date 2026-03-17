@@ -386,7 +386,6 @@ async def upload_invoice(
             supplier_id=supplier.id,
             invoice_number=extracted.get("invoice_number", ""),
             date=extracted.get("date", ""),
-            date_parsed=validation.get("date_parsed"),
             provider_name=extracted.get("provider", supplier.name),
             nif_cif=extracted.get("nif_cif"),
             iban=extracted.get("iban"),
@@ -408,6 +407,19 @@ async def upload_invoice(
         db.add(invoice)
         db.commit()
         db.refresh(invoice)
+
+        # Store parsed date via raw SQL (column not in ORM model during migration)
+        date_parsed = validation.get("date_parsed")
+        if date_parsed:
+            from sqlalchemy import text
+            try:
+                db.execute(
+                    text("UPDATE supplier_invoices SET date_parsed = :dp WHERE id = :id"),
+                    {"dp": date_parsed, "id": invoice.id},
+                )
+                db.commit()
+            except Exception:
+                pass  # Column may not exist yet — non-blocking
 
     finally:
         # Always clean up temp file
@@ -463,7 +475,7 @@ async def list_my_invoices(
 
     return [PortalInvoiceResponse(
         id=inv.id, invoice_number=inv.invoice_number,
-        date=format_date_for_response(inv.date_parsed or inv.date),
+        date=format_date_for_response(inv.date),
         provider_name=inv.provider_name, oc_number=inv.oc_number,
         base_amount=inv.base_amount, iva_amount=inv.iva_amount,
         final_total=inv.final_total, currency=inv.currency or "EUR",

@@ -117,7 +117,8 @@ class SupplierInvoice(Base):
     supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="CASCADE"), nullable=False, index=True)
     invoice_number = Column(String, nullable=False)
     date = Column(String, nullable=False)
-    date_parsed = Column(Date, nullable=True)  # Migración H-3: Date object (nullable during transition)
+    # date_parsed Column(Date) — added via ALTER TABLE in migrate-dates endpoint.
+    # Not mapped here to avoid startup failure when column doesn't exist yet.
     provider_name = Column(String, nullable=False)
     nif_cif = Column(String, nullable=True)
     iban = Column(String, nullable=True)
