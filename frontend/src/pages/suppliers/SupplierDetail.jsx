@@ -447,7 +447,7 @@ const SupplierDetail = () => {
                       }
                     </div>
                     {/* Fecha */}
-                    <div className="text-[11px] text-zinc-400">{inv.date}</div>
+                    <div className="text-[12px] text-zinc-400">{inv.date}</div>
                     {/* Importe */}
                     <div className="font-mono text-[12px] font-medium text-zinc-200 whitespace-nowrap">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
                     {/* Estado — centrado en su columna 1fr */}
@@ -466,15 +466,15 @@ const SupplierDetail = () => {
                         <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[13px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
                       )}
                       {inv.status === 'PAID' && (
-                        <span className="text-[13px] text-zinc-600">Cerrada</span>
+                        <span className="text-[13px] text-zinc-600 px-2.5 py-1">Cerrada</span>
                       )}
                       {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="text-[13px] px-2.5 py-1 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="text-[13px] px-2.5 py-1 border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors flex items-center">
                           <Trash2 size={13} strokeWidth={1.5} />
                         </button>
                       )}
                       {inv.status === 'PAID' && (
-                        <div className="text-[13px] px-2.5 py-1 flex items-center justify-center">
+                        <div className="text-[13px] px-2.5 py-1 flex items-center">
                           <Trash2 size={13} className="text-zinc-800" strokeWidth={1.5} />
                         </div>
                       )}

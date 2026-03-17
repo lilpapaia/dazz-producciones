@@ -98,20 +98,20 @@ const InvoicesList = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">Facturas</h1>
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Facturas</h1>
         <div className="flex gap-1 bg-zinc-800 rounded p-0.5">
-          <button onClick={() => setView('list')} className={`text-[10px] px-2.5 py-1 rounded flex items-center gap-1 ${view === 'list' ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-500'}`}>
-            <List size={12} /> Lista
+          <button onClick={() => setView('list')} className={`text-[13px] px-2.5 py-1 rounded flex items-center gap-1 ${view === 'list' ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-500'}`}>
+            <List size={13} /> Lista
           </button>
-          <button onClick={() => setView('kanban')} className={`text-[10px] px-2.5 py-1 rounded flex items-center gap-1 ${view === 'kanban' ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-500'}`}>
-            <Columns3 size={12} /> Kanban
+          <button onClick={() => setView('kanban')} className={`text-[13px] px-2.5 py-1 rounded flex items-center gap-1 ${view === 'kanban' ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-500'}`}>
+            <Columns3 size={13} /> Kanban
           </button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-2 mb-3.5 flex-wrap items-center">
-        <div className="relative max-w-[220px] flex-1" ref={searchRef}>
+        <div className="relative w-[300px]" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
             <input
@@ -121,7 +121,7 @@ const InvoicesList = () => {
               onChange={(e) => handleSearchChange(e.target.value)}
               onFocus={() => (search || recentSearches.length > 0) && setShowSuggestions(true)}
               onKeyDown={(e) => { if (e.key === 'Enter' && search.trim()) { saveRecentSearch(search); setShowSuggestions(false); } }}
-              className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
+              className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[13px] pl-9 pr-14 py-2 rounded-sm focus:border-amber-500 outline-none"
             />
             <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
               {search && (
@@ -171,13 +171,13 @@ const InvoicesList = () => {
           )}
         </div>
         <select value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
+          className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[13px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
           style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")" }}>
           <option value="">Todas las empresas</option>
           {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
+          className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[13px] px-2.5 py-2 rounded outline-none appearance-none pr-7 bg-no-repeat bg-[right_8px_center]"
           style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")" }}>
           <option value="">Todos los estados</option>
           <option value="PENDING">Pendiente</option>
@@ -194,12 +194,12 @@ const InvoicesList = () => {
             <table className="w-full min-w-[650px]">
               <thead>
                 <tr>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Nº Factura</th>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Proyecto · OC</th>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Importe</th>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
-                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[9px] text-zinc-400 tracking-widest uppercase font-medium w-[140px]">Acción</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Nº Factura</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Proyecto · OC</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Importe</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
+                  <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium w-[140px]">Acción</th>
                   <th className="bg-zinc-800 px-3 py-2.5 w-9"></th>
                 </tr>
               </thead>
@@ -208,28 +208,28 @@ const InvoicesList = () => {
                   const pill = PILL[inv.status] || PILL.PENDING;
                   return (
                     <tr key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=list`)} className="hover:bg-white/[.02] transition-colors cursor-pointer">
-                      <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[11px] text-zinc-200">
+                      <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[13px] text-zinc-200">
                         {inv.invoice_number}
                         {inv.from_supplier_portal && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
                       </td>
-                      <td className="px-3 py-2.5 border-b border-white/[.04] text-xs text-zinc-200">{inv.supplier_name}</td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-200">{inv.supplier_name}</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
                       </td>
-                      <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-xs text-zinc-200">{inv.final_total?.toFixed(2)} EUR</td>
+                      <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[13px] text-zinc-200">{inv.final_total?.toFixed(2)} EUR</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
+                        <span className={`text-[12px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
                           <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status}
                         </span>
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         {inv.status === 'PENDING' && (
-                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'approve' }); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded transition-colors hover:bg-amber-400">Aprobar</button>
+                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'approve' }); }} className="text-[13px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded transition-colors hover:bg-amber-400">Aprobar</button>
                         )}
                         {inv.status === 'APPROVED' && (
-                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'pay' }); }} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
+                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'pay' }); }} className="text-[13px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
                         )}
-                        {inv.status === 'PAID' && <span className="text-[10px] text-zinc-600">Cerrada</span>}
+                        {inv.status === 'PAID' && <span className="text-[13px] text-zinc-600">Cerrada</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         {(inv.status === 'PENDING' || inv.status === 'REJECTED') ? (
@@ -251,7 +251,7 @@ const InvoicesList = () => {
             </table>
           </div>
           {/* Pagination (I3) */}
-          <div className="flex items-center justify-between mt-2 text-[11px] text-zinc-500">
+          <div className="flex items-center justify-between mt-2 text-[13px] text-zinc-500">
             <span>Mostrando {Math.min(page * PAGE_SIZE + 1, filtered.length)}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length} facturas</span>
             {totalPages > 1 && (
               <div className="flex gap-1">
