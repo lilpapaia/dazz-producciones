@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, List, Columns3, ExternalLink, Check, X, CreditCard } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
@@ -16,6 +17,7 @@ const KANBAN_COLS = ['PENDING', 'APPROVED', 'PAID', 'REJECTED'];
 const PAGE_SIZE = 20;
 
 const InvoicesList = () => {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +130,7 @@ const InvoicesList = () => {
                 {paged.map(inv => {
                   const pill = PILL[inv.status] || PILL.PENDING;
                   return (
-                    <tr key={inv.id} className="hover:bg-white/[.02] transition-colors">
+                    <tr key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}`)} className="hover:bg-white/[.02] transition-colors cursor-pointer">
                       <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[11px] text-zinc-200">
                         {inv.invoice_number}
                         {inv.from_supplier_portal && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
@@ -149,17 +151,17 @@ const InvoicesList = () => {
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         {inv.status === 'PENDING' && (
-                          <button onClick={() => setActionModal({ invoice: inv, action: 'approve' })} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded transition-colors hover:bg-amber-400">Aprobar</button>
+                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'approve' }); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded transition-colors hover:bg-amber-400">Aprobar</button>
                         )}
                         {inv.status === 'APPROVED' && (
-                          <button onClick={() => setActionModal({ invoice: inv, action: 'pay' })} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
+                          <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'pay' }); }} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
                         )}
                         {inv.status === 'PAID' && <span className="text-[10px] text-zinc-600">Cerrada</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         <div className="flex gap-1">
-                          {inv.file_url && <button onClick={() => window.open(inv.file_url, '_blank')} className="p-1 text-zinc-600 hover:text-zinc-300 transition-colors"><ExternalLink size={12} /></button>}
-                          {inv.status === 'PENDING' && <button onClick={() => setActionModal({ invoice: inv, action: 'reject' })} className="p-1 text-red-400/60 hover:text-red-400 transition-colors"><X size={12} /></button>}
+                          {inv.file_url && <button onClick={(e) => { e.stopPropagation(); window.open(inv.file_url, '_blank'); }} className="p-1 text-zinc-600 hover:text-zinc-300 transition-colors"><ExternalLink size={12} /></button>}
+                          {inv.status === 'PENDING' && <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'reject' }); }} className="p-1 text-red-400/60 hover:text-red-400 transition-colors"><X size={12} /></button>}
                         </div>
                       </td>
                     </tr>

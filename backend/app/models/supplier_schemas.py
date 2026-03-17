@@ -117,6 +117,12 @@ class InvoiceResponse(BaseModel):
         from_attributes = True
 
 
+class InvoiceDetailResponse(InvoiceResponse):
+    nif_cif: Optional[str] = None
+    iban: Optional[str] = None
+    ia_validation_result: Optional[str] = None
+
+
 class NotificationResponse(BaseModel):
     id: int
     event_type: str

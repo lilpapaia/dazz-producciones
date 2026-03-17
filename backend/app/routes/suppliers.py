@@ -21,7 +21,7 @@ from app.models.suppliers import (
 from app.services.auth import get_current_admin_user
 from app.models.supplier_schemas import (
     InviteRequest, InviteResponse, SupplierResponse, SupplierUpdate,
-    AssignOCRequest, NoteRequest, InvoiceStatusUpdate, InvoiceResponse,
+    AssignOCRequest, NoteRequest, InvoiceStatusUpdate, InvoiceResponse, InvoiceDetailResponse,
     NotificationResponse, DashboardResponse, CreateOCRequest, CreateOCResponse,
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
@@ -504,6 +504,41 @@ async def list_all_invoices(
         ))
 
     return result
+
+
+@router.get("/invoices/{invoice_id}", response_model=InvoiceDetailResponse)
+async def get_invoice(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Get a single supplier invoice with full details."""
+    invoice = db.query(SupplierInvoice).options(
+        joinedload(SupplierInvoice.supplier)
+    ).filter(SupplierInvoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(404, "Invoice not found")
+
+    return InvoiceDetailResponse(
+        id=invoice.id, supplier_id=invoice.supplier_id,
+        supplier_name=invoice.supplier.name if invoice.supplier else None,
+        invoice_number=invoice.invoice_number,
+        date=format_date_for_response(invoice.date),
+        provider_name=invoice.provider_name, oc_number=invoice.oc_number,
+        company_id=invoice.company_id,
+        base_amount=invoice.base_amount, iva_percentage=invoice.iva_percentage,
+        iva_amount=invoice.iva_amount,
+        irpf_percentage=invoice.irpf_percentage or 0,
+        irpf_amount=invoice.irpf_amount or 0,
+        final_total=invoice.final_total,
+        currency=invoice.currency or "EUR", is_foreign=invoice.is_foreign or False,
+        file_url=get_invoice_pdf_url(invoice.file_url) if invoice.file_url else "",
+        status=invoice.status.value if invoice.status else "PENDING",
+        rejection_reason=invoice.rejection_reason, delete_reason=invoice.delete_reason,
+        nif_cif=invoice.nif_cif, iban=invoice.iban,
+        ia_validation_result=invoice.ia_validation_result,
+        created_at=invoice.created_at,
+    )
 
 
 @router.put("/invoices/{invoice_id}/status")

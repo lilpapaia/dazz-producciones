@@ -17,6 +17,7 @@ export const createOC = (data) => api.post('/suppliers/ocs', data);
 export const exportSupplierExcel = (id) => api.get(`/suppliers/${id}/export-excel`, { responseType: 'blob' });
 
 // Invoices
+export const getInvoice = (id) => api.get(`/suppliers/invoices/${id}`);
 export const getAllInvoices = (params) => api.get('/suppliers/invoices/all', { params });
 export const updateInvoiceStatus = (id, data) => api.put(`/suppliers/invoices/${id}/status`, data);
 export const deleteInvoice = (id) => api.delete(`/suppliers/invoices/${id}`);
