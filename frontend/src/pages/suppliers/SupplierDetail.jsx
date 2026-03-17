@@ -236,19 +236,23 @@ const SupplierDetail = () => {
       <div className="grid lg:grid-cols-[260px_1fr] gap-3.5">
         {/* ═══ LEFT: Supplier card ═══ */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-          <div className="w-11 h-11 bg-amber-500 rounded-md flex items-center justify-center font-['Bebas_Neue'] text-lg text-zinc-950 mb-3">{initials}</div>
-          <div className="font-['Bebas_Neue'] text-base tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
-          <div className="text-[11px] text-zinc-500 mb-2.5 flex gap-1.5 flex-wrap items-center">
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${supplier.is_active ? 'bg-green-400/10 text-green-400 border border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border border-zinc-700'}`}>
-              {STATUS_LABEL[supplier.status] || supplier.status}
-            </span>
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border border-blue-400/20'}`}>
-              {supplier.supplier_type === 'INFLUENCER' ? 'Talent' : supplier.supplier_type === 'GENERAL' ? 'General' : 'Mixed'}
-            </span>
+          <div className="flex items-center gap-3 mb-2.5">
+            <div className="w-11 h-11 bg-amber-500 rounded-md flex items-center justify-center font-['Bebas_Neue'] text-lg text-zinc-950 flex-shrink-0">{initials}</div>
+            <div>
+              <div className="font-['Bebas_Neue'] text-[18px] tracking-wide text-zinc-100">{supplier.name.toUpperCase()}</div>
+              <div className="flex gap-1.5 flex-wrap items-center">
+                <span className={`text-[11px] font-bold px-[8px] py-[3px] rounded ${supplier.is_active ? 'bg-green-400/10 text-green-400 border border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border border-zinc-700'}`}>
+                  {STATUS_LABEL[supplier.status] || supplier.status}
+                </span>
+                <span className={`text-[11px] font-bold px-[8px] py-[3px] rounded ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border border-blue-400/20'}`}>
+                  {supplier.supplier_type === 'INFLUENCER' ? 'Talent' : supplier.supplier_type === 'GENERAL' ? 'General' : 'Mixed'}
+                </span>
+              </div>
+            </div>
           </div>
 
           {supplier.oc_number && (
-            <div className="mb-3 inline-flex items-center gap-1.5 bg-purple-400/[.08] text-purple-400 text-[11px] font-medium px-2.5 py-1 rounded border border-purple-400/15 font-mono">
+            <div className="mb-3 inline-flex items-center gap-1.5 bg-purple-400/[.08] text-purple-400 text-[12px] font-medium px-[10px] py-[4px] rounded border border-purple-400/15 font-mono">
               <Link2 size={11} />{supplier.oc_number}
             </div>
           )}
@@ -266,7 +270,7 @@ const SupplierDetail = () => {
             ['Cert. bancario', supplier.bank_cert_url ? 'pdf' : null],
             ['Alta', supplier.created_at ? new Date(supplier.created_at).toLocaleDateString('es-ES') : '—', true],
           ].map(([label, val, mono, amber]) => (
-            <div key={label} className="flex justify-between py-1.5 border-b border-white/[.04] last:border-0 text-xs">
+            <div key={label} className="flex justify-between py-1.5 border-b border-white/[.04] last:border-0 text-[13px]">
               <span className="text-zinc-500">{label}</span>
               {val === 'pdf' ? (
                 <button onClick={handleViewCert} className="text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">Ver PDF → <ExternalLink size={9} /></button>
@@ -293,13 +297,13 @@ const SupplierDetail = () => {
           {/* Historial de eventos */}
           {history.length > 0 && (
             <div className="mb-3">
-              <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-2">Historial de eventos</div>
+              <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-2">Historial de eventos</div>
               {history.slice(0, 5).map(h => (
-                <div key={h.id} className="flex items-start gap-2 py-1.5 border-b border-white/[.04] last:border-0 text-[11px]">
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${HISTORY_DOT[h.event_type] || 'bg-zinc-600'}`} />
+                <div key={h.id} className="flex items-start gap-2 py-1.5 border-b border-white/[.04] last:border-0 text-[13px]">
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${HISTORY_DOT[h.event_type] || 'bg-zinc-600'}`} />
                   <div>
                     <div className="text-zinc-300">{h.message || h.title}</div>
-                    <div className="text-zinc-600">{timeAgo(h.created_at)}</div>
+                    <div className="text-[12px] text-zinc-600">{timeAgo(h.created_at)}</div>
                   </div>
                 </div>
               ))}
@@ -312,19 +316,19 @@ const SupplierDetail = () => {
             onChange={e => setNote(e.target.value)}
             placeholder="Añadir nota interna..."
             rows={2}
-            className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[11px] px-2.5 py-2 rounded focus:border-amber-500 outline-none resize-none"
+            className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-2.5 py-2 rounded focus:border-amber-500 outline-none resize-none"
           />
           <div className="flex gap-1.5 mt-1.5 flex-wrap">
-            <button onClick={handleAddNote} disabled={saving || !note.trim()} className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded border border-zinc-700 transition-colors disabled:opacity-40 flex items-center gap-1">
-              <Save size={11} /> Añadir nota
+            <button onClick={handleAddNote} disabled={saving || !note.trim()} className="text-[13px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-[14px] py-[8px] rounded border border-zinc-700 transition-colors disabled:opacity-40 flex items-center gap-1">
+              <Save size={13} /> Añadir nota
             </button>
             {supplier.is_active ? (
-              <button onClick={handleDeactivate} className="text-[11px] text-red-400 border border-red-400/25 hover:bg-red-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
-                <UserX size={11} /> Desactivar
+              <button onClick={handleDeactivate} className="text-[13px] text-red-400 border border-red-400/25 hover:bg-red-400/[.08] px-[14px] py-[8px] rounded transition-colors flex items-center gap-1">
+                <UserX size={13} /> Desactivar
               </button>
             ) : (
-              <button onClick={handleReactivate} className="text-[11px] text-green-400 border border-green-400/25 hover:bg-green-400/[.08] px-3 py-1.5 rounded transition-colors flex items-center gap-1">
-                <Check size={11} /> Activar
+              <button onClick={handleReactivate} className="text-[13px] text-green-400 border border-green-400/25 hover:bg-green-400/[.08] px-[14px] py-[8px] rounded transition-colors flex items-center gap-1">
+                <Check size={13} /> Activar
               </button>
             )}
           </div>
@@ -420,43 +424,43 @@ const SupplierDetail = () => {
             ) : (
               <div className="space-y-1">
                 {filtered.map(inv => (
-                  <div key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors cursor-pointer">
-                    <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
-                      <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)} className="grid items-center py-[18px] px-[18px] rounded hover:bg-white/[.02] transition-colors cursor-pointer" style={{ gridTemplateColumns: '44px 200px 200px 130px auto auto auto' }}>
+                    <div className="w-[38px] h-[38px] bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
+                      <svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
-                        {inv.invoice_number}
-                      </div>
-                      <div className="text-[10px] text-zinc-500">
-                        {inv.oc_number && <span className="text-[9px] px-1 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15 mr-1">{inv.oc_number}</span>}
-                        {inv.date}
-                      </div>
+                    <div className="text-[15px] font-semibold text-zinc-200 font-mono truncate">
+                      {inv.invoice_number}
                     </div>
-                    <div className="font-mono text-xs font-medium text-zinc-200 mx-2">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
-                      <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                    <div>
+                      {inv.oc_number && <span className="text-[12px] px-[9px] py-[3px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>}
+                    </div>
+                    <div className="text-[13px] text-zinc-500">{inv.date}</div>
+                    <div className="font-mono text-[14px] font-medium text-zinc-200 mx-2">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
+                    <span className={`text-[11px] font-bold px-[10px] py-[4px] rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
                       {PILL_LABEL[inv.status] || inv.status}
                     </span>
-                    {inv.status === 'PENDING' && (
-                      <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors ml-1">Aprobar</button>
-                    )}
-                    {inv.status === 'APPROVED' && (
-                      <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors ml-1">Marcar pagada</button>
-                    )}
-                    {inv.status === 'PAID' && (
-                      <span className="text-[10px] text-zinc-600 ml-1">Cerrada</span>
-                    )}
-                    {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
-                      <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-6 h-6 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors ml-1">
-                        <Trash2 size={11} strokeWidth={1.5} />
-                      </button>
-                    )}
-                    {inv.status === 'PAID' && (
-                      <div className="w-6 h-6 flex items-center justify-center">
-                        <Trash2 size={11} className="text-zinc-800" strokeWidth={1.5} />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 justify-end">
+                      {inv.status === 'PENDING' && (
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-[12px] py-[5px] rounded hover:bg-amber-400 transition-colors">Aprobar</button>
+                      )}
+                      {inv.status === 'APPROVED' && (
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[12px] text-zinc-400 border border-zinc-700 px-[12px] py-[5px] rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
+                      )}
+                      {inv.status === 'PAID' && (
+                        <span className="text-[12px] text-zinc-600">Cerrada</span>
+                      )}
+                      {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                          <Trash2 size={13} strokeWidth={1.5} />
+                        </button>
+                      )}
+                      {inv.status === 'PAID' && (
+                        <div className="w-7 h-7 flex items-center justify-center">
+                          <Trash2 size={13} className="text-zinc-800" strokeWidth={1.5} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
