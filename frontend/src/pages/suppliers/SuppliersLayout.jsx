@@ -5,8 +5,8 @@ import { getSuppliersDashboard, getNotifications } from '../../services/supplier
 
 const NAV_ITEMS = [
   { path: '/suppliers', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { path: '/suppliers/list', label: 'Proveedores', icon: Users, badgeKey: 'pending_invoices' },
-  { path: '/suppliers/invoices', label: 'Facturas', icon: FileText, badgeKey: 'pending_invoices' },
+  { path: '/suppliers/list', label: 'Proveedores', icon: Users },
+  { path: '/suppliers/invoices', label: 'Facturas', icon: FileText },
   { path: '/suppliers/notifications', label: 'Notificaciones', icon: Bell, badgeKey: 'unread_notifications' },
   { path: '/suppliers/invite', label: 'Invitar proveedor', icon: UserPlus, section: 'add' },
 ];
@@ -16,12 +16,11 @@ const SuppliersLayout = () => {
   const [stats, setStats] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const fetchStats = () => getSuppliersDashboard().then(r => setStats(r.data)).catch(() => {});
+
+  useEffect(() => { fetchStats(); }, [location.pathname]);
   useEffect(() => {
-    getSuppliersDashboard().then(r => setStats(r.data)).catch(() => {});
-    // Poll every 30s
-    const interval = setInterval(() => {
-      getSuppliersDashboard().then(r => setStats(r.data)).catch(() => {});
-    }, 30000);
+    const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -51,7 +50,6 @@ const SuppliersLayout = () => {
 
         {NAV_ITEMS.filter(i => !i.section).map(item => {
           const active = isActive(item.path, item.exact);
-          const badge = item.badgeKey && stats[item.badgeKey];
           return (
             <Link
               key={item.path}
@@ -65,10 +63,8 @@ const SuppliersLayout = () => {
             >
               <item.icon size={14} className={active ? 'text-amber-500' : 'text-zinc-600'} />
               <span className="flex-1">{item.label}</span>
-              {badge > 0 && (
-                <span className="bg-amber-500 text-zinc-950 text-[9px] font-bold min-w-[17px] h-[17px] rounded-full flex items-center justify-center px-1 font-mono">
-                  {badge}
-                </span>
+              {item.badgeKey && stats[item.badgeKey] > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
               )}
             </Link>
           );
