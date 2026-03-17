@@ -428,52 +428,52 @@ const SupplierDetail = () => {
                   <div
                     key={inv.id}
                     onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)}
-                    className="grid items-center gap-3 px-[18px] py-[18px] rounded hover:bg-white/[.02] transition-colors cursor-pointer"
-                    style={{ gridTemplateColumns: '44px 200px 200px 130px auto auto auto' }}
+                    className="grid items-center gap-3 px-[12px] py-[12px] rounded hover:bg-white/[.02] transition-colors cursor-pointer"
+                    style={{ gridTemplateColumns: '32px 200px 200px 130px auto auto auto' }}
                   >
                     {/* Icono */}
-                    <div className="w-[38px] h-[38px] bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
-                      <svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>
                     {/* Nombre factura */}
-                    <div className="text-[15px] font-semibold text-zinc-200 font-mono truncate">
+                    <div className="text-[13px] font-semibold text-zinc-200 font-mono truncate">
                       {inv.invoice_number}
                     </div>
                     {/* OC */}
                     <div>
                       {inv.oc_number
-                        ? <span className="text-[12px] px-[9px] py-[3px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
-                        : <span className="text-[12px] text-zinc-600">—</span>
+                        ? <span className="text-[10px] px-[7px] py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        : <span className="text-[10px] text-zinc-600">—</span>
                       }
                     </div>
                     {/* Fecha */}
-                    <div className="text-[13px] text-zinc-400">{inv.date}</div>
+                    <div className="text-[11px] text-zinc-400">{inv.date}</div>
                     {/* Importe */}
-                    <div className="font-mono text-[14px] font-medium text-zinc-200 whitespace-nowrap">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
+                    <div className="font-mono text-[12px] font-medium text-zinc-200 whitespace-nowrap">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</div>
                     {/* Estado */}
-                    <span className={`text-[11px] font-bold px-[10px] py-[4px] rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
+                      <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
                       {PILL_LABEL[inv.status] || inv.status}
                     </span>
                     {/* Acciones */}
                     <div className="flex items-center gap-1.5">
                       {inv.status === 'PENDING' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-[12px] py-[5px] rounded hover:bg-amber-400 transition-colors">Aprobar</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                       )}
                       {inv.status === 'APPROVED' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[12px] text-zinc-400 border border-zinc-700 px-[12px] py-[5px] rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
                       )}
                       {inv.status === 'PAID' && (
-                        <span className="text-[12px] text-zinc-600">Cerrada</span>
+                        <span className="text-[10px] text-zinc-600">Cerrada</span>
                       )}
                       {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
-                          <Trash2 size={13} strokeWidth={1.5} />
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-6 h-6 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                          <Trash2 size={11} strokeWidth={1.5} />
                         </button>
                       )}
                       {inv.status === 'PAID' && (
-                        <div className="w-7 h-7 flex items-center justify-center">
-                          <Trash2 size={13} className="text-zinc-800" strokeWidth={1.5} />
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          <Trash2 size={11} className="text-zinc-800" strokeWidth={1.5} />
                         </div>
                       )}
                     </div>
