@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save, UserX, Link2, Mail, ExternalLink, Check, Download } from 'lucide-react';
-import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl } from '../../services/suppliersApi';
+import { ChevronLeft, Save, UserX, Link2, Mail, ExternalLink, Check, Download, Search, X, Edit3 } from 'lucide-react';
+import { getSupplier, updateSupplier, deactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus } from '../../services/suppliersApi';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -27,6 +27,8 @@ const SupplierDetail = () => {
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceFilter, setInvoiceFilter] = useState('');
 
   const load = () => {
     Promise.all([
@@ -66,6 +68,21 @@ const SupplierDetail = () => {
     setSaving(false);
   };
 
+  const handleInvoiceAction = async (invoiceId, status) => {
+    try {
+      await updateInvoiceStatus(invoiceId, { status });
+      load();
+    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+  };
+
+  const handleDeleteNote = async (lineIndex) => {
+    if (!supplier.notes_internal) return;
+    const lines = supplier.notes_internal.split('\n');
+    const updated = lines.filter((_, i) => i !== lineIndex).join('\n').trim();
+    await updateSupplier(id, { notes_internal: updated || null });
+    load();
+  };
+
   const timeAgo = (d) => {
     if (!d) return '';
     const diff = Date.now() - new Date(d).getTime();
@@ -88,9 +105,15 @@ const SupplierDetail = () => {
 
   return (
     <div>
-      <button onClick={() => navigate('/suppliers/list')} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-amber-400 mb-3 transition-colors">
-        <ChevronLeft size={14} /> ← Volver al listado
-      </button>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">
+          <span onClick={() => navigate('/suppliers/list')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">PROVEEDORES</span>
+          {' / '}{supplier.name.toUpperCase()}
+        </h1>
+        <button className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1">
+          <Edit3 size={11} /> Editar datos
+        </button>
+      </div>
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-3.5">
         {/* Left: Supplier card */}
@@ -137,11 +160,14 @@ const SupplierDetail = () => {
           ))}
 
           {/* Notes */}
-          {supplier.notes_internal && (
-            <div className="bg-zinc-800 rounded p-2.5 text-[11px] text-zinc-400 mt-3 border-l-2 border-amber-500 whitespace-pre-wrap">
-              {supplier.notes_internal}
+          {supplier.notes_internal && supplier.notes_internal.split('\n').filter(Boolean).map((line, i) => (
+            <div key={i} className="flex items-start gap-1.5 bg-zinc-800 rounded p-2 text-[11px] text-zinc-400 mt-1.5 border-l-2 border-amber-500 group">
+              <span className="flex-1 whitespace-pre-wrap">{line}</span>
+              <button onClick={() => handleDeleteNote(i)} className="text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" title="Eliminar nota">
+                <X size={10} />
+              </button>
             </div>
-          )}
+          ))}
 
           <hr className="border-white/[.04] my-3" />
 
@@ -188,38 +214,93 @@ const SupplierDetail = () => {
 
         {/* Right: Invoice history */}
         <div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-            <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Facturas ({invoices.length})</div>
+          {/* Search + filter pills (like ProjectView) */}
+          <div className="flex items-center gap-2.5 mb-3 flex-wrap">
+            <div className="relative flex-1 max-w-[180px]">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+              <input
+                placeholder="Buscar factura..."
+                value={invoiceSearch}
+                onChange={e => setInvoiceSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none"
+              />
+              {invoiceSearch && (
+                <button onClick={() => setInvoiceSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1.5 flex-1 justify-end">
+              {[
+                { key: '', label: 'Todas' },
+                { key: 'PENDING', label: 'Pendientes' },
+                { key: 'APPROVED', label: 'Aprobadas' },
+                { key: 'PAID', label: 'Pagadas' },
+              ].map(f => {
+                const count = f.key ? invoices.filter(i => i.status === f.key).length : invoices.length;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setInvoiceFilter(f.key)}
+                    className={`text-[11px] px-3 py-1 rounded-full border transition-all ${
+                      invoiceFilter === f.key
+                        ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
+                        : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                    }`}
+                  >
+                    {f.label}{count > 0 ? ` (${count})` : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-            {invoices.length === 0 ? (
-              <p className="text-xs text-zinc-600">Sin facturas</p>
-            ) : (
-              <div className="space-y-1">
-                {invoices.map(inv => (
-                  <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] cursor-pointer transition-colors">
-                    <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
-                      <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
-                        {inv.invoice_number}
-                        {/* IA badge (S5) */}
-                        <span className="text-[9px] text-green-400 flex items-center gap-0.5"><Check size={9} strokeWidth={2} />ok</span>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
+            {(() => {
+              const filtered = invoices.filter(inv => {
+                if (invoiceFilter && inv.status !== invoiceFilter) return false;
+                if (!invoiceSearch) return true;
+                const q = invoiceSearch.toLowerCase();
+                return inv.invoice_number?.toLowerCase().includes(q) || inv.oc_number?.toLowerCase().includes(q);
+              });
+              return filtered.length === 0 ? (
+                <p className="text-xs text-zinc-600">Sin facturas</p>
+              ) : (
+                <div className="space-y-1">
+                  {filtered.map(inv => (
+                    <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded hover:bg-white/[.02] transition-colors">
+                      <div className="w-7 h-7 bg-red-400/[.08] rounded flex items-center justify-center border border-red-400/[.12] flex-shrink-0">
+                        <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                       </div>
-                      <div className="text-[10px] text-zinc-500">
-                        {inv.oc_number && <span className="text-[9px] px-1 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15 mr-1">{inv.oc_number}</span>}
-                        {inv.date}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-zinc-200 font-mono flex items-center gap-1.5">
+                          {inv.invoice_number}
+                          <span className="text-[9px] text-green-400 flex items-center gap-0.5"><Check size={9} strokeWidth={2} />ok</span>
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          {inv.oc_number && <span className="text-[9px] px-1 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15 mr-1">{inv.oc_number}</span>}
+                          {inv.date}
+                        </div>
                       </div>
+                      <div className="font-mono text-xs font-medium text-zinc-200 mx-2">{inv.final_total?.toFixed(2)} €</div>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
+                        <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                        {inv.status}
+                      </span>
+                      {inv.status === 'PENDING' && (
+                        <button onClick={() => handleInvoiceAction(inv.id, 'APPROVED')} className="text-[10px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors ml-1">Aprobar</button>
+                      )}
+                      {inv.status === 'APPROVED' && (
+                        <button onClick={() => handleInvoiceAction(inv.id, 'PAID')} className="text-[10px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors ml-1">Marcar pagada</button>
+                      )}
+                      {inv.status === 'PAID' && (
+                        <span className="text-[10px] text-zinc-600 ml-1">Cerrada</span>
+                      )}
                     </div>
-                    <div className="font-mono text-xs font-medium text-zinc-200 mx-2">{inv.final_total?.toFixed(2)} EUR</div>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
-                      <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
-                      {inv.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Export button (S6) */}

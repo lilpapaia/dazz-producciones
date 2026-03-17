@@ -322,7 +322,7 @@ async def update_supplier(
     if not supplier:
         raise HTTPException(404, "Supplier not found")
 
-    ALLOWED_FIELDS = {"name", "nif_cif", "phone", "address", "supplier_type"}
+    ALLOWED_FIELDS = {"name", "nif_cif", "phone", "address", "supplier_type", "notes_internal"}
     for field, value in body.model_dump(exclude_unset=True).items():
         if field in ALLOWED_FIELDS:
             setattr(supplier, field, value)

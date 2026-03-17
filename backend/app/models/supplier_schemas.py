@@ -74,6 +74,7 @@ class SupplierUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     supplier_type: Optional[str] = None
+    notes_internal: Optional[str] = None
 
 
 class AssignOCRequest(BaseModel):
