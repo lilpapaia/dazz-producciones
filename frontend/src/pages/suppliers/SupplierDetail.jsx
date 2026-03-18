@@ -396,8 +396,8 @@ const SupplierDetail = () => {
                 </div>
               )}
             </div>
-            <div className="flex gap-1.5 flex-1 justify-end overflow-x-auto scrollbar-none">
-              <div className="flex gap-1.5 flex-shrink-0">
+            {/* Chips — desktop inline */}
+            <div className="hidden sm:flex gap-1.5 flex-1 justify-end">
               {[
                 { key: '', label: 'Todas' },
                 { key: 'PENDING', label: 'Pendientes' },
@@ -416,9 +416,31 @@ const SupplierDetail = () => {
                   {f.label}
                 </button>
               ))}
-              </div>
             </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
+          </div>
+
+          {/* Chips — solo móvil, scrollable pegada a bordes */}
+          <div className="sm:hidden flex gap-2 overflow-x-auto mb-3 -mx-4 px-4"
+            style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
+            {[
+              { key: '', label: 'Todas' },
+              { key: 'PENDING', label: 'Pendientes' },
+              { key: 'APPROVED', label: 'Aprobadas' },
+              { key: 'PAID', label: 'Pagadas' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setInvoiceFilter(f.key)}
+                className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${
+                  invoiceFilter === f.key
+                    ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
+                    : 'border-zinc-700 text-zinc-400'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div><div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             {filtered.length === 0 ? (
               <p className="text-xs text-zinc-600 text-center py-6">Sin facturas</p>
             ) : (

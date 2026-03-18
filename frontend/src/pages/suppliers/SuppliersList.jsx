@@ -92,7 +92,7 @@ const SuppliersList = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2.5 mb-3.5 flex-wrap items-center">
+      <div className="flex gap-2.5 mb-2 flex-wrap items-center">
         <div className="relative w-full sm:w-[300px]" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
@@ -152,7 +152,8 @@ const SuppliersList = () => {
             </div>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none w-full sm:w-auto sm:flex-wrap items-center -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* Chips empresa — desktop inline, móvil fila propia abajo */}
+        <div className="hidden sm:flex gap-2 flex-wrap items-center">
           <span className="text-[12px] text-zinc-500 tracking-widest uppercase flex-shrink-0">Empresa:</span>
           <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>
           {companies.map(c => (
@@ -161,6 +162,18 @@ const SuppliersList = () => {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Chips empresa — solo móvil, fila scrollable pegada a los bordes */}
+      <div className="sm:hidden flex gap-2 overflow-x-auto mb-3.5 -mx-4 px-4"
+        style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
+        <span className="text-[12px] text-zinc-500 tracking-widest uppercase flex-shrink-0 self-center">Empresa:</span>
+        <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>Todas</button>
+        {companies.map(c => (
+          <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>
+            {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
+          </button>
+        ))}
       </div>
 
       {/* CARDS — solo móvil */}
