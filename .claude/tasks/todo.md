@@ -19,6 +19,14 @@
   - [x] Borrado archivos Cloudinary al eliminar factura (PDF + páginas)
   - [x] Fix páginas PDF subiendo a raíz en vez de `dazz-suppliers/pages/{supplier_id}/`
   - [x] Fix `delete_invoice_pdf` recibía URL en vez de public_id — usar `extract_public_id_from_url`
+- [x] **Fixes varios proveedores** (2026-03-18):
+  - [x] Descarga PDF fuerza download (fetch+blob) en vez de abrir en navegador
+  - [x] Nombre descarga PDF: `{proveedor}_{fecha}_{numero}.pdf`
+  - [x] Eliminar dominio legacy `producciones.dazzcreative.com` (CORS + email fallback)
+  - [x] `extract_public_id_from_url` busca solo 'upload', no 'raw' (fix URLs /raw/upload/)
+  - [x] `delete_invoice_pdf` añade extensión .pdf al public_id para raw resources
+  - [x] Quitar badge "IA ok" de lista facturas en SupplierDetail
+  - [x] Endpoint `PUT /{supplier_id}/reactivate` + botón Activar/Desactivar dinámico
 - [x] Setup Claude Code + .claude/ estructura
 - [x] Análisis completo proyecto
 

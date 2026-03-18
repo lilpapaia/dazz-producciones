@@ -80,7 +80,7 @@ const SupplierInvite = () => {
   // ─── SUCCESS STATE ───
   if (sent) {
     return (
-      <div className="max-w-lg mx-auto mt-12">
+      <div className="max-w-[47rem] mx-auto mt-12">
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-6 text-center">
           <CheckCircle size={40} className="text-green-400 mx-auto mb-3" />
           <h2 className="font-['Bebas_Neue'] text-lg tracking-wider text-zinc-100 mb-2">Invitación enviada</h2>
@@ -101,10 +101,10 @@ const SupplierInvite = () => {
   }
 
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2.5 rounded focus:border-amber-500 outline-none";
-  const labelCls = "text-[11px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
+  const labelCls = "text-[12px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-[47rem] mx-auto">
       <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 mb-4">Invitar proveedor</h1>
 
       {/* Info bar */}
@@ -134,8 +134,8 @@ const SupplierInvite = () => {
               <div className={`w-3 h-3 border-2 rounded-full mb-2 relative ${type === opt.key ? 'border-amber-500' : 'border-zinc-600'}`}>
                 {type === opt.key && <div className="absolute inset-[3px] bg-amber-500 rounded-full" />}
               </div>
-              <div className={`font-['Bebas_Neue'] text-xs tracking-wide ${type === opt.key ? 'text-amber-400' : 'text-zinc-300'}`}>{opt.label}</div>
-              <div className="text-[9px] text-zinc-500 mt-0.5">{opt.desc}</div>
+              <div className={`font-['Bebas_Neue'] tracking-wide ${type === opt.key ? 'text-amber-400' : 'text-zinc-300'}`} style={{fontSize:'0.98rem'}}>{opt.label}</div>
+              <div className="text-[12px] text-zinc-500 mt-0.5">{opt.desc}</div>
             </button>
           ))}
         </div>
@@ -152,7 +152,7 @@ const SupplierInvite = () => {
               </div>
               <div>
                 <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Crear OC permanente</div>
-                <div className="text-[10px] text-zinc-500">Solo factura a DAZZLE MGMT &middot; OC asignado automáticamente al registrarse via NIF</div>
+                <div className="text-[12px] text-zinc-500">Solo factura a DAZZLE MGMT &middot; OC asignado automáticamente al registrarse via NIF</div>
               </div>
             </div>
 
@@ -164,7 +164,7 @@ const SupplierInvite = () => {
               <div>
                 <label className={labelCls}>NIF / DNI</label>
                 <input value={talentNif} onChange={e => setTalentNif(e.target.value)} placeholder="12345678A" className={inputCls} />
-                <div className="text-[9px] text-zinc-600 mt-0.5">Para el matching automático al registrarse</div>
+                <div className="text-[12px] text-zinc-600 mt-0.5">Para el matching automático al registrarse</div>
               </div>
               <div>
                 <label className={labelCls}>Empresa</label>
@@ -176,7 +176,7 @@ const SupplierInvite = () => {
               <div>
                 <label className={labelCls}>Código OC <span className="text-amber-500">*</span></label>
                 <input value={talentOC} onChange={e => setTalentOC(e.target.value)} placeholder="OC-MGMTINT2026047" className={`${inputCls} font-mono`} />
-                <div className="text-[9px] text-zinc-600 mt-0.5">Número secuencial de contabilidad</div>
+                <div className="text-[12px] text-zinc-600 mt-0.5">Número secuencial de contabilidad</div>
               </div>
               {talentNif && talentOC && (
                 <div className="flex items-end pb-0.5">
@@ -205,7 +205,7 @@ const SupplierInvite = () => {
               <div className="w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center font-['Bebas_Neue'] text-sm text-zinc-950 flex-shrink-0">2</div>
               <div>
                 <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Enviar invitación por email</div>
-                <div className="text-[10px] text-zinc-500">El proveedor crea su propia contraseña durante el registro</div>
+                <div className="text-[12px] text-zinc-500">El proveedor crea su propia contraseña durante el registro</div>
               </div>
             </div>
 
@@ -253,7 +253,7 @@ const SupplierInvite = () => {
             <div className="w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center font-['Bebas_Neue'] text-sm text-zinc-950 flex-shrink-0">1</div>
             <div>
               <div className="font-['Bebas_Neue'] text-sm tracking-wide text-zinc-100">Enviar invitación por email</div>
-              <div className="text-[10px] text-zinc-500">Los proveedores generales no tienen OC fijo — usan el OC del proyecto en cada factura</div>
+              <div className="text-[12px] text-zinc-500">Los proveedores generales no tienen OC fijo — usan el OC del proyecto en cada factura</div>
             </div>
           </div>
 
