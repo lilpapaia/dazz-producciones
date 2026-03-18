@@ -67,7 +67,7 @@ const SupplierNotifications = () => {
     <div>
       {/* Header with actions (N1, N2) */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">Notificaciones</h1>
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Notificaciones</h1>
         <div className="flex gap-2">
           {unreadCount > 0 && (
             <button onClick={handleMarkAllRead} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">
