@@ -223,17 +223,17 @@ const SupplierDetail = () => {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">
-          <span onClick={() => navigate('/suppliers/list')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">PROVEEDORES</span>
-          {' / '}{supplier.name.toUpperCase()}
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 truncate">
+          <span onClick={() => navigate('/suppliers/list')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors hidden sm:inline">PROVEEDORES / </span>
+          {supplier.name.toUpperCase()}
         </h1>
-        <button onClick={openEditModal} className="text-[13px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1">
-          <Edit3 size={13} /> Editar datos
+        <button onClick={openEditModal} className="text-[13px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1 flex-shrink-0">
+          <Edit3 size={13} /> <span className="hidden sm:inline">Editar datos</span><span className="sm:hidden">Editar</span>
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-[320px_1fr] gap-3.5">
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-3.5">
         {/* ═══ LEFT: Supplier card ═══ */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
           {/* Avatar + nombre en horizontal */}
@@ -339,7 +339,7 @@ const SupplierDetail = () => {
         <div>
           {/* Buscador ProjectView pattern */}
           <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-            <div className="relative w-[300px]" ref={searchRef}>
+            <div className="relative w-full sm:w-[300px]" ref={searchRef}>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
                 <input
@@ -396,7 +396,8 @@ const SupplierDetail = () => {
                 </div>
               )}
             </div>
-            <div className="flex gap-1.5 flex-1 justify-end">
+            <div className="flex gap-1.5 flex-1 justify-end overflow-x-auto scrollbar-none">
+              <div className="flex gap-1.5 flex-shrink-0">
               {[
                 { key: '', label: 'Todas' },
                 { key: 'PENDING', label: 'Pendientes' },
@@ -406,7 +407,7 @@ const SupplierDetail = () => {
                 <button
                   key={f.key}
                   onClick={() => setInvoiceFilter(f.key)}
-                  className={`text-[13px] px-3 py-1 rounded-full border transition-all ${
+                  className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${
                     invoiceFilter === f.key
                       ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
                       : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
@@ -415,14 +416,54 @@ const SupplierDetail = () => {
                   {f.label}
                 </button>
               ))}
+              </div>
             </div>
-          </div>
-
-          {/* Lista facturas */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             {filtered.length === 0 ? (
               <p className="text-xs text-zinc-600 text-center py-6">Sin facturas</p>
             ) : (
+              <>
+                {/* CARDS — solo móvil */}
+                <div className="lg:hidden space-y-2">
+                  {filtered.map(inv => (
+                    <div key={inv.id}
+                      onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)}
+                      className="bg-zinc-800 rounded-md p-3 cursor-pointer border border-zinc-700 transition-colors">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="font-mono text-[13px] font-semibold text-zinc-200">{inv.invoice_number}</span>
+                        <span className="font-mono text-[13px] font-medium text-zinc-100">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {inv.oc_number
+                          ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                          : <span className="text-[11px] text-zinc-600">Sin OC</span>
+                        }
+                        <span className="text-[11px] text-zinc-500">{inv.date}</span>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
+                          <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                          {PILL_LABEL[inv.status] || inv.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 justify-end" onClick={e => e.stopPropagation()}>
+                        {inv.status === 'PENDING' && (
+                          <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400">Aprobar</button>
+                        )}
+                        {inv.status === 'APPROVED' && (
+                          <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
+                        )}
+                        {inv.status === 'PAID' && <span className="text-[12px] text-zinc-600">Cerrada</span>}
+                        {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
+                            <Trash2 size={14} strokeWidth={1.5} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* GRID — solo desktop */}
+                <div className="hidden lg:block space-y-1">
               <div className="space-y-1">
                 {filtered.map(inv => (
                   <div
@@ -482,6 +523,8 @@ const SupplierDetail = () => {
                   </div>
                 ))}
               </div>
+                </div>
+              </>
             )}
           </div>
 
