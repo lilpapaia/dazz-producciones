@@ -152,13 +152,15 @@ const SuppliersList = () => {
             </div>
           )}
         </div>
-        <span className="text-[12px] text-zinc-500 tracking-widest uppercase">Empresa:</span>
-        <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>
-        {companies.map(c => (
-          <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[13px] px-3 py-1 rounded-full border transition-all ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
-            {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
-          </button>
-        ))}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none w-full sm:w-auto sm:flex-wrap items-center -mx-4 px-4 sm:mx-0 sm:px-0">
+          <span className="text-[12px] text-zinc-500 tracking-widest uppercase flex-shrink-0">Empresa:</span>
+          <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>
+          {companies.map(c => (
+            <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
+              {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* CARDS — solo móvil */}

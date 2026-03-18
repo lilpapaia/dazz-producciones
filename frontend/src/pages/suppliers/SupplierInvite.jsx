@@ -115,7 +115,7 @@ const SupplierInvite = () => {
       {/* Type selector */}
       <div className="mb-4">
         <div className="text-[12px] text-zinc-500 tracking-widest uppercase mb-2">Tipo de proveedor *</div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {[
             { key: 'talent', label: 'Talent / Influencer', desc: 'OC permanente · Solo factura a DAZZLE MGMT' },
             { key: 'mixed', label: 'Mixed', desc: 'OC permanente + OC proyecto · Todas las empresas' },
@@ -156,7 +156,7 @@ const SupplierInvite = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
               <div>
                 <label className={labelCls}>Nombre del talent <span className="text-amber-500">*</span></label>
                 <input value={talentName} onChange={e => setTalentName(e.target.value)} placeholder="@mariagomez" className={inputCls} />
@@ -172,7 +172,7 @@ const SupplierInvite = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-[1fr_2fr] gap-2.5 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2.5 mb-3">
               <div>
                 <label className={labelCls}>Código OC <span className="text-amber-500">*</span></label>
                 <input value={talentOC} onChange={e => setTalentOC(e.target.value)} placeholder="OC-MGMTINT2026047" className={`${inputCls} font-mono`} />
@@ -210,7 +210,7 @@ const SupplierInvite = () => {
             </div>
 
             <form onSubmit={handleInvite}>
-              <div className="grid grid-cols-2 gap-2.5 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                 <div>
                   <label className={labelCls}>Email <span className="text-amber-500">*</span></label>
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="talent@email.com" required className={inputCls} />
@@ -258,7 +258,7 @@ const SupplierInvite = () => {
           </div>
 
           <form onSubmit={handleInvite}>
-            <div className="grid grid-cols-2 gap-2.5 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
               <div>
                 <label className={labelCls}>Nombre / razón social <span className="text-amber-500">*</span></label>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Audiovisual Pérez SL" required className={inputCls} />
