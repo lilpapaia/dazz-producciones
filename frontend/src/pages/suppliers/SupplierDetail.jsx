@@ -469,13 +469,13 @@ const SupplierDetail = () => {
                         <span className="text-[13px] text-zinc-600 px-2.5 py-1">Cerrada</span>
                       )}
                       {(inv.status === 'PENDING' || inv.status === 'APPROVED') && (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="text-[13px] px-2.5 py-1 border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors flex items-center">
-                          <Trash2 size={13} strokeWidth={1.5} />
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors flex-shrink-0">
+                          <Trash2 size={15} strokeWidth={1.5} />
                         </button>
                       )}
                       {inv.status === 'PAID' && (
-                        <div className="text-[13px] px-2.5 py-1 flex items-center">
-                          <Trash2 size={13} className="text-zinc-800" strokeWidth={1.5} />
+                        <div className="w-[34px] h-[34px] flex items-center justify-center flex-shrink-0">
+                          <Trash2 size={15} className="text-zinc-800" strokeWidth={1.5} />
                         </div>
                       )}
                     </div>

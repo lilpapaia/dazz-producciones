@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Bell, UserPlus, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Bell, UserPlus } from 'lucide-react';
 import { getSuppliersDashboard, getNotifications } from '../../services/suppliersApi';
 
 const NAV_ITEMS = [
@@ -14,7 +14,6 @@ const NAV_ITEMS = [
 const SuppliersLayout = () => {
   const location = useLocation();
   const [stats, setStats] = useState({});
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchStats = () => getSuppliersDashboard().then(r => setStats(r.data)).catch(() => {});
 
@@ -31,22 +30,8 @@ const SuppliersLayout = () => {
 
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
-      {/* Mobile toggle */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed bottom-4 right-4 z-50 bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg shadow-amber-500/30"
-      >
-        <Menu size={20} />
-      </button>
-
-      {/* Sidebar — sticky para que no haga scroll */}
-      <aside className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 fixed lg:sticky inset-y-0 left-0 z-40
-        w-52 bg-zinc-900 border-r border-zinc-800 p-3 flex flex-col
-        transition-transform lg:transition-none pt-20 lg:pt-3
-        lg:top-16 lg:h-[calc(100vh-64px)] lg:self-start
-      `}>
+      {/* Sidebar — solo desktop */}
+      <aside className="hidden lg:flex lg:sticky lg:top-16 lg:h-[calc(100vh-64px)] lg:self-start w-52 bg-zinc-900 border-r border-zinc-800 p-3 flex-col">
         <div className="text-[12px] text-zinc-600 tracking-widest uppercase px-3 mb-1">General</div>
 
         {NAV_ITEMS.filter(i => !i.section).map(item => {
@@ -55,7 +40,6 @@ const SuppliersLayout = () => {
             <Link
               key={item.path}
               to={item.path}
-              onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-2.5 px-3 py-2 rounded mb-0.5 transition-all ${
                 active
                   ? 'bg-amber-500/10 border-l-2 border-amber-500 pl-2.5 text-amber-400'
@@ -80,7 +64,6 @@ const SuppliersLayout = () => {
             <Link
               key={item.path}
               to={item.path}
-              onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-2.5 px-3 py-2 rounded mb-0.5 transition-all ${
                 active
                   ? 'bg-amber-500/10 border-l-2 border-amber-500 pl-2.5 text-amber-400'
@@ -95,15 +78,38 @@ const SuppliersLayout = () => {
         })}
       </aside>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/60 z-30" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Content — solo este hace scroll */}
-      <main className="flex-1 p-4 sm:p-5 overflow-y-auto bg-zinc-950">
+      {/* Content */}
+      <main className="flex-1 p-4 sm:p-5 overflow-y-auto bg-zinc-950 pb-24 lg:pb-5">
         <Outlet />
       </main>
+
+      {/* Bottom nav — solo móvil */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around h-[62px] px-2">
+        {NAV_ITEMS.map(item => {
+          const active = isActive(item.path, item.exact);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className="flex flex-col items-center gap-1 flex-1 py-1 relative"
+            >
+              <item.icon
+                size={20}
+                className={active ? 'text-amber-500' : 'text-zinc-600'}
+                strokeWidth={1.5}
+              />
+              <span className={`text-[9px] tracking-wide ${active ? 'text-amber-400' : 'text-zinc-600'}`}>
+                {item.label === 'Invitar proveedor' ? 'Invitar' : item.label}
+              </span>
+              {item.badgeKey && stats[item.badgeKey] > 0 && (
+                <span className="absolute top-0 right-3 w-4 h-4 bg-amber-500 rounded-full text-[8px] font-bold text-zinc-950 flex items-center justify-center">
+                  {stats[item.badgeKey]}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 };
