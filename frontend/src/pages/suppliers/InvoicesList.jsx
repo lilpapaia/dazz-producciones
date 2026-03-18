@@ -101,7 +101,7 @@ const InvoicesList = () => {
 
       {/* Filters */}
       <div className="flex gap-2 mb-3.5 flex-wrap items-center">
-        <div className="relative w-[300px]" ref={searchRef}>
+        <div className="relative w-full sm:w-[300px]" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
             <input
@@ -177,7 +177,53 @@ const InvoicesList = () => {
         </select>
       </div>
 
-      {/* LIST VIEW */}
+      {/* CARDS — solo móvil */}
+      <div className="lg:hidden flex flex-col gap-2 mb-4">
+        {paged.length === 0 ? (
+          <div className="text-center py-8 text-xs text-zinc-600">Sin facturas</div>
+        ) : paged.map(inv => {
+          const pill = PILL[inv.status] || PILL.PENDING;
+          return (
+            <div key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=list`)}
+              className="bg-zinc-900 border border-zinc-800 rounded-md p-3.5 cursor-pointer active:border-amber-500 transition-colors">
+              <div className="flex items-start justify-between mb-2">
+                <span className="font-mono text-[13px] text-zinc-200">{inv.invoice_number}
+                  {inv.from_supplier_portal && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
+                </span>
+                <span className="font-mono text-[13px] font-semibold text-zinc-100">{inv.final_total?.toFixed(2)} €</span>
+              </div>
+              <div className="text-[12px] text-zinc-400 mb-2">{inv.supplier_name}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
+                    <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                  {inv.status === 'PENDING' && (
+                    <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'approve' }); }}
+                      className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400">Aprobar</button>
+                  )}
+                  {inv.status === 'APPROVED' && (
+                    <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'pay' }); }}
+                      className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
+                  )}
+                  {(inv.status === 'PENDING' || inv.status === 'REJECTED') && (
+                    <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'delete' }); }}
+                      className="w-[30px] h-[30px] flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
+                      <Trash2 size={13} strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* LIST VIEW — solo desktop */}
+      <div className="hidden lg:block">
       <>
           <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-x-auto">
             <table className="w-full min-w-[650px]">
@@ -253,6 +299,7 @@ const InvoicesList = () => {
             )}
           </div>
         </>
+      </div>
 
       {/* Action modal */}
       {actionModal && (

@@ -87,13 +87,13 @@ const SuppliersList = () => {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Proveedores</h1>
         <button onClick={() => navigate('/suppliers/invite')} className="bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[13px] font-semibold px-4 py-2 rounded transition-colors">
-          + Invitar proveedor
+          + Invitar
         </button>
       </div>
 
       {/* Filters */}
       <div className="flex gap-2.5 mb-3.5 flex-wrap items-center">
-        <div className="relative w-[300px]" ref={searchRef}>
+        <div className="relative w-full sm:w-[300px]" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 text-zinc-500 pointer-events-none" size={14} />
             <input
@@ -161,8 +161,39 @@ const SuppliersList = () => {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-x-auto">
+      {/* CARDS — solo móvil */}
+      <div className="lg:hidden flex flex-col gap-2 mb-4">
+        {filtered.length === 0 ? (
+          <div className="text-center py-8 text-xs text-zinc-600">No se encontraron proveedores</div>
+        ) : filtered.map(s => (
+          <div key={s.id} onClick={() => navigate(`/suppliers/${s.id}`)}
+            className="bg-zinc-900 border border-zinc-800 rounded-md p-3.5 flex items-center gap-3 cursor-pointer active:border-amber-500 transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center font-['Bebas_Neue'] text-base text-zinc-950 flex-shrink-0">
+              {s.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[13px] font-medium text-zinc-200 truncate">{s.name}</span>
+                {s.pending_invoices > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] text-zinc-500 font-mono">{s.nif_cif || '—'}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${TYPE_BADGE[s.supplier_type] || TYPE_BADGE.GENERAL}`}>{s.supplier_type}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
+              </div>
+              {s.oc_number && (
+                <div className="mt-1">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{s.oc_number}</span>
+                </div>
+              )}
+            </div>
+            <span className="text-[11px] text-zinc-600 flex-shrink-0">{timeAgo(s.last_activity)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* TABLE — solo desktop */}
+      <div className="hidden lg:block bg-zinc-900 border border-zinc-800 rounded-md overflow-x-auto">
         <table className="w-full min-w-[700px]">
           <thead>
             <tr>
