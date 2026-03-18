@@ -119,10 +119,10 @@ const InvoiceDetail = () => {
     try { iaResult = JSON.parse(invoice.ia_validation_result); } catch { /* ignore */ }
   }
 
-  const rowCls = "flex justify-between py-2 border-b border-white/[.04] last:border-0 text-[0.85rem]";
+  const rowCls = "flex justify-between py-2 border-b border-white/[.04] last:border-0 text-xs";
   const labelCls = "text-zinc-500";
   const valCls = "text-zinc-200 text-right max-w-[200px] break-all";
-  const monoCls = "font-mono text-[13px]";
+  const monoCls = "font-mono text-[11px]";
   const ibanCls = "text-zinc-200 text-right font-mono text-[11px] whitespace-nowrap overflow-hidden text-ellipsis";
 
   return (
@@ -130,7 +130,7 @@ const InvoiceDetail = () => {
       {/* Header: breadcrumb | nav | status */}
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         {/* Left: breadcrumb */}
-        <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100">
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">
           <span onClick={() => navigate(from === 'supplier' && supplierId ? `/suppliers/${supplierId}` : '/suppliers/invoices')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">
             {from === 'supplier' ? 'PROVEEDOR' : 'FACTURAS'}
           </span>
@@ -172,12 +172,12 @@ const InvoiceDetail = () => {
               a.remove();
               URL.revokeObjectURL(a.href);
             }}
-              className="text-[12px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
-              <Download size={12} /> Descargar PDF
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
+              <Download size={14} /> Descargar PDF
             </button>
           )}
-          <span className={`text-[12px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
-            <span className={`w-1 h-1 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+          <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
             {PILL_LABEL[invoice.status] || invoice.status}
           </span>
         </div>
@@ -258,7 +258,7 @@ const InvoiceDetail = () => {
 
           {/* Datos factura */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-            <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Datos de la factura</div>
+            <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Datos de la factura</div>
             <div className={rowCls}><span className={labelCls}>Nº Factura</span><span className={`${valCls} ${monoCls} text-amber-400`}>{invoice.invoice_number}</span></div>
             <div className={rowCls}><span className={labelCls}>Fecha</span><span className={valCls}>{invoice.date}</span></div>
             <div className={rowCls}><span className={labelCls}>Proveedor</span><span className={valCls}>{invoice.provider_name}</span></div>
@@ -266,7 +266,7 @@ const InvoiceDetail = () => {
             <div className={rowCls}><span className={labelCls}>IBAN</span><span className={ibanCls}>{invoice.iban || '—'}</span></div>
             <div className={rowCls}>
               <span className={labelCls}>OC</span>
-              <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{invoice.oc_number}</span>
+              <span className="text-[12px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{invoice.oc_number}</span>
             </div>
           </div>
         </div>
@@ -275,7 +275,7 @@ const InvoiceDetail = () => {
         <div className="space-y-3.5">
           {/* Importes */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-            <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Importes</div>
+            <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Importes</div>
             <div className={rowCls}><span className={labelCls}>Base imponible</span><span className={`${valCls} ${monoCls}`}>{invoice.base_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
             <div className={rowCls}><span className={labelCls}>IVA ({(invoice.iva_percentage * 100).toFixed(0)}%)</span><span className={`${valCls} ${monoCls}`}>{invoice.iva_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
             {(invoice.irpf_amount > 0) && (
@@ -290,7 +290,7 @@ const InvoiceDetail = () => {
           {/* Resultado IA */}
           {iaResult && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-              <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Validación IA</div>
+              <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Validación IA</div>
               {iaResult.valid ? (
                 <div className="flex items-center gap-2 text-xs text-green-400">
                   <Check size={14} strokeWidth={2} /> Validación correcta
@@ -320,37 +320,37 @@ const InvoiceDetail = () => {
           {/* Rechazo */}
           {invoice.status === 'REJECTED' && invoice.rejection_reason && (
             <div className="bg-red-400/[.06] border border-red-400/[.12] rounded-md p-4">
-              <div className="text-[11px] text-red-400 tracking-widest uppercase mb-2 font-semibold">Motivo del rechazo</div>
+              <div className="text-[9px] text-red-400 tracking-widest uppercase mb-2 font-semibold">Motivo del rechazo</div>
               <p className="text-xs text-red-300">{invoice.rejection_reason}</p>
             </div>
           )}
 
           {/* Acciones */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-            <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Acciones</div>
+            <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Acciones</div>
             {invoice.status === 'PENDING' && (
               <div className="flex gap-2">
                 <button onClick={() => handleAction('APPROVED')} disabled={acting}
-                  className="flex-1 text-[13px] bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
+                  className="flex-1 text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
                   {acting ? 'Procesando...' : 'Aprobar'}
                 </button>
                 <button onClick={() => setRejectModal(true)} disabled={acting}
-                  className="flex-1 text-[13px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
+                  className="flex-1 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
                   Rechazar
                 </button>
               </div>
             )}
             {invoice.status === 'APPROVED' && (
               <button onClick={() => handleAction('PAID')} disabled={acting}
-                className="w-full text-[13px] text-zinc-300 border border-zinc-700 hover:bg-zinc-800 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
+                className="w-full text-xs text-zinc-300 border border-zinc-700 hover:bg-zinc-800 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
                 {acting ? 'Procesando...' : 'Marcar como pagada'}
               </button>
             )}
             {invoice.status === 'PAID' && (
-              <p className="text-[13px] text-zinc-600 text-center py-2">Factura cerrada — no hay acciones disponibles</p>
+              <p className="text-xs text-zinc-600 text-center py-2">Factura cerrada — no hay acciones disponibles</p>
             )}
             {invoice.status === 'REJECTED' && (
-              <p className="text-[13px] text-zinc-600 text-center py-2">Factura rechazada</p>
+              <p className="text-xs text-zinc-600 text-center py-2">Factura rechazada</p>
             )}
           </div>
         </div>

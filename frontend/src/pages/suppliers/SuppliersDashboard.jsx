@@ -55,17 +55,17 @@ const SuppliersDashboard = () => {
 
   return (
     <div>
-      <h1 className="font-['Bebas_Neue'] text-xl tracking-wider text-zinc-100 mb-4">Dashboard</h1>
+      <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 mb-4">Dashboard</h1>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">
         {kpis.map((kpi, i) => (
           <div key={i} className={`bg-zinc-900 border border-zinc-800 rounded-md p-3.5 ${kpi.accent ? 'border-l-2 border-l-amber-500' : ''}`}>
-            <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-1.5">{kpi.label}</div>
+            <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-1.5">{kpi.label}</div>
             <div className={`font-['Bebas_Neue'] text-2xl tracking-wide leading-none ${kpi.warn ? 'text-amber-500' : kpi.ok ? 'text-green-400' : 'text-zinc-100'}`}>
               {kpi.value}{kpi.suffix && <span className="text-zinc-500 text-lg ml-0.5">EUR</span>}
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1">{kpi.sub}</div>
+            <div className="text-[11px] text-zinc-500 mt-1">{kpi.sub}</div>
           </div>
         ))}
       </div>
@@ -74,9 +74,9 @@ const SuppliersDashboard = () => {
       <div className="grid lg:grid-cols-2 gap-3">
         {/* Activity feed */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-          <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Actividad reciente</div>
+          <div className="font-['Bebas_Neue'] text-[13px] tracking-wider text-zinc-300 mb-3">Actividad reciente</div>
           {feed.length === 0 ? (
-            <p className="text-xs text-zinc-600">Sin actividad reciente</p>
+            <p className="text-[13px] text-zinc-600">Sin actividad reciente</p>
           ) : (
             feed.slice(0, 6).map(n => {
               const cfg = FEED_ICONS[n.event_type] || { icon: Bell, bg: 'bg-zinc-800', color: 'text-zinc-400' };
@@ -87,8 +87,8 @@ const SuppliersDashboard = () => {
                     <Icon size={13} className={cfg.color} strokeWidth={1.8} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs text-zinc-300 leading-snug">{n.message || n.title}</div>
-                    <div className="text-[10px] text-zinc-600 mt-0.5">
+                    <div className="text-[13px] text-zinc-300 leading-snug">{n.message || n.title}</div>
+                    <div className="text-[11px] text-zinc-600 mt-0.5">
                       {timeAgo(n.created_at)}
                       {!n.is_read && <b className="text-amber-400 ml-2">sin leer</b>}
                     </div>
@@ -98,7 +98,7 @@ const SuppliersDashboard = () => {
             })
           )}
           {feed.length > 6 && (
-            <button onClick={() => navigate('/suppliers/notifications')} className="text-[11px] text-amber-500 hover:text-amber-400 mt-2">
+            <button onClick={() => navigate('/suppliers/notifications')} className="text-[13px] text-amber-500 hover:text-amber-400 mt-2">
               Ver todas las notificaciones
             </button>
           )}
@@ -106,7 +106,7 @@ const SuppliersDashboard = () => {
 
         {/* Invoice status chart */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
-          <div className="font-['Bebas_Neue'] text-sm tracking-wider text-zinc-300 mb-3">Estado de facturas</div>
+          <div className="font-['Bebas_Neue'] text-[13px] tracking-wider text-zinc-300 mb-3">Estado de facturas</div>
           <div className="flex flex-col gap-2.5 mt-1">
             {[
               { label: 'Pendiente', value: stats?.pending_invoices || 0, color: 'bg-amber-500', text: 'text-amber-400' },
@@ -116,10 +116,10 @@ const SuppliersDashboard = () => {
               const maxVal = Math.max(...[stats?.pending_invoices || 0, stats?.approved_this_month || 0, 10]);
               const pct = maxVal > 0 ? Math.min((s.value / maxVal) * 100, 100) : 0;
               return (
-                <div key={i} className="flex items-center gap-2.5 text-xs">
+                <div key={i} className="flex items-center gap-2.5 text-[13px]">
                   <div className={`w-2 h-2 rounded-sm ${s.color} flex-shrink-0`} />
                   <span className="flex-1 text-zinc-400">{s.label}</span>
-                  <span className={`font-mono text-[11px] ${s.text}`}>{s.value}</span>
+                  <span className={`font-mono text-[13px] ${s.text}`}>{s.value}</span>
                   <div className="w-20 h-1 bg-zinc-800 rounded">
                     <div className={`h-full rounded ${s.color}`} style={{ width: `${pct}%` }} />
                   </div>
