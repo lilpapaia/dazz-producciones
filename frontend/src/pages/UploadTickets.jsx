@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket } from '../services/api';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
+import { showWarning } from '../utils/toast';
 import imageCompression from 'browser-image-compression';
 
 const UploadTickets = () => {
@@ -93,7 +94,7 @@ const UploadTickets = () => {
 
   const handleUpload = async () => {
     if (files.length === 0) {
-      alert('Selecciona al menos un archivo');
+      showWarning('Selecciona al menos un archivo');
       return;
     }
 

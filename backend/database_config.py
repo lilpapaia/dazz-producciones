@@ -35,8 +35,17 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
         connect_args={"check_same_thread": False}
     )
 else:
-    # PostgreSQL: sin check_same_thread
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    # PERF-M4: PostgreSQL con pool configurado para Railway (2 workers gunicorn)
+    # pool_size=5 x 2 workers = 10 conexiones base, max_overflow=10 x 2 = 20 extras
+    # pool_pre_ping: verifica conexión antes de usar (Railway cierra idle connections)
+    # pool_recycle: recicla conexiones cada 5min (previene conexiones zombie)
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
 
 # Session maker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

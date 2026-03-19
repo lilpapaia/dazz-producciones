@@ -3,12 +3,36 @@ Servicio para obtener tasas de cambio históricas
 Usa frankfurter.app - API gratuita sin límites basada en BCE
 """
 
+import time
+import logging
 import requests
 from datetime import datetime, date
 from typing import Optional
 
+logger = logging.getLogger(__name__)
+
 # API gratuita Banco Central Europeo
 EXCHANGE_API_URL = "https://api.frankfurter.app"
+
+# PERF-H2: Caché en memoria por worker — evita llamadas API repetidas para la misma moneda+fecha.
+# Con 2 workers gunicorn, cada uno tiene su propia caché. Peor caso: 2 requests por combinación
+# en vez de 1, que es aceptable vs los 10+ requests idénticos de antes.
+_rate_cache: dict = {}  # {(currency, date_str): (rate, timestamp)}
+_CACHE_TTL = 3600  # 1 hora
+
+
+def _get_cached_rate(currency: str, date_str: str) -> Optional[float]:
+    key = (currency.upper(), date_str)
+    if key in _rate_cache:
+        rate, ts = _rate_cache[key]
+        if time.time() - ts < _CACHE_TTL:
+            return rate
+        del _rate_cache[key]
+    return None
+
+
+def _set_cached_rate(currency: str, date_str: str, rate: float):
+    _rate_cache[(currency.upper(), date_str)] = (rate, time.time())
 
 def get_historical_exchange_rate(
     from_currency: str,
@@ -44,10 +68,14 @@ def get_historical_exchange_rate(
     
     # Convertir fecha a string YYYY-MM-DD
     date_str = rate_date.strftime("%Y-%m-%d")
-    
+
+    # PERF-H2: Check cache before API call
+    cached = _get_cached_rate(from_currency, date_str)
+    if cached is not None:
+        return cached
+
     try:
         # Llamada a frankfurter.app
-        # Ejemplo: https://api.frankfurter.app/2025-01-15?from=USD&to=EUR
         url = f"{EXCHANGE_API_URL}/{date_str}"
         params = {
             "from": from_currency.upper(),
@@ -62,24 +90,25 @@ def get_historical_exchange_rate(
             rate = data.get("rates", {}).get(to_currency.upper())
             
             if rate:
-                print(f"✅ Tasa {from_currency} → {to_currency} ({date_str}): {rate}")
-                return float(rate)
-        
+                result = float(rate)
+                _set_cached_rate(from_currency, date_str, result)
+                logger.info(f"Tasa {from_currency} -> {to_currency} ({date_str}): {result}")
+                return result
+
         # Si falla, intentar con tasa de hoy
-        print(f"⚠️ No se encontró tasa para {date_str}, intentando con hoy...")
+        logger.warning(f"No se encontro tasa para {date_str}, intentando con hoy...")
         return get_current_exchange_rate(from_currency, to_currency)
-        
+
     except requests.exceptions.Timeout:
-        print(f"⚠️ Timeout obteniendo tasa de cambio")
+        logger.warning("Timeout obteniendo tasa de cambio")
         return get_current_exchange_rate(from_currency, to_currency)
-        
+
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error obteniendo tasa de cambio: {str(e)}")
-        # Fallback: usar tasa de hoy
+        logger.error(f"Error obteniendo tasa de cambio: {str(e)}")
         return get_current_exchange_rate(from_currency, to_currency)
-    
+
     except Exception as e:
-        print(f"❌ Error inesperado: {str(e)}")
+        logger.error(f"Error inesperado: {str(e)}")
         return None
 
 
@@ -101,10 +130,13 @@ def get_current_exchange_rate(
     # Si la divisa ya es EUR, retornar 1.0
     if from_currency == to_currency:
         return 1.0
-    
+
+    # PERF-H2: Check cache
+    cached = _get_cached_rate(from_currency, "latest")
+    if cached is not None:
+        return cached
+
     try:
-        # Llamada a frankfurter.app (latest)
-        # Ejemplo: https://api.frankfurter.app/latest?from=USD&to=EUR
         url = f"{EXCHANGE_API_URL}/latest"
         params = {
             "from": from_currency.upper(),
@@ -118,13 +150,15 @@ def get_current_exchange_rate(
             rate = data.get("rates", {}).get(to_currency.upper())
             
             if rate:
-                print(f"✅ Tasa actual {from_currency} → {to_currency}: {rate}")
-                return float(rate)
-        
+                result = float(rate)
+                _set_cached_rate(from_currency, "latest", result)
+                logger.info(f"Tasa actual {from_currency} -> {to_currency}: {result}")
+                return result
+
         return None
-        
+
     except Exception as e:
-        print(f"❌ Error obteniendo tasa actual: {str(e)}")
+        logger.error(f"Error obteniendo tasa actual: {str(e)}")
         return None
 
 

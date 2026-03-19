@@ -8,11 +8,12 @@ import StatusBadge from '../components/common/StatusBadge';
 import EmptyState from '../components/common/EmptyState';
 import useVoiceSearch from '../hooks/useVoiceSearch';
 import useClickOutside from '../hooks/useClickOutside';
+import { ROLES } from '../constants/roles';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === ROLES.ADMIN;
 
   const [projects, setProjects] = useState([]);
   const [companies, setCompanies] = useState([]);

@@ -1,15 +1,19 @@
 import { AlertTriangle, X } from 'lucide-react';
+import useEscapeKey from '../hooks/useEscapeKey';
 
-const ConfirmDialog = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
+const ConfirmDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
   confirmText = "Confirmar",
   cancelText = "Cancelar",
   type = "danger" // danger | warning | info
 }) => {
+  // UX-L2: Cerrar con Escape
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const colors = {

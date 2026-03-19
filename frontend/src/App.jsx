@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 
 // Eager load: Login (primera pantalla) + Dashboard (destino principal)
@@ -46,6 +48,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ErrorBoundary>
         <div className="min-h-screen bg-zinc-950">
           <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -171,10 +174,20 @@ function App() {
           </Routes>
           </Suspense>
 
+          {/* UX-H1: Toast notifications (reemplaza alert() nativo) */}
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              style: { background: '#27272a', color: '#f4f4f5', border: '1px solid #3f3f46' },
+              className: 'text-sm',
+            }}
+          />
+
           {/* PWA Components - Toasts de actualización e instalación */}
           <PWAUpdatePrompt />
           <PWAInstallPrompt />
         </div>
+        </ErrorBoundary>
       </Router>
     </AuthProvider>
   );

@@ -22,12 +22,16 @@ if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is required. Set it before starting the server.")
 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-# VULN-001: Reducir expiración de 7 días a 24 horas
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+# SEC-H1: Token de acceso corto (30min). El refresh token (7 días) renueva automáticamente.
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
+
+# SEC-C3: Hash dummy para timing-attack protection en login
+# Pre-generado para no recalcular en cada request
+_DUMMY_HASH = pwd_context.hash("dummy-timing-attack-protection")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
@@ -111,15 +115,19 @@ def authenticate_user(db: Session, identifier: str, password: str):
     Returns:
         User object if authenticated, False otherwise
     """
-    # Buscar por email O username
+    # SEC-C2: Normalizar email a lowercase para búsqueda (username se mantiene case-sensitive)
+    identifier_lower = identifier.lower()
     user = db.query(User).filter(
         or_(
-            User.email == identifier,
+            User.email == identifier_lower,
             User.username == identifier
         )
     ).first()
 
     if not user:
+        # SEC-C3: Ejecutar verify contra hash dummy para igualar tiempo de respuesta
+        # Evita timing attacks que permiten enumerar usuarios válidos
+        pwd_context.verify(password, _DUMMY_HASH)
         return False
     if not verify_password(password, user.hashed_password):
         return False
@@ -146,7 +154,8 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).options(joinedload(User.companies)).filter(User.email == email).first()
+    # SEC-C2: Normalizar email a lowercase para búsqueda JWT
+    user = db.query(User).options(joinedload(User.companies)).filter(User.email == email.lower()).first()
     if user is None:
         raise credentials_exception
 

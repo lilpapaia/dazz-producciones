@@ -34,6 +34,9 @@ const Register = () => {
     setError('');
     if (form.password !== form.confirmPassword) { setError('Passwords do not match'); return; }
     if (form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (!/[A-Z]/.test(form.password)) { setError('Password must contain at least one uppercase letter'); return; }
+    if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number'); return; }
+    if (!/[!@#$%^&*(),.?":{}|<>\-_+=\[\]\\;'/`~]/.test(form.password)) { setError('Password must contain at least one special character'); return; }
     if (!form.gdpr_consent) { setError('You must accept the data processing terms'); return; }
 
     setLoading(true);
@@ -146,22 +149,22 @@ const Register = () => {
           {step === 1 && (
             <>
               <div className="mb-3">
-                <label className={labelCls}>Name / Company <span className="text-amber-500">*</span></label>
-                <input value={form.name} onChange={set('name')} required className={inputCls} />
+                <label htmlFor="reg-name" className={labelCls}>Name / Company <span className="text-amber-500">*</span></label>
+                <input id="reg-name" value={form.name} onChange={set('name')} required className={inputCls} />
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className={labelCls}>NIF/CIF/VAT</label>
-                  <input value={form.nif_cif} onChange={set('nif_cif')} placeholder="e.g. 12345678A" className={inputCls} />
+                  <label htmlFor="reg-nif" className={labelCls}>NIF/CIF/VAT</label>
+                  <input id="reg-nif" value={form.nif_cif} onChange={set('nif_cif')} placeholder="e.g. 12345678A" className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Phone</label>
-                  <input value={form.phone} onChange={set('phone')} placeholder="+34 600..." className={inputCls} />
+                  <label htmlFor="reg-phone" className={labelCls}>Phone</label>
+                  <input id="reg-phone" value={form.phone} onChange={set('phone')} placeholder="+34 600..." className={inputCls} />
                 </div>
               </div>
               <div className="mb-4">
-                <label className={labelCls}>Fiscal address</label>
-                <input value={form.address} onChange={set('address')} placeholder="Street, city, country" className={inputCls} />
+                <label htmlFor="reg-address" className={labelCls}>Fiscal address</label>
+                <input id="reg-address" value={form.address} onChange={set('address')} placeholder="Street, city, country" className={inputCls} />
               </div>
               <button onClick={() => setStep(2)} disabled={!form.name.trim()} className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
                 Continue
@@ -173,8 +176,8 @@ const Register = () => {
           {step === 2 && (
             <>
               <div className="mb-3">
-                <label className={labelCls}>IBAN <span className="text-amber-500">*</span></label>
-                <input value={form.iban} onChange={set('iban')} placeholder="ES12 1234 5678 9012 3456 7890" className={inputCls} />
+                <label htmlFor="reg-iban" className={labelCls}>IBAN <span className="text-amber-500">*</span></label>
+                <input id="reg-iban" value={form.iban} onChange={set('iban')} placeholder="ES12 1234 5678 9012 3456 7890" className={inputCls} />
                 <p className="text-[10px] text-zinc-600 mt-1">Your IBAN will be encrypted and stored securely.</p>
               </div>
               <div className="mb-4">
@@ -205,12 +208,12 @@ const Register = () => {
           {step === 3 && (
             <>
               <div className="mb-3">
-                <label className={labelCls}>Password <span className="text-amber-500">*</span></label>
-                <input type="password" value={form.password} onChange={set('password')} placeholder="Min 8 chars, 1 uppercase, 1 number" className={inputCls} />
+                <label htmlFor="reg-password" className={labelCls}>Password <span className="text-amber-500">*</span></label>
+                <input id="reg-password" type="password" value={form.password} onChange={set('password')} placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special" className={inputCls} />
               </div>
               <div className="mb-4">
-                <label className={labelCls}>Confirm password <span className="text-amber-500">*</span></label>
-                <input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} className={inputCls} />
+                <label htmlFor="reg-confirm" className={labelCls}>Confirm password <span className="text-amber-500">*</span></label>
+                <input id="reg-confirm" type="password" value={form.confirmPassword} onChange={set('confirmPassword')} className={inputCls} />
               </div>
 
               <label className="flex items-start gap-2 mb-4 cursor-pointer">

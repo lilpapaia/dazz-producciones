@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { ROLES } from '../../../constants/roles';
 
 const selectClass = "w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2 text-zinc-100 focus:border-amber-500 focus:outline-none";
 const labelClass = "block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2";
@@ -8,7 +9,7 @@ const StatisticsFilters = memo(({
   companyId, setCompanyId, companies, availableYears, userRole,
 }) => (
   <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6">
-    <div className={`grid grid-cols-1 ${userRole === 'ADMIN' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
+    <div className={`grid grid-cols-1 ${userRole === ROLES.ADMIN ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
 
       <div>
         <label className={labelClass}>Ano</label>
@@ -41,7 +42,7 @@ const StatisticsFilters = memo(({
         </select>
       </div>
 
-      {userRole === 'ADMIN' && (
+      {userRole === ROLES.ADMIN && (
         <div>
           <label className={labelClass}>Empresa</label>
           <select

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
+import asyncio
 import os, shutil, json
 from pathlib import Path
 from datetime import datetime
@@ -45,16 +46,15 @@ async def upload_ticket(
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        # 1. Subir a Cloudinary (convierte PDF a imágenes o imagen a WebP)
-        cloudinary_result = upload_ticket_file(str(temp_path), file.filename, project_id)
+        # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
+        cloudinary_result = await asyncio.to_thread(upload_ticket_file, str(temp_path), file.filename, project_id)
 
         # 2. Extraer datos con Claude AI (usando primera página/imagen)
         ai_file_path = str(temp_path)
         ai_mime = file.content_type
 
-        # Si es PDF, usar la primera página convertida para la IA
-        # La conversión ya ocurrió en Cloudinary, pero necesitamos el temp para IA
-        extracted_data = extract_ticket_data(ai_file_path, ai_mime)
+        # PERF-M1: Offload AI extraction (3-10s) al thread pool
+        extracted_data = await asyncio.to_thread(extract_ticket_data, ai_file_path, ai_mime)
 
         # 3. Procesar moneda extranjera
         is_foreign = extracted_data.get("is_foreign", False) if "error" not in extracted_data else False
@@ -75,7 +75,8 @@ async def upload_ticket(
                 if date_str and "/" in date_str:
                     day, month, year = date_str.split("/")
                     invoice_date = datetime(int(year), int(month), int(day)).date()
-                    exchange_rate = get_historical_exchange_rate(from_currency=currency, to_currency="EUR", rate_date=invoice_date)
+                    # PERF-M1: Offload exchange rate API call al thread pool
+                    exchange_rate = await asyncio.to_thread(get_historical_exchange_rate, currency, "EUR", invoice_date)
                     if exchange_rate:
                         exchange_rate_date = invoice_date
                         foreign_amount = extracted_data.get("foreign_amount")
@@ -142,7 +143,20 @@ async def upload_ticket(
         db.add(ticket)
         project.tickets_count += 1
         project.total_amount += ticket.final_total
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            # LOGIC-M4: Si falla el commit a BD, limpiar archivos ya subidos a Cloudinary
+            try:
+                from app.services.cloudinary_service import delete_ticket_files
+                delete_ticket_files(
+                    json.dumps(cloudinary_result.get("pages", [])),
+                    cloudinary_result.get("pdf_url")
+                )
+            except Exception:
+                pass
+            raise
         db.refresh(ticket)
         return ticket
 

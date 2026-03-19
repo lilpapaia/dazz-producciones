@@ -61,9 +61,11 @@ def _warning(content: str) -> str:
 
 def send_supplier_invitation(name: str, email: str, token: str, custom_message: str = None):
     """Invitation email with registration link (72h expiry)."""
+    # SEC-M2: Escapar nombre para prevenir HTML injection en email
+    safe_name = html_mod.escape(name)
     url = f"{SUPPLIER_PORTAL_URL}/register?token={token}"
     body = (
-        _text(f"Hello <strong>{name}</strong>,")
+        _text(f"Hello <strong>{safe_name}</strong>,")
         + _text("You have been invited to join the <strong>DAZZ Group</strong> supplier portal. "
                 "Through this portal you can submit invoices and track their payment status.")
         + (_text(f"<em>\"{html_mod.escape(custom_message)}\"</em>") if custom_message else "")
@@ -73,12 +75,15 @@ def send_supplier_invitation(name: str, email: str, token: str, custom_message: 
                     "and can only be used once.")
     )
     return send_email(email, "DAZZ Group — You're invited to the Supplier Portal", _base_template(
-        f"Welcome, {name}!", "SUPPLIER PORTAL INVITATION", body))
+        f"Welcome, {safe_name}!", "SUPPLIER PORTAL INVITATION", body))
 
 
 def send_supplier_invoice_paid(name: str, email: str, invoice_number: str, amount: float):
+    # SEC-M2: Escapar datos interpolados en HTML
+    safe_name = html_mod.escape(name)
+    invoice_number = html_mod.escape(invoice_number)
     body = (
-        _text(f"Hello <strong>{name}</strong>,")
+        _text(f"Hello <strong>{safe_name}</strong>,")
         + _text(f"Invoice <strong>{invoice_number}</strong> has been <strong style='color:#22c55e;'>paid</strong>.")
         + f'<div style="margin:20px 0;padding:20px;background-color:#3f3f46;border-radius:4px;text-align:center;">'
           f'<span style="color:#a1a1aa;font-size:12px;">AMOUNT PAID</span><br>'

@@ -1,5 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, BarChart3, Users, LogOut, Truck } from 'lucide-react';
+import DazzLogo from './DazzLogo';
+import { ROLES } from '../constants/roles';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -20,10 +22,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo DAZZ CREATIVE - Solo asterisco en móvil */}
           <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            {/* Logo asterisco SVG */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 66 69" fill="none" className="text-amber-500 flex-shrink-0">
-              <path d="M58.7442 59.5633L46.4651 68.332L32.7907 50.377L19.5349 68.332L6.97674 59.5633L20.3721 40.634L0 34.2314L4.60465 20.1736L24.5581 26.5761V3.33203H41.0233V26.5761L60.9767 20.1736L66 34.2314L45.3488 40.634L58.7442 59.5633Z" fill="currentColor"/>
-            </svg>
+            <DazzLogo size={32} className="text-amber-500 flex-shrink-0" />
             {/* Texto DAZZ CREATIVE - Oculto en móvil */}
             <span className="hidden sm:inline text-xl font-bold tracking-wider text-white uppercase">DAZZ CREATIVE</span>
           </Link>
@@ -43,7 +42,7 @@ const Navbar = () => {
             </Link>
 
             {/* Estadísticas — solo ADMIN y BOSS */}
-            {(user.role === 'ADMIN' || user.role === 'BOSS') && (
+            {(user.role === ROLES.ADMIN || user.role === ROLES.BOSS) && (
               <Link
                 to="/statistics"
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
@@ -58,7 +57,7 @@ const Navbar = () => {
             )}
 
             {/* Proveedores — solo ADMIN */}
-            {user.role === 'ADMIN' && (
+            {user.role === ROLES.ADMIN && (
               <Link
                 to="/suppliers"
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
@@ -73,7 +72,7 @@ const Navbar = () => {
             )}
 
             {/* Usuarios — solo ADMIN */}
-            {user.role === 'ADMIN' && (
+            {user.role === ROLES.ADMIN && (
               <Link
                 to="/users"
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${

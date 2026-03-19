@@ -4,6 +4,7 @@ Prefijo: /portal
 """
 
 import os
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -35,7 +36,7 @@ from app.services.supplier_ai import (
 )
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url
 from app.services.encryption import encrypt_iban, decrypt_iban
-from app.services.validators import validate_pdf_bytes, sanitize_filename
+from app.services.validators import validate_pdf_bytes, sanitize_filename, validate_iban_format
 from app.services.supplier_ai import format_date_for_response
 
 from slowapi import Limiter
@@ -155,6 +156,10 @@ async def register_supplier(
         supplier_type = SupplierType.INFLUENCER if oc_id else SupplierType.GENERAL
     else:
         supplier_type = SupplierType.GENERAL
+
+    # SEC-M1: Validate IBAN format (mod-97 checksum) before encrypting
+    if body.iban:
+        validate_iban_format(body.iban)
 
     # Create supplier
     email_hash = hashlib.sha256(invitation.email.lower().encode()).hexdigest()
@@ -314,7 +319,8 @@ async def upload_bank_cert(
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
-    cert_key = save_bank_cert(file, supplier.id, contents=contents)
+    # PERF-M1: Offload upload R2 síncrono al thread pool para no bloquear event loop
+    cert_key = await asyncio.to_thread(save_bank_cert, file, supplier.id, contents)
     supplier.bank_cert_url = cert_key
     db.commit()
 
@@ -360,8 +366,8 @@ async def upload_invoice(
         out.write(contents)
 
     try:
-        # AI extraction on local temp file
-        extracted = extract_supplier_invoice(temp_path, "application/pdf")
+        # PERF-M1: Offload AI extraction (3-10s) al thread pool
+        extracted = await asyncio.to_thread(extract_supplier_invoice, temp_path, "application/pdf")
 
         if extracted.get("error"):
             raise HTTPException(422, f"Could not process PDF: {extracted.get('error')}")
@@ -395,8 +401,8 @@ async def upload_invoice(
         except Exception:
             db.rollback()
 
-        # Validation passed → upload to Cloudinary (public + page images)
-        upload_result = save_invoice_pdf(file, supplier.id, contents=contents)
+        # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
+        upload_result = await asyncio.to_thread(save_invoice_pdf, file, supplier.id, contents)
 
         # All validated invoices start as PENDING (OC must exist)
         invoice_status = InvoiceStatus.PENDING
@@ -425,7 +431,17 @@ async def upload_invoice(
             ia_validation_result=json.dumps(validation, default=str),
         )
         db.add(invoice)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            # LOGIC-M4: Si falla el commit a BD, limpiar archivos ya subidos a Cloudinary
+            try:
+                from app.services.supplier_storage import delete_invoice_pdf
+                delete_invoice_pdf(upload_result["url"])
+            except Exception:
+                pass
+            raise
         db.refresh(invoice)
 
         # Save file_pages via raw SQL (column not in ORM)
@@ -437,18 +453,11 @@ async def upload_invoice(
             except Exception:
                 pass
 
-        # Store parsed date via raw SQL (column not in ORM model during migration)
+        # LOGIC-M2: Store parsed date via ORM (column now mapped)
         date_parsed = validation.get("date_parsed")
         if date_parsed:
-            from sqlalchemy import text
-            try:
-                db.execute(
-                    text("UPDATE supplier_invoices SET date_parsed = :dp WHERE id = :id"),
-                    {"dp": date_parsed, "id": invoice.id},
-                )
-                db.commit()
-            except Exception:
-                pass  # Column may not exist yet — non-blocking
+            invoice.date_parsed = date_parsed
+            db.commit()
 
     finally:
         # Always clean up temp file

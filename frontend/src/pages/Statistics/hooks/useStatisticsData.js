@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getCompleteStatistics, getAvailableYears, getCompanies } from '../../../services/api';
+import { ROLES } from '../../../constants/roles';
 
 export function useStatisticsData(user) {
   const currentYear = new Date().getFullYear();
 
   const getInitialCompanyId = () => {
-    if (user?.role === 'BOSS' && user.companies?.length > 0) {
+    if (user?.role === ROLES.BOSS && user.companies?.length > 0) {
       return user.companies[0].id;
     }
     return null;
@@ -40,7 +41,7 @@ export function useStatisticsData(user) {
 
   // Cargar empresas (solo para ADMIN)
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (user?.role !== ROLES.ADMIN) return;
     const loadCompanies = async () => {
       try {
         const response = await getCompanies();

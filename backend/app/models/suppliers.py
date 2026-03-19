@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Boolean, Date,
-    ForeignKey, Text, Enum, LargeBinary, UniqueConstraint
+    ForeignKey, Text, Enum, LargeBinary, UniqueConstraint, Index
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -111,14 +111,16 @@ class SupplierInvoice(Base):
     __tablename__ = "supplier_invoices"
     __table_args__ = (
         UniqueConstraint("supplier_id", "invoice_number", name="uq_supplier_invoice_number"),
+        # PERF-M2: Índice compuesto para queries frecuentes (list invoices por supplier + status)
+        Index("ix_supplier_invoices_supplier_status", "supplier_id", "status"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
     supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="CASCADE"), nullable=False, index=True)
     invoice_number = Column(String, nullable=False)
     date = Column(String, nullable=False)
-    # date_parsed Column(Date) — added via ALTER TABLE in migrate-dates endpoint.
-    # Not mapped here to avoid startup failure when column doesn't exist yet.
+    # LOGIC-M2: date_parsed now mapped in ORM (column created via ALTER TABLE IF NOT EXISTS at startup)
+    date_parsed = Column(Date, nullable=True)
     provider_name = Column(String, nullable=False)
     nif_cif = Column(String, nullable=True)
     iban = Column(String, nullable=True)
@@ -155,6 +157,10 @@ class SupplierInvoice(Base):
 
 class SupplierNotification(Base):
     __tablename__ = "supplier_notifications"
+    __table_args__ = (
+        # PERF-M2: Índice compuesto para queries de notificaciones no leídas por destinatario
+        Index("ix_notifications_recipient_read", "recipient_type", "recipient_id", "is_read"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     recipient_type = Column(Enum(NotificationRecipientType), nullable=False)

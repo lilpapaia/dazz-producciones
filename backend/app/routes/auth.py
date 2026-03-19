@@ -1,9 +1,12 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime, timezone
 import secrets
 import string
 import os
+
+logger = logging.getLogger(__name__)
 
 from config.database import get_db
 from app.models import schemas
@@ -54,12 +57,15 @@ async def register(
 
     NUEVO: Ahora asigna empresas al usuario según company_ids
     """
-    print(f"📝 Intentando crear usuario: {user.email}, role: {user.role}, empresas: {user.company_ids}")
+    logger.info(f"Registrando usuario: {user.email}, role: {user.role}, empresas: {user.company_ids}")
+
+    # SEC-C2: Normalizar email a lowercase antes de buscar y guardar
+    normalized_email = user.email.lower()
 
     # Verificar si el email ya existe
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = db.query(User).filter(User.email == normalized_email).first()
     if db_user:
-        print(f"❌ Email ya registrado: {user.email}")
+        logger.warning(f"Email ya registrado: {user.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
@@ -69,7 +75,7 @@ async def register(
     if user.username:
         existing_username = db.query(User).filter(User.username == user.username).first()
         if existing_username:
-            print(f"❌ Username ya registrado: {user.username}")
+            logger.warning(f"Username ya registrado: {user.username}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already taken"
@@ -93,7 +99,7 @@ async def register(
 
         db_user = User(
             name=user.name,
-            email=user.email,
+            email=normalized_email,
             username=user.username,
             hashed_password=hashed_password,
             role=role_value
@@ -103,7 +109,7 @@ async def register(
         db.commit()
         db.refresh(db_user)
 
-        print(f"✅ Usuario creado exitosamente: {user.email} (ID: {db_user.id})")
+        logger.info(f"Usuario creado: {user.email} (ID: {db_user.id})")
 
         # Asignar empresas al usuario
         if user.company_ids:
@@ -115,14 +121,14 @@ async def register(
                 db.add(user_company)
 
             db.commit()
-            print(f"✅ {len(user.company_ids)} empresa(s) asignada(s) al usuario {user.email}")
+            logger.info(f"{len(user.company_ids)} empresa(s) asignada(s) a {user.email}")
         else:
-            print(f"⚠️ Usuario creado SIN empresas asignadas: {user.email}")
+            logger.warning(f"Usuario creado SIN empresas asignadas: {user.email}")
 
     except Exception as e:
         db.rollback()
         # VULN-006: Logear error real internamente, devolver mensaje genérico
-        print(f"❌ Error al crear usuario en BD: {str(e)}")
+        logger.error(f"Error al crear usuario en BD: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al crear usuario"
@@ -151,36 +157,36 @@ async def register(
         token_created = True
 
         # VULN-014: No logear el token, ni parcial ni completo
-        print(f"✅ Token de set-password generado para {user.email} (expira en 24h)")
+        logger.info(f"Token set-password generado para {user.email} (expira en 24h)")
 
         # Intentar enviar email
         try:
-            print(f"📧 Intentando enviar email a {user.email}...")
+            logger.info(f"Enviando email a {user.email}...")
             send_set_password_email(
                 user_name=user.name,
                 user_email=user.email,
                 token=token
             )
             email_sent = True
-            print(f"✅ Email enviado correctamente a {user.email}")
+            logger.info(f"Email enviado correctamente a {user.email}")
 
         except Exception as email_error:
             # Email falló pero NO es crítico
-            print(f"⚠️ Error al enviar email (usuario creado OK): {str(email_error)}")
+            logger.warning(f"Error al enviar email (usuario creado OK): {str(email_error)}")
             # NO hacer raise - continuar normalmente
 
     except Exception as token_error:
         # Error al crear token, tampoco es crítico
-        print(f"⚠️ Error al generar token (usuario creado OK): {str(token_error)}")
+        logger.warning(f"Error al generar token (usuario creado OK): {str(token_error)}")
         # NO hacer rollback del usuario - solo no tiene token
 
     # Log final del resultado
     if token_created and email_sent:
-        print(f"🎉 Usuario creado + Token generado + Email enviado: {user.email}")
+        logger.info(f"Usuario creado + Token + Email OK: {user.email}")
     elif token_created and not email_sent:
-        print(f"⚠️ Usuario creado + Token generado, pero email NO enviado: {user.email}")
+        logger.warning(f"Usuario creado + Token OK, pero email NO enviado: {user.email}")
     else:
-        print(f"⚠️ Usuario creado pero sin token/email: {user.email}")
+        logger.warning(f"Usuario creado pero sin token/email: {user.email}")
 
     # Refrescar para obtener las relaciones (empresas)
     db.refresh(db_user)
@@ -196,16 +202,41 @@ async def login(
     user_credentials: schemas.UserLogin,
     db: Session = Depends(get_db)
 ):
-    """Login con logging crítico de intentos fallidos"""
+    """Login con logging crítico de intentos fallidos y account lockout"""
+
+    # SEC-H2: Verificar lockout ANTES de intentar autenticar
+    # Buscar usuario por email/username para comprobar bloqueo
+    from sqlalchemy import or_
+    identifier_lower = user_credentials.identifier.lower()
+    target_user = db.query(User).filter(
+        or_(User.email == identifier_lower, User.username == user_credentials.identifier)
+    ).first()
+
+    if target_user and target_user.locked_until:
+        if target_user.locked_until > datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Account temporarily locked due to too many failed attempts. Try again in 15 minutes."
+            )
+        else:
+            # Lock expirado, resetear
+            target_user.failed_login_attempts = 0
+            target_user.locked_until = None
+            db.commit()
 
     # Intentar autenticar
     user = authenticate_user(db, user_credentials.identifier, user_credentials.password)
 
     if not user:
-        # Obtener IP del cliente
-        client_ip = request.client.host if request.client else "unknown"
+        # SEC-H2: Incrementar intentos fallidos si el usuario existe
+        if target_user:
+            target_user.failed_login_attempts = (target_user.failed_login_attempts or 0) + 1
+            if target_user.failed_login_attempts >= 5:
+                target_user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+                logger.warning(f"Account locked for user id={target_user.id} after 5 failed attempts")
+            db.commit()
 
-        # LOGGING CRÍTICO AMARILLO - Login fallido
+        client_ip = request.client.host if request.client else "unknown"
         log_login_failed(
             identifier=user_credentials.identifier,
             ip_address=client_ip,
@@ -217,6 +248,12 @@ async def login(
             detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # SEC-H2: Login exitoso — resetear contador
+    if user.failed_login_attempts and user.failed_login_attempts > 0:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
 
     # Login exitoso - crear access token + refresh token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -295,7 +332,7 @@ async def set_password(
     Endpoint para que el usuario elija su contraseña con un token
     """
     # VULN-014: No logear el token
-    print(f"🔑 Intentando set password...")
+    logger.info("Intentando set password...")
 
     # Buscar token válido
     reset_token = db.query(PasswordResetToken).filter(
@@ -305,7 +342,7 @@ async def set_password(
     ).first()
 
     if not reset_token:
-        print(f"❌ Token inválido, expirado o ya usado")
+        logger.warning("Token invalido, expirado o ya usado")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token inválido, expirado o ya usado"
@@ -314,7 +351,7 @@ async def set_password(
     # Obtener usuario
     user = db.query(User).filter(User.id == reset_token.user_id).first()
     if not user:
-        print(f"❌ Usuario no encontrado")
+        logger.warning("Usuario no encontrado para set-password")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado"
@@ -326,7 +363,10 @@ async def set_password(
         reset_token.used_at = datetime.now(timezone.utc)
 
         db.commit()
-        print(f"✅ Contraseña actualizada para usuario: {user.email}")
+
+        # SEC-H3: Revocar todos los refresh tokens tras cambio de contraseña
+        revoke_all_user_refresh_tokens(db, user.id)
+        logger.info(f"Contrasena actualizada y tokens revocados para: {user.email}")
 
         return schemas.SetPasswordResponse(
             message="Contraseña actualizada correctamente. Ya puedes iniciar sesión.",
@@ -336,7 +376,7 @@ async def set_password(
     except Exception as e:
         db.rollback()
         # VULN-006: Logear error real, devolver genérico
-        print(f"❌ Error al actualizar contraseña: {str(e)}")
+        logger.error(f"Error al actualizar contrasena: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al actualizar contraseña"
@@ -354,14 +394,14 @@ async def forgot_password(
     Endpoint para solicitar reset de contraseña.
     Siempre devuelve éxito (por seguridad, no revelar si el email existe)
     """
-    print(f"🔐 Solicitud de reset password para: {payload.email}")
+    logger.info(f"Solicitud reset password para: {payload.email}")
 
-    # Buscar usuario
-    user = db.query(User).filter(User.email == payload.email).first()
+    # SEC-C2: Normalizar email a lowercase
+    user = db.query(User).filter(User.email == payload.email.lower()).first()
 
     if not user:
         # Por seguridad, no revelar que el email no existe
-        print(f"⚠️ Email no encontrado: {payload.email} (no revelamos al usuario)")
+        logger.info(f"Reset solicitado para email inexistente (no revelado al usuario)")
         return {"message": "Si el email existe, recibirás un enlace para restablecer tu contraseña."}
 
     try:
@@ -385,7 +425,7 @@ async def forgot_password(
         db.commit()
 
         # VULN-014: No logear el token
-        print(f"✅ Token de reset generado para: {user.email}")
+        logger.info(f"Token reset generado para: {user.email}")
 
         # Enviar email
         try:
@@ -394,13 +434,13 @@ async def forgot_password(
                 user_email=user.email,
                 token=token
             )
-            print(f"✅ Email de reset enviado a: {user.email}")
+            logger.info(f"Email reset enviado a: {user.email}")
         except Exception as email_error:
-            print(f"⚠️ Error enviando email de reset: {str(email_error)}")
+            logger.warning(f"Error enviando email de reset: {str(email_error)}")
             # No fallar - el usuario puede intentar de nuevo
 
     except Exception as e:
-        print(f"❌ Error en forgot-password: {str(e)}")
+        logger.error(f"Error en forgot-password: {str(e)}")
         # No revelar el error al usuario
 
     return {"message": "Si el email existe, recibirás un enlace para restablecer tu contraseña."}
@@ -426,7 +466,7 @@ if ENVIRONMENT != "production":
         hashed_password = get_password_hash(user.password)
         db_user = User(
             name=user.name,
-            email=user.email,
+            email=user.email.lower(),
             username=user.username,
             hashed_password=hashed_password,
             role="ADMIN"

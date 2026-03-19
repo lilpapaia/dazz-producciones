@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ROLES } from '../constants/roles';
 
 /**
  * NOTA DE SEGURIDAD: Esta protección de rutas es SOLO visual/UX.
@@ -25,12 +26,12 @@ const ProtectedRoute = ({ children, adminOnly = false, adminOrBossOnly = false }
   }
 
   // Solo ADMIN
-  if (adminOnly && user.role !== 'ADMIN') {
+  if (adminOnly && user.role !== ROLES.ADMIN) {
     return <Navigate to="/dashboard" replace />;
   }
 
   // ADMIN o BOSS (para Statistics)
-  if (adminOrBossOnly && user.role !== 'ADMIN' && user.role !== 'BOSS') {
+  if (adminOrBossOnly && user.role !== ROLES.ADMIN && user.role !== ROLES.BOSS) {
     return <Navigate to="/dashboard" replace />;
   }
 

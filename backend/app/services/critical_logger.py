@@ -13,8 +13,20 @@ Eventos críticos:
 - Excepciones inesperadas
 """
 
+import hashlib
 from datetime import datetime, timezone
 from typing import Dict, Optional
+
+
+def _hash_pii(value: str) -> str:
+    """SEC-H5: Hash PII para logs — identificable para debugging pero no reversible."""
+    if not value:
+        return "N/A"
+    return hashlib.sha256(value.encode()).hexdigest()[:12]
+
+
+# Keys en details que contienen PII y deben hashearse
+_PII_DETAIL_KEYS = {"email_eliminado", "usuario_afectado"}
 
 
 class Colors:
@@ -66,19 +78,19 @@ def log_critical(
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     print(f"Timestamp: {timestamp}")
     
-    # Usuario (si existe)
+    # SEC-H5: Usuario hasheado para RGPD (identificable pero no reversible)
     if user_email:
-        print(f"Usuario: {user_email}")
-    
+        print(f"Usuario: {_hash_pii(user_email)}")
+
     # IP (si existe)
     if ip_address:
         print(f"IP: {ip_address}")
-    
-    # Detalles adicionales
+
+    # Detalles adicionales (hashear PII conocido)
     for key, value in details.items():
-        # Capitalizar primera letra de la key
         formatted_key = key.replace("_", " ").capitalize()
-        print(f"{formatted_key}: {value}")
+        display_value = _hash_pii(str(value)) if key in _PII_DETAIL_KEYS else value
+        print(f"{formatted_key}: {display_value}")
     
     # Separador final
     print(separator)

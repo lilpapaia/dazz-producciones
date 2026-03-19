@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { showWarning } from '../utils/toast';
 
 const useVoiceSearch = ({ lang = 'es-ES', onResult }) => {
   const [isListening, setIsListening] = useState(false);
@@ -31,7 +32,7 @@ const useVoiceSearch = ({ lang = 'es-ES', onResult }) => {
       setIsListening(true);
       recognitionRef.current.start();
     } else {
-      alert('Tu navegador no soporta búsqueda por voz');
+      showWarning('Tu navegador no soporta búsqueda por voz');
     }
   }, []);
 

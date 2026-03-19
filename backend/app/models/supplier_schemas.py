@@ -31,7 +31,8 @@ class InviteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     email: EmailStr
     message: Optional[str] = Field(default=None, max_length=500)
-    supplier_type: Optional[str] = Field(default=None, max_length=20)
+    # LOGIC-M1: Validar supplier_type con Literal (lowercase — es lo que guarda raw SQL en invitations)
+    supplier_type: Optional[Literal["talent", "general", "mixed"]] = None
 
 
 class InviteResponse(BaseModel):
@@ -74,7 +75,8 @@ class SupplierUpdate(BaseModel):
     nif_cif: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-    supplier_type: Optional[str] = None
+    # LOGIC-M1: Validar supplier_type con Literal (uppercase — enum SupplierType)
+    supplier_type: Optional[Literal["INFLUENCER", "GENERAL", "MIXED"]] = None
     notes_internal: Optional[str] = None
 
 
@@ -171,12 +173,15 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
+        """SEC-C4: Alineado con UserCreate del sistema principal (schemas.py)"""
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
         if not re.search(r"[0-9]", v):
             raise ValueError("Password must contain at least one number")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_+=\[\]\\;'/`~]", v):
+            raise ValueError("Password must contain at least one special character")
         return v
 
 

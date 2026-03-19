@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createProject, getCompanies } from '../services/api';
 import { ArrowLeft, Save, Building2 } from 'lucide-react';
+import { showSuccess, showError } from '../utils/toast';
 import UserAutocomplete from '../components/UserAutocomplete';
 
 const ProjectCreate = () => {
@@ -42,7 +43,7 @@ const ProjectCreate = () => {
       }
     } catch (error) {
       console.error('Error loading companies:', error);
-      alert('Error al cargar empresas. Verifica tus permisos.');
+      showError('Error al cargar empresas. Verifica tus permisos.');
     } finally {
       setLoadingCompanies(false);
     }
@@ -84,10 +85,10 @@ const ProjectCreate = () => {
       };
       
       const response = await createProject(dataToSend);
-      alert('✓ Proyecto creado exitosamente');
+      showSuccess('Proyecto creado exitosamente');
       navigate(`/projects/${response.data.id}`);
     } catch (error) {
-      alert('Error al crear proyecto: ' + (error.response?.data?.detail || error.message));
+      showError('Error al crear proyecto: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }

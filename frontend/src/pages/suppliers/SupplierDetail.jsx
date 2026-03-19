@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, UserX, Link2, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
 import { getSupplier, updateSupplier, deactivateSupplier, reactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
+import { showError } from '../../utils/toast';
 import useClickOutside from '../../hooks/useClickOutside';
 
 const PILL = {
@@ -97,7 +98,7 @@ const SupplierDetail = () => {
     try {
       const { data } = await getBankCertUrl(id);
       window.open(data.url, '_blank');
-    } catch { alert('No se pudo cargar el certificado bancario'); }
+    } catch { showError('No se pudo cargar el certificado bancario'); }
   };
 
   const handleAddNote = async () => {
@@ -121,7 +122,7 @@ const SupplierDetail = () => {
     try {
       await updateInvoiceStatus(invoiceId, { status });
       load();
-    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
   };
 
   const handleDeleteInvoice = async () => {
@@ -129,7 +130,7 @@ const SupplierDetail = () => {
     try {
       await deleteInvoice(deleteModal.id);
       load();
-    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setDeleteModal(null);
     setDeleteReason('');
   };
@@ -146,7 +147,7 @@ const SupplierDetail = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch { alert('Error al exportar Excel'); }
+    } catch { showError('Error al exportar Excel'); }
   };
 
   const handleEditSave = async () => {
@@ -158,7 +159,7 @@ const SupplierDetail = () => {
       }
       setEditModal(false);
       load();
-    } catch (e) { alert(e.response?.data?.detail || 'Error al guardar'); }
+    } catch (e) { showError(e.response?.data?.detail || 'Error al guardar'); }
     setEditSaving(false);
   };
 

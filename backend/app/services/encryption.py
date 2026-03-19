@@ -25,7 +25,13 @@ if _ENCRYPTION_KEY:
         logger.error(f"Invalid ENCRYPTION_KEY: {e}")
         _fernet = None
 else:
-    logger.warning("ENCRYPTION_KEY not set — IBAN encryption disabled (plaintext fallback)")
+    # SEC-C1: En producción, ENCRYPTION_KEY es obligatoria — no permitir arrancar sin ella
+    if os.getenv("ENVIRONMENT") == "production":
+        raise RuntimeError(
+            "ENCRYPTION_KEY environment variable is required in production. "
+            "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    logger.warning("ENCRYPTION_KEY not set — IBAN encryption disabled (plaintext fallback, dev only)")
 
 
 def encrypt_iban(plaintext: str) -> bytes:

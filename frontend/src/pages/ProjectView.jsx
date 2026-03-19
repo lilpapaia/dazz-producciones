@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjectTickets, deleteTicket, deleteProject, closeProject, reopenProject } from '../services/api';
 import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { showSuccess, showError } from '../utils/toast';
+import { ROLES } from '../constants/roles';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
@@ -53,7 +55,7 @@ const ProjectView = () => {
       setProject(response.data);
     } catch (error) {
       console.error('Error loading project:', error);
-      alert('Error al cargar proyecto');
+      showError('Error al cargar proyecto');
       navigate('/dashboard');
     }
   };
@@ -106,11 +108,11 @@ const ProjectView = () => {
 
     try {
       await deleteTicket(ticketId);
-      alert('✓ Ticket eliminado');
+      showSuccess('Ticket eliminado');
       loadTickets();
       loadProject();
     } catch (error) {
-      alert('Error al eliminar ticket');
+      showError('Error al eliminar ticket');
     }
   };
 
@@ -125,10 +127,10 @@ const ProjectView = () => {
     setReopeningProject(true);
     try {
       await reopenProject(id);
-      alert('✓ Proyecto reabierto correctamente');
+      showSuccess('Proyecto reabierto correctamente');
       loadProject(); // Recargar para actualizar estado
     } catch (error) {
-      alert('Error al reabrir proyecto');
+      showError('Error al reabrir proyecto');
     } finally {
       setReopeningProject(false);
     }
@@ -138,10 +140,10 @@ const ProjectView = () => {
     setDeletingProject(true);
     try {
       await deleteProject(id);
-      alert('✓ Proyecto eliminado correctamente');
+      showSuccess('Proyecto eliminado correctamente');
       navigate('/dashboard');
     } catch (error) {
-      alert('Error al eliminar proyecto: ' + (error.response?.data?.detail || error.message));
+      showError('Error al eliminar proyecto: ' + (error.response?.data?.detail || error.message));
       setDeletingProject(false);
     }
   };
@@ -165,8 +167,8 @@ const ProjectView = () => {
   if (loading || !project) return <LoadingSpinner size="lg" fullPage />;
 
   // ← FIX: mayúsculas correctas (era 'admin' → siempre false)
-  const isAdmin = user?.role === 'ADMIN';
-  const isBoss  = user?.role === 'BOSS';
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const isBoss  = user?.role === ROLES.BOSS;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">

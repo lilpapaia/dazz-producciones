@@ -5,7 +5,7 @@ Unifica la lógica duplicada que existía en projects.py y tickets.py.
 """
 from typing import List
 from sqlalchemy.orm import Session, joinedload
-from app.models.database import User, Project
+from app.models.database import User, Project, UserRole
 
 
 def get_user_company_ids(user: User, db: Session) -> List[int]:
@@ -32,12 +32,13 @@ def can_access_project(user: User, project: Project, db: Session) -> bool:
     - BOSS: proyectos de su empresa
     - WORKER: solo SUS proyectos de sus empresas
     """
-    if user.role == "ADMIN":
+    # DEUDA-M3: Usar enum UserRole en vez de strings literales
+    if user.role == UserRole.ADMIN:
         return True
 
     company_ids = get_user_company_ids(user, db)
 
-    if user.role == "BOSS":
+    if user.role == UserRole.BOSS:
         return project.owner_company_id in company_ids
 
     # WORKER: solo sus propios proyectos de sus empresas
@@ -54,10 +55,10 @@ def can_modify_project(user: User, project: Project, db: Session) -> bool:
     - BOSS: puede modificar proyectos de su empresa
     - WORKER: puede modificar solo SUS proyectos
     """
-    if user.role == "ADMIN":
+    if user.role == UserRole.ADMIN:
         return True
 
-    if user.role == "BOSS":
+    if user.role == UserRole.BOSS:
         company_ids = get_user_company_ids(user, db)
         return project.owner_company_id in company_ids
 

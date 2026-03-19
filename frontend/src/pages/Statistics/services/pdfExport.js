@@ -7,9 +7,11 @@
  * @param {number} params.year - Año seleccionado
  * @param {string|number} params.quarter - Trimestre ('' o 1-4)
  */
+import { showWarning } from '../../../utils/toast';
+
 export async function exportPDFReport({ data, year, quarter }) {
   if (!data || !data.foreign_breakdown || data.foreign_breakdown.length === 0) {
-    alert('No hay datos internacionales para exportar');
+    showWarning('No hay datos internacionales para exportar');
     return;
   }
 

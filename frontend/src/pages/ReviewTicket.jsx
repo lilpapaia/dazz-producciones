@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getTicket, updateTicket, deleteTicket, getProjectTickets } from '../services/api';
+import { showSuccess, showError } from '../utils/toast';
 import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import useEscapeKey from '../hooks/useEscapeKey';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 
@@ -37,6 +39,12 @@ const ReviewTicket = () => {
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
   const [customPayment, setCustomPayment] = useState(false);
 
+  // UX-L1: Detectar cambios sin guardar
+  const initialTicketRef = useRef(null);
+
+  // UX-L2: Cerrar lightbox con Escape
+  useEscapeKey(() => setShowLightbox(false), showLightbox);
+
   // Refs para detección de swipe
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -53,6 +61,18 @@ const ReviewTicket = () => {
       setCustomPayment(true);
     }
   }, [ticket?.payment_status]);
+
+  // UX-L1: Avisar si hay cambios sin guardar al cerrar/navegar
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (ticket && initialTicketRef.current && JSON.stringify(ticket) !== initialTicketRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [ticket]);
 
   // Bloquear scroll cuando se abre el lightbox
   useEffect(() => {
@@ -76,6 +96,7 @@ const ReviewTicket = () => {
       console.log('file_pages valor:', response.data.file_pages);
       const currentTicket = response.data;
       setTicket(currentTicket);
+      initialTicketRef.current = JSON.stringify(currentTicket);
       
       // Cargar todos los tickets del proyecto para navegación
       try {
@@ -97,7 +118,7 @@ const ReviewTicket = () => {
         console.error('Error loading project tickets:', error);
       }
     } catch (error) {
-      alert('Error al cargar ticket');
+      showError('Error al cargar ticket');
       navigate(-1);
     } finally {
       setLoading(false);
@@ -108,10 +129,10 @@ const ReviewTicket = () => {
     setSaving(true);
     try {
       await updateTicket(id, {...ticket, is_reviewed: true});
-      alert('✓ Ticket actualizado y marcado como revisado');
+      showSuccess('Ticket actualizado y marcado como revisado');
       navigate(isFromStatistics ? '/statistics' : `/projects/${ticket.project_id}`);
     } catch (error) {
-      alert('Error al actualizar ticket');
+      showError('Error al actualizar ticket');
     } finally {
       setSaving(false);
     }
@@ -121,10 +142,10 @@ const ReviewTicket = () => {
     setDeleting(true);
     try {
       await deleteTicket(id);
-      alert('✓ Ticket eliminado correctamente');
+      showSuccess('Ticket eliminado correctamente');
       navigate(isFromStatistics ? '/statistics' : `/projects/${ticket.project_id}`);
     } catch (error) {
-      alert('Error al eliminar ticket: ' + (error.response?.data?.detail || error.message));
+      showError('Error al eliminar ticket: ' + (error.response?.data?.detail || error.message));
       setDeleting(false);
     }
   };

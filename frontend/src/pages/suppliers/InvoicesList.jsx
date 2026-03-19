@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Trash2, X, CreditCard, Mic } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
+import { showError } from '../../utils/toast';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
 
@@ -83,7 +84,7 @@ const InvoicesList = () => {
       else if (action === 'pay') await updateInvoiceStatus(invoice.id, { status: 'PAID' });
       else if (action === 'reject') { if (!reason.trim()) return; await updateInvoiceStatus(invoice.id, { status: 'REJECTED', reason }); }
       else if (action === 'delete') await deleteInvoice(invoice.id);
-    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setActionModal(null); setReason(''); load();
   };
 

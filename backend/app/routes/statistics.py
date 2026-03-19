@@ -65,37 +65,41 @@ async def get_available_years(
 
 @router.get("/overview", response_model=schemas.StatisticsOverview)
 async def get_statistics_overview(
-    year: int = Query(...),
+    year: int = Query(..., ge=2000, le=2100),
     quarter: Optional[int] = Query(None, ge=1, le=4),
     geo_filter: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
-    tickets_query = db.query(Ticket).join(Project).filter(Project.year == str(year))
-    all_tickets = tickets_query.all()
-    
+    # PERF-M6: Cuando no hay quarter, calcular sumas en SQL directo
+    # Con quarter, necesitamos parsear date strings en Python (campo date es String, no Date)
     if quarter:
+        all_tickets = db.query(Ticket).join(Project).filter(Project.year == str(year)).all()
         all_tickets = filter_tickets_by_quarter(all_tickets, quarter)
-    
-    international_tickets = [t for t in all_tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
-    international_spent = sum(t.final_total for t in international_tickets)
-    iva_reclamable = sum(t.foreign_tax_eur or 0.0 for t in international_tickets if t.foreign_tax_eur)
-    
-    if geo_filter:
-        filtered_tickets = [t for t in all_tickets if t.geo_classification == geo_filter]
+        intl = [t for t in all_tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
+        international_spent = sum(t.final_total for t in intl)
+        iva_reclamable = sum(t.foreign_tax_eur or 0.0 for t in intl if t.foreign_tax_eur)
+        filtered = [t for t in all_tickets if t.geo_classification == geo_filter] if geo_filter else all_tickets
+        total_spent = sum(t.final_total for t in filtered)
     else:
-        filtered_tickets = all_tickets
-    
-    total_spent = sum(t.final_total for t in filtered_tickets)
-    
+        base_filter = [Ticket.project_id == Project.id, Project.year == str(year)]
+        geo_extra = [Ticket.geo_classification == geo_filter] if geo_filter else []
+        total_spent = float(db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).join(Project).filter(
+            Project.year == str(year), *geo_extra).scalar())
+        intl_filter = [Project.year == str(year), Ticket.geo_classification.in_(['UE', 'INTERNACIONAL'])]
+        international_spent = float(db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).join(Project).filter(
+            *intl_filter).scalar())
+        iva_reclamable = float(db.query(func.coalesce(func.sum(Ticket.foreign_tax_eur), 0.0)).join(Project).filter(
+            *intl_filter).scalar())
+
     projects_query = db.query(Project).filter(Project.year == str(year))
     projects_total = projects_query.count()
     projects_closed = projects_query.filter(Project.status == ProjectStatus.CERRADO).count()
-    
+
     return schemas.StatisticsOverview(
-        total_spent=total_spent,
-        international_spent=international_spent,
-        iva_reclamable=iva_reclamable,
+        total_spent=round(total_spent, 2),
+        international_spent=round(international_spent, 2),
+        iva_reclamable=round(iva_reclamable, 2),
         projects_total=projects_total,
         projects_closed=projects_closed,
         projects_open=projects_total - projects_closed
@@ -104,7 +108,7 @@ async def get_statistics_overview(
 
 @router.get("/monthly-evolution", response_model=List[schemas.MonthlyDataPoint])
 async def get_monthly_evolution(
-    year: int = Query(...),
+    year: int = Query(..., ge=2000, le=2100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
@@ -130,7 +134,7 @@ async def get_monthly_evolution(
 
 @router.get("/currency-distribution", response_model=List[schemas.CurrencyDistribution])
 async def get_currency_distribution(
-    year: int = Query(...),
+    year: int = Query(..., ge=2000, le=2100),
     quarter: Optional[int] = Query(None, ge=1, le=4),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
@@ -143,7 +147,7 @@ async def get_currency_distribution(
 
 @router.get("/foreign-breakdown", response_model=List[schemas.CountryBreakdown])
 async def get_foreign_breakdown(
-    year: int = Query(...),
+    year: int = Query(..., ge=2000, le=2100),
     quarter: Optional[int] = Query(None, ge=1, le=4),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
@@ -164,7 +168,7 @@ async def get_foreign_breakdown(
 
 @router.get("/complete")
 async def get_complete_statistics(
-    year: int = Query(..., description="Año a consultar"),
+    year: int = Query(..., ge=2000, le=2100, description="Año a consultar"),
     quarter: Optional[int] = Query(None, ge=1, le=4, description="Trimestre (1-4)"),
     geo_filter: Optional[str] = Query(None, description="NACIONAL | UE | INTERNACIONAL"),
     company_id: Optional[int] = Query(None, description="ID empresa (solo ADMIN)"),
@@ -265,10 +269,23 @@ def _calc_overview(project_ids: list, db: Session) -> schemas.StatisticsOverview
             projects_total=0, projects_closed=0, projects_open=0
         )
 
-    tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids)).all()
-    intl_tickets = [t for t in tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
+    # PERF-M6: Sumas calculadas en SQL en vez de cargar todos los tickets en Python
+    total_spent = db.query(
+        func.coalesce(func.sum(Ticket.final_total), 0.0)
+    ).filter(Ticket.project_id.in_(project_ids)).scalar()
 
-    # COUNT directo en DB (evita traer todos los projects a Python)
+    intl_filter = [
+        Ticket.project_id.in_(project_ids),
+        Ticket.geo_classification.in_(['UE', 'INTERNACIONAL'])
+    ]
+    international_spent = db.query(
+        func.coalesce(func.sum(Ticket.final_total), 0.0)
+    ).filter(*intl_filter).scalar()
+
+    iva_reclamable = db.query(
+        func.coalesce(func.sum(Ticket.foreign_tax_eur), 0.0)
+    ).filter(*intl_filter).scalar()
+
     closed = db.query(func.count(Project.id)).filter(
         Project.id.in_(project_ids),
         Project.status == ProjectStatus.CERRADO
@@ -276,9 +293,9 @@ def _calc_overview(project_ids: list, db: Session) -> schemas.StatisticsOverview
     total = len(project_ids)
 
     return schemas.StatisticsOverview(
-        total_spent=round(sum(t.final_total for t in tickets), 2),
-        international_spent=round(sum(t.final_total for t in intl_tickets), 2),
-        iva_reclamable=round(sum(t.foreign_tax_eur or 0.0 for t in intl_tickets), 2),
+        total_spent=round(float(total_spent), 2),
+        international_spent=round(float(international_spent), 2),
+        iva_reclamable=round(float(iva_reclamable), 2),
         projects_total=total,
         projects_closed=closed,
         projects_open=total - closed
@@ -286,7 +303,13 @@ def _calc_overview(project_ids: list, db: Session) -> schemas.StatisticsOverview
 
 
 def _calc_monthly(project_ids: list, geo_filter: Optional[str], db: Session) -> list:
-    """Evolución mensual: year + company + geo_filter (sin quarter, siempre 12 meses)"""
+    """Evolución mensual: year + company + geo_filter (sin quarter, siempre 12 meses)
+
+    PERF-H1: Esta función (y _calc_distribution, _build_breakdown_single, _get_breakdown_all_companies)
+    cargan tickets en memoria porque necesitan parsear Ticket.date (String DD/MM/YYYY) para agrupar
+    por mes/trimestre. Migrar a SQL requeriría convertir la columna date a tipo Date — cambio de
+    esquema mayor. Con <500 tickets/año el overhead es aceptable.
+    """
     empty = [
         schemas.MonthlyDataPoint(month=i+1, month_name=MONTH_NAMES_ES[i], total=0.0)
         for i in range(12)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download } from 'lucide-react';
 import { getInvoice, getAllInvoices, updateInvoiceStatus } from '../../services/suppliersApi';
+import { showError } from '../../utils/toast';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -44,7 +45,7 @@ const InvoiceDetail = () => {
   const load = () => {
     getInvoice(invoiceId)
       .then(r => setInvoice(r.data))
-      .catch(() => { alert('Error al cargar factura'); navigate(-1); })
+      .catch(() => { showError('Error al cargar factura'); navigate(-1); })
       .finally(() => setLoading(false));
   };
 
@@ -91,7 +92,7 @@ const InvoiceDetail = () => {
       setRejectModal(false);
       setReason('');
       load();
-    } catch (e) { alert(e.response?.data?.detail || 'Error'); }
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setActing(false);
   };
 

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getUsers, registerUser, deleteUser, updateUser, getCompanies } from '../services/api';
 import { Plus, Trash2, Edit } from 'lucide-react';
+import { showSuccess, showError } from '../utils/toast';
+import { ROLES } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
 import CompanyMultiSelect from '../components/CompanyMultiSelect';
 import StatusBadge from '../components/common/StatusBadge';
@@ -17,7 +19,7 @@ const Users = () => {
     email: '',
     username: '',
     password: 'temporal123',
-    role: 'WORKER',
+    role: ROLES.WORKER,
     company_ids: []
   });
   const { user: currentUser } = useAuth();
@@ -53,7 +55,7 @@ const Users = () => {
         email: '', 
         username: '', 
         password: 'temporal123', 
-        role: 'WORKER',
+        role: ROLES.WORKER,
         company_ids: []
       });
       
@@ -61,11 +63,11 @@ const Users = () => {
       await loadData();
       
       // TERCERO: Mostrar confirmación (después de recargar)
-      alert(`✓ Usuario creado correctamente\n✓ Se ha enviado un email a ${tempEmail} para configurar su contraseña`);
+      showSuccess(`Usuario creado. Email enviado a ${tempEmail} para configurar contraseña`);
       
     } catch (error) {
       console.error('Error creating user:', error);
-      alert('Error al crear usuario: ' + (error.response?.data?.detail || error.message));
+      showError('Error al crear usuario: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -80,11 +82,11 @@ const Users = () => {
       // Recargar lista
       await loadData();
       
-      alert('✓ Usuario actualizado correctamente');
+      showSuccess('Usuario actualizado correctamente');
       
     } catch (error) {
       console.error('Error updating user:', error);
-      alert('Error al actualizar usuario: ' + (error.response?.data?.detail || error.message));
+      showError('Error al actualizar usuario: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -94,10 +96,10 @@ const Users = () => {
     try {
       await deleteUser(userId);
       await loadData(); // Recargar lista
-      alert('✓ Usuario eliminado correctamente');
+      showSuccess('Usuario eliminado correctamente');
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Error al eliminar usuario: ' + (error.response?.data?.detail || error.message));
+      showError('Error al eliminar usuario: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -217,9 +219,9 @@ const Users = () => {
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ROL</label>
                 <div className="grid grid-cols-3 gap-4">
                   <button
-                    onClick={() => setNewUser({...newUser, role: 'ADMIN'})}
+                    onClick={() => setNewUser({...newUser, role: ROLES.ADMIN})}
                     className={`p-4 rounded-sm border-2 transition-all ${
-                      newUser.role === 'ADMIN'
+                      newUser.role === ROLES.ADMIN
                         ? 'border-amber-500 bg-amber-500/10'
                         : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                     }`}
@@ -231,9 +233,9 @@ const Users = () => {
                   </button>
 
                   <button
-                    onClick={() => setNewUser({...newUser, role: 'BOSS'})}
+                    onClick={() => setNewUser({...newUser, role: ROLES.BOSS})}
                     className={`p-4 rounded-sm border-2 transition-all ${
-                      newUser.role === 'BOSS'
+                      newUser.role === ROLES.BOSS
                         ? 'border-amber-500 bg-amber-500/10'
                         : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                     }`}
@@ -245,9 +247,9 @@ const Users = () => {
                   </button>
 
                   <button
-                    onClick={() => setNewUser({...newUser, role: 'WORKER'})}
+                    onClick={() => setNewUser({...newUser, role: ROLES.WORKER})}
                     className={`p-4 rounded-sm border-2 transition-all ${
-                      newUser.role === 'WORKER'
+                      newUser.role === ROLES.WORKER
                         ? 'border-amber-500 bg-amber-500/10'
                         : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                     }`}
@@ -341,9 +343,9 @@ const Users = () => {
                   <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ROL</label>
                   <div className="grid grid-cols-3 gap-4">
                     <button
-                      onClick={() => setEditingUser({...editingUser, role: 'ADMIN'})}
+                      onClick={() => setEditingUser({...editingUser, role: ROLES.ADMIN})}
                       className={`p-4 rounded-sm border-2 transition-all ${
-                        editingUser.role === 'ADMIN'
+                        editingUser.role === ROLES.ADMIN
                           ? 'border-amber-500 bg-amber-500/10'
                           : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                       }`}
@@ -354,9 +356,9 @@ const Users = () => {
                     </button>
 
                     <button
-                      onClick={() => setEditingUser({...editingUser, role: 'BOSS'})}
+                      onClick={() => setEditingUser({...editingUser, role: ROLES.BOSS})}
                       className={`p-4 rounded-sm border-2 transition-all ${
-                        editingUser.role === 'BOSS'
+                        editingUser.role === ROLES.BOSS
                           ? 'border-amber-500 bg-amber-500/10'
                           : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                       }`}
@@ -367,9 +369,9 @@ const Users = () => {
                     </button>
 
                     <button
-                      onClick={() => setEditingUser({...editingUser, role: 'WORKER'})}
+                      onClick={() => setEditingUser({...editingUser, role: ROLES.WORKER})}
                       className={`p-4 rounded-sm border-2 transition-all ${
-                        editingUser.role === 'WORKER'
+                        editingUser.role === ROLES.WORKER
                           ? 'border-amber-500 bg-amber-500/10'
                           : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
                       }`}

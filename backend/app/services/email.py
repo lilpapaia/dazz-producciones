@@ -5,9 +5,13 @@ Usa API REST (HTTPS) en lugar de SMTP.
 Railway bloquea SMTP, pero API funciona.
 """
 
+import html
+import logging
 import httpx
 import os
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -50,19 +54,19 @@ def send_email(to_email: str, subject: str, html_content: str):
             response = client.post(BREVO_API_URL, json=payload, headers=headers)
             
             if response.status_code in [200, 201]:
-                print(f"✅ Email enviado a {to_email}")
+                logger.info(f"Email enviado a {to_email}")
                 return True
             else:
                 error_data = response.json()
                 error_msg = error_data.get("message", response.text)
-                print(f"❌ Error Brevo ({response.status_code}): {error_msg}")
+                logger.error(f"Error Brevo ({response.status_code}): {error_msg}")
                 raise Exception(f"Error Brevo: {error_msg}")
-                
+
     except httpx.TimeoutException:
-        print(f"❌ Timeout enviando email a {to_email}")
+        logger.error(f"Timeout enviando email a {to_email}")
         raise Exception("Timeout conectando con Brevo API")
     except Exception as e:
-        print(f"❌ Error enviando email: {str(e)}")
+        logger.error(f"Error enviando email: {str(e)}")
         raise e
 
 
@@ -75,10 +79,12 @@ def send_set_password_email(user_name: str, user_email: str, token: str):
         user_email: Email del usuario
         token: Token único para set password
     """
+    # SEC-M2: Escapar nombre de usuario para prevenir HTML injection en email
+    user_name = html.escape(user_name)
     set_password_url = f"{FRONTEND_URL}/set-password?token={token}"
-    
+
     subject = "¡Bienvenido a DAZZ Creative! - Configura tu contraseña"
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -183,10 +189,12 @@ def send_forgot_password_email(user_name: str, user_email: str, token: str):
     """
     Enviar email para restablecer contraseña olvidada
     """
+    # SEC-M2: Escapar nombre de usuario para prevenir HTML injection en email
+    user_name = html.escape(user_name)
     reset_url = f"{FRONTEND_URL}/set-password?token={token}"
-    
+
     subject = "DAZZ Creative - Restablecer contraseña"
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -293,11 +301,16 @@ def send_project_closed_email_multi(
     Usa Brevo API.
     """
     import base64
-    
+
+    # SEC-M2: Escapar datos interpolados en HTML para prevenir injection
+    project_code = html.escape(project_code)
+    project_name = html.escape(project_name)
+    responsible_name = html.escape(responsible_name)
+
     if not BREVO_API_KEY:
         raise Exception("BREVO_API_KEY no configurada")
-    
-    subject = f"📊 Proyecto Cerrado: {project_code}"
+
+    subject = f"Proyecto Cerrado: {project_code}"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -420,19 +433,19 @@ def send_project_closed_email_multi(
             response = client.post(BREVO_API_URL, json=payload, headers=headers)
             
             if response.status_code in [200, 201]:
-                print(f"✅ Email proyecto cerrado enviado a {len(recipients)} destinatarios")
+                logger.info(f"Email proyecto cerrado enviado a {len(recipients)} destinatarios")
                 return True
             else:
                 error_data = response.json()
                 error_msg = error_data.get("message", response.text)
-                print(f"❌ Error Brevo ({response.status_code}): {error_msg}")
+                logger.error(f"Error Brevo ({response.status_code}): {error_msg}")
                 raise Exception(f"Error Brevo: {error_msg}")
-                
+
     except httpx.TimeoutException:
-        print(f"❌ Timeout enviando email de proyecto cerrado")
+        logger.error("Timeout enviando email de proyecto cerrado")
         raise Exception("Timeout conectando con Brevo API")
     except Exception as e:
-        print(f"❌ Error enviando email proyecto cerrado: {str(e)}")
+        logger.error(f"Error enviando email proyecto cerrado: {str(e)}")
         raise e
 
 

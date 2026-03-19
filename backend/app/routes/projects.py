@@ -213,11 +213,19 @@ async def close_project(
 ):
     """Cerrar proyecto (ADMIN, BOSS de la empresa, o dueño del proyecto)"""
 
-    project = db.query(Project).filter(Project.id == project_id).first()
+    # LOGIC-M3: SELECT FOR UPDATE para prevenir race conditions (dos cierres simultáneos)
+    project = db.query(Project).with_for_update().filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
+        )
+
+    # LOGIC-M3: Verificar que no esté ya cerrado (después de obtener el lock)
+    if project.status == ProjectStatus.CERRADO:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Project is already closed"
         )
 
     # Validar permisos: ADMIN, BOSS de la empresa, o dueño

@@ -86,15 +86,19 @@ def sanitize_string(text: str, max_length: Optional[int] = None) -> str:
 
 def validate_no_sql_patterns(text: str) -> bool:
     """
-    Verifica que no haya patrones sospechosos de SQL injection
-    
-    Nota: SQLAlchemy ORM ya protege, esto es validación adicional
-    
-    Args:
-        text: String a validar
-    
+    DEPRECATED — No usar en validaciones nuevas.
+
+    SQLAlchemy ORM con queries parametrizadas es la protección real contra
+    SQL injection. Esta función tiene patrones incompletos (no detecta
+    bypasses con comentarios, encoding, etc.) y causa falsos positivos
+    (ej: una descripción con "DELETE FROM the old records" sería rechazada).
+
+    Se mantiene por compatibilidad pero ya no se llama desde
+    validate_string_input(). Si necesitas validación de input, usa
+    sanitize_string() para XSS y confía en el ORM para SQL.
+
     Returns:
-        True si es seguro, False si es sospechoso
+        True si es seguro según estos patrones (incompletos), False si sospechoso
     """
     # Patrones sospechosos (case-insensitive)
     dangerous_patterns = [
@@ -160,13 +164,10 @@ def validate_string_input(
             detail=f"{field_name} no puede tener más de {max_length} caracteres"
         )
     
-    # Validar patrones SQL sospechosos
-    if not validate_no_sql_patterns(text):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{field_name} contiene caracteres no permitidos"
-        )
-    
+    # SEC-M5: Eliminada llamada a validate_no_sql_patterns() — la protección real
+    # contra SQL injection es SQLAlchemy ORM con queries parametrizadas.
+    # La función regex tenía patrones incompletos y causaba falsos positivos.
+
     # Validar caracteres especiales si no están permitidos
     if not allow_special_chars:
         if not text.replace(" ", "").replace("-", "").replace("_", "").isalnum():
@@ -260,7 +261,15 @@ def validate_phone(phone: str) -> str:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Formato de teléfono inválido (debe tener 9-20 dígitos)"
         )
-    
+
+    # SEC-L2: Exigir al menos 9 dígitos efectivos (evita strings con solo guiones/paréntesis)
+    digit_count = sum(c.isdigit() for c in phone)
+    if digit_count < 9:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Teléfono debe tener al menos 9 dígitos (tiene {digit_count})"
+        )
+
     return phone
 
 
@@ -446,6 +455,51 @@ def validate_positive_number(
 # ============================================
 # VALIDACIÓN DE IDs
 # ============================================
+
+def validate_iban_format(iban: str) -> str:
+    """
+    SEC-M1: Valida formato IBAN con checksum mod-97 (ISO 13616).
+
+    Args:
+        iban: IBAN string (puede tener espacios)
+
+    Returns:
+        IBAN limpio (sin espacios, uppercase)
+
+    Raises:
+        HTTPException 400 si el formato es inválido
+    """
+    cleaned = iban.strip().upper().replace(" ", "")
+
+    if len(cleaned) < 15 or len(cleaned) > 34:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="IBAN must be between 15 and 34 characters"
+        )
+
+    if not re.match(r'^[A-Z]{2}[0-9]{2}[A-Z0-9]+$', cleaned):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid IBAN format (must start with 2-letter country code + 2 check digits)"
+        )
+
+    # Mod-97 checksum: move first 4 chars to end, convert letters to numbers (A=10..Z=35)
+    rearranged = cleaned[4:] + cleaned[:4]
+    numeric_str = ""
+    for char in rearranged:
+        if char.isdigit():
+            numeric_str += char
+        else:
+            numeric_str += str(ord(char) - ord('A') + 10)
+
+    if int(numeric_str) % 97 != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid IBAN checksum"
+        )
+
+    return cleaned
+
 
 def validate_id(value: int, field_name: str = "ID") -> int:
     """

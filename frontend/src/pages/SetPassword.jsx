@@ -19,7 +19,17 @@ const SetPassword = () => {
       setError('Token no encontrado. El enlace puede ser inválido.');
     } else {
       setToken(tokenFromUrl);
+      // SEC-M3: Eliminar token de la URL y del historial del navegador
+      // para que no quede visible en dispositivos compartidos
+      window.history.replaceState({}, '', window.location.pathname);
     }
+
+    // SEC-M3: Meta referrer para que esta página no envíe la URL a terceros
+    const meta = document.createElement('meta');
+    meta.name = 'referrer';
+    meta.content = 'no-referrer';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
   }, [searchParams]);
 
   const validatePassword = () => {

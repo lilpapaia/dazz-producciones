@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjectTickets, closeProjectWithEmails, getUsernames } from '../services/api';
+import { showSuccess, showError, showWarning } from '../utils/toast';
 import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import EmailChipsInput from '../components/EmailChipsInput';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -42,7 +43,7 @@ const ProjectCloseReview = () => {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al cargar datos');
+      showError('Error al cargar datos');
       navigate(`/projects/${id}`);
     } finally {
       setLoading(false);
@@ -59,7 +60,7 @@ const ProjectCloseReview = () => {
   const handleConfirmClose = async () => {
     // Validar que haya al menos un email
     if (emailRecipients.length === 0) {
-      alert('⚠️ Debes añadir al menos un destinatario de email');
+      showWarning('Debes añadir al menos un destinatario de email');
       return;
     }
 
@@ -83,11 +84,11 @@ const ProjectCloseReview = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      alert(`✓ Proyecto cerrado. Excel descargado y email enviado a ${emailRecipients.length} destinatario(s).`);
+      showSuccess(`Proyecto cerrado. Excel descargado y email enviado a ${emailRecipients.length} destinatario(s).`);
       navigate('/dashboard');
     } catch (error) {
       console.error('Error closing project:', error);
-      alert('Error al cerrar proyecto: ' + (error.response?.data?.detail || error.message));
+      showError('Error al cerrar proyecto: ' + (error.response?.data?.detail || error.message));
     } finally {
       setSending(false);
     }

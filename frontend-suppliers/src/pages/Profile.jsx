@@ -7,6 +7,7 @@ const Profile = () => {
   const { supplier } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [certError, setCertError] = useState('');
 
   useEffect(() => {
     getProfile().then(r => setProfile(r.data)).catch(() => {}).finally(() => setLoading(false));
@@ -22,7 +23,7 @@ const Profile = () => {
     try {
       const { data } = await getBankCertUrl();
       window.open(data.url, '_blank');
-    } catch { alert('Could not load bank certificate'); }
+    } catch { setCertError('Could not load bank certificate'); }
   };
 
   if (!profile) return null;
@@ -92,9 +93,12 @@ const Profile = () => {
           <div key={label} className="flex justify-between items-center py-2 border-b border-white/[.04] last:border-0 text-[13px]">
             <span className="text-zinc-500">{label}</span>
             {isPdf ? (
-              <button onClick={handleViewCert} className="text-red-400 text-xs cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">
+              <>
+              <button onClick={() => { setCertError(''); handleViewCert(); }} className="text-red-400 text-xs cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">
                 View PDF <ExternalLink size={10} />
               </button>
+              {certError && <span className="text-red-400 text-[10px]">{certError}</span>}
+              </>
             ) : (
               <span className={`text-right max-w-[200px] break-all ${
                 mono ? "font-['IBM_Plex_Mono'] text-xs" : 'text-sm'

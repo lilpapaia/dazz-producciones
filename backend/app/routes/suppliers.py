@@ -3,7 +3,10 @@ Endpoints de gestión de proveedores — Solo ADMIN.
 Prefijo: /suppliers
 """
 
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, case
 from datetime import datetime, timedelta, timezone
@@ -508,6 +511,8 @@ async def list_all_invoices(
     if company_id:
         query = query.filter(SupplierInvoice.company_id == company_id)
     if oc_number:
+        # PERF-M5: LIKE %texto% no usa índice B-tree, pero es aceptable con <1000 facturas.
+        # Reconsiderar pg_trgm si el volumen supera 10.000 registros.
         query = query.filter(SupplierInvoice.oc_number.ilike(f"%{oc_number}%"))
 
     invoices = query.options(
@@ -710,12 +715,12 @@ async def confirm_invoice_deletion(
             db.delete(linked_ticket)
             print(f"Ticket {linked_ticket.id} deleted (cascade from supplier invoice)")
 
-    # Delete Cloudinary files before removing DB record
+    # LOGIC-M5: Delete Cloudinary files with error logging (was silent pass)
     if invoice.file_url:
         try:
             delete_invoice_pdf(invoice.file_url)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to delete Cloudinary PDF for invoice {invoice.id}: {e}")
 
     # Delete page images if they exist (file_pages not in ORM)
     from sqlalchemy import text as sa_text
@@ -729,10 +734,10 @@ async def confirm_invoice_deletion(
                     if pid:
                         import cloudinary.uploader
                         cloudinary.uploader.destroy(pid, resource_type="image")
-                except Exception:
-                    pass
-    except Exception:
-        pass
+                except Exception as e:
+                    logger.error(f"Failed to delete Cloudinary page image for invoice {invoice.id}, url={page_url}: {e}")
+    except Exception as e:
+        logger.error(f"Failed to process file_pages for invoice {invoice.id}: {e}")
 
     db.delete(invoice)
     db.commit()

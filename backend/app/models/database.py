@@ -66,7 +66,10 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.WORKER, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
+    # SEC-H2: Account lockout tras login fallidos
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime, nullable=True)
+
     # Relaciones
     projects = relationship("Project", back_populates="owner")
     companies = relationship("Company", secondary="user_companies", back_populates="users")

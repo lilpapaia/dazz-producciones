@@ -22,6 +22,24 @@ class TicketType(str, Enum):
     FACTURA = "factura"
 
 # ============================================
+# DEUDA-M2: Validación de contraseña compartida
+# ============================================
+
+def _validate_password_strength(v: str) -> str:
+    """Validación centralizada de fortaleza de contraseña.
+    Usada por UserCreate y SetPasswordRequest."""
+    if len(v) < 8:
+        raise ValueError('La contraseña debe tener al menos 8 caracteres')
+    if not re.search(r'[A-Z]', v):
+        raise ValueError('La contraseña debe contener al menos una mayúscula')
+    if not re.search(r'[0-9]', v):
+        raise ValueError('La contraseña debe contener al menos un número')
+    if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:\'",.<>?/\\`~]', v):
+        raise ValueError('La contraseña debe contener al menos un símbolo especial')
+    return v
+
+
+# ============================================
 # COMPANY SCHEMAS
 # ============================================
 
@@ -57,15 +75,7 @@ class UserCreate(UserBase):
     @field_validator('password')
     @classmethod
     def validate_password_complexity(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError('La contraseña debe tener al menos 8 caracteres')
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('La contraseña debe contener al menos una mayúscula')
-        if not re.search(r'[0-9]', v):
-            raise ValueError('La contraseña debe contener al menos un número')
-        if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:\'",.<>?/\\`~]', v):
-            raise ValueError('La contraseña debe contener al menos un símbolo especial')
-        return v
+        return _validate_password_strength(v)
 
 class UserLogin(BaseModel):
     identifier: str  # Email O username
@@ -107,15 +117,7 @@ class SetPasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def validate_password_complexity(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError('La contraseña debe tener al menos 8 caracteres')
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('La contraseña debe contener al menos una mayúscula')
-        if not re.search(r'[0-9]', v):
-            raise ValueError('La contraseña debe contener al menos un número')
-        if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:\'",.<>?/\\`~]', v):
-            raise ValueError('La contraseña debe contener al menos un símbolo especial')
-        return v
+        return _validate_password_strength(v)
 
 class SetPasswordResponse(BaseModel):
     message: str

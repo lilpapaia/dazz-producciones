@@ -5,7 +5,13 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import os
+import logging
 
+# DEUDA-M1: Configurar logging antes de importar módulos
+from app.services.log_config import setup_logging
+setup_logging()
+
+logger = logging.getLogger(__name__)
 
 from database_config import engine
 from app.models.database import Base
@@ -42,13 +48,26 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response: Response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+# SEC-M4 / SEC-H4: Decisión arquitectónica sobre tokens y CSRF.
+#
+# Los tokens JWT se almacenan en localStorage (no cookies). Esto significa:
+# - CSRF no es un vector de ataque (el navegador no adjunta tokens automáticamente)
+# - El riesgo teórico es XSS → robo de token desde localStorage
+# - Mitigaciones XSS actuales: CORS restrictivo, security headers, React auto-escaping,
+#   sanitize_string(), no se usa dangerouslySetInnerHTML
+# - Migrar a cookies HttpOnly requeriría ~8-12h de cambios cross-stack (backend cookies +
+#   frontend eliminar localStorage + implementar CSRF tokens) con alto riesgo de regresión
+# - Con 3-5 usuarios internos y sin contenido de terceros (ads, widgets, analytics JS),
+#   el riesgo XSS real es muy bajo
+# - Reconsiderar si se añade contenido de terceros o se abre a usuarios públicos
 
 # ============================================
 # 🔒 CONFIGURACIÓN SEGURA DE CORS
@@ -117,6 +136,9 @@ async def health_check(request: Request):
 
 # ============================================
 # 🧪 ENDPOINTS DE TEST - SOLO EN DESARROLLO
+# SEC-H6: Seguro porque ENVIRONMENT defaulta a "production" (línea 69).
+# Solo se registran si ENVIRONMENT es exactamente "development".
+# Cualquier otro valor (o variable no seteada) los excluye.
 # ============================================
 if ENVIRONMENT == "development":
     @app.get("/test-brevo")
@@ -159,11 +181,40 @@ if ENVIRONMENT == "development":
 @app.on_event("startup")
 async def startup_event():
     Base.metadata.create_all(bind=engine)
-    print("✅ Base de datos inicializada")
-    print(f"🔒 Modo: {ENVIRONMENT}")
-    print(f"🌐 CORS permitido para: {ALLOWED_ORIGINS}")
-    print(f"🛡️ Rate limiting: Activo (200/día, 50/hora)")
-    print(f"🛡️ Security headers: Activo")
+
+    # Migraciones idempotentes al arrancar (todas <1ms si ya existen)
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            # PERF-M2: Índices compuestos
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_supplier_invoices_supplier_status "
+                "ON supplier_invoices (supplier_id, status)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_notifications_recipient_read "
+                "ON supplier_notifications (recipient_type, recipient_id, is_read)"
+            ))
+            # LOGIC-M2: Columna date_parsed (ahora mapeada en ORM)
+            conn.execute(text(
+                "ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS date_parsed DATE"
+            ))
+            # SEC-H2: Columnas account lockout
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0"
+            ))
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP"
+            ))
+            conn.commit()
+        except Exception:
+            pass  # SQLite u otros motores pueden no soportar IF NOT EXISTS
+
+    logger.info("Base de datos inicializada")
+    logger.info(f"Modo: {ENVIRONMENT}")
+    logger.info(f"CORS permitido para: {ALLOWED_ORIGINS}")
+    logger.info("Rate limiting: Activo (200/dia, 50/hora)")
+    logger.info("Security headers: Activo")
 
 if __name__ == "__main__":
     import uvicorn
