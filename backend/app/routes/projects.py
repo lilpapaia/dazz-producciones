@@ -2,6 +2,7 @@ import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, or_
 from typing import List, Optional
 from datetime import datetime, timezone
 from io import BytesIO
@@ -127,10 +128,14 @@ async def get_projects(
         query = query.filter(Project.owner_company_id.in_(user_company_ids))
 
     else:
-        # WORKER ve solo SUS proyectos de sus empresas
+        # WORKER ve proyectos donde es owner O responsible (case-insensitive)
         user_company_ids = get_user_company_ids(current_user, db)
+        username_lower = (current_user.username or "").lower()
         query = query.filter(
-            Project.owner_id == current_user.id,
+            or_(
+                Project.owner_id == current_user.id,
+                func.lower(Project.responsible) == username_lower,
+            ),
             Project.owner_company_id.in_(user_company_ids)
         )
 
