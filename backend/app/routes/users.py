@@ -47,23 +47,26 @@ async def get_usernames(
     if current_user.role == UserRole.WORKER:
         return [current_user]
 
-    # BOSS: Usuarios de sus empresas
+    # BOSS: Solo WORKERs de sus empresas (para selector de responsable)
     if current_user.role == UserRole.BOSS:
-        # Obtener IDs de empresas del BOSS
         user_company_ids = [uc.id for uc in current_user.companies]
-        
+
         if not user_company_ids:
-            # BOSS sin empresas, solo se retorna a sí mismo
             return [current_user]
-        
-        # Buscar usuarios que tengan al menos una empresa en común
-        users_in_companies = db.query(User).join(
+
+        workers = db.query(User).join(
             UserCompany, User.id == UserCompany.user_id
         ).filter(
-            UserCompany.company_id.in_(user_company_ids)
+            UserCompany.company_id.in_(user_company_ids),
+            User.role == UserRole.WORKER,
         ).distinct().all()
-        
-        return users_in_companies
+
+        # Incluir al propio BOSS también (puede ser responsable de sus proyectos)
+        boss_ids = {u.id for u in workers}
+        if current_user.id not in boss_ids:
+            workers.append(current_user)
+
+        return workers
     
     # Fallback: solo el usuario actual
     return [current_user]
