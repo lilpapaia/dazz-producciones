@@ -27,7 +27,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+# auto_error=False: return None instead of 403 when no token — we handle it as 401 below
+security = HTTPBearer(auto_error=False)
 
 # SEC-C3: Hash dummy para timing-attack protection en login
 # Pre-generado para no recalcular en cada request
@@ -144,6 +145,10 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # auto_error=False means credentials is None when no Authorization header
+    if credentials is None:
+        raise credentials_exception
 
     try:
         token = credentials.credentials

@@ -46,7 +46,7 @@ const Dashboard = () => {
   useEffect(() => {
     loadProjects();
     loadRecentSearches();
-    if (isAdmin) loadCompanies();
+    loadCompanies();
   }, []);
 
   const loadProjects = async () => {
@@ -180,10 +180,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Empresa — solo en tab 'Todas' para ADMIN */}
-      {isAdmin && activeTab === 'all' && (
+      {/* Empresa — visible en tab 'Todas' cuando hay múltiples empresas */}
+      {activeTab === 'all' && companies.length > 1 && (
         <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
-          <span>🏢</span>
+          <Building2 size={13} className="text-zinc-500" />
           <span>{project.owner_company?.name || project.company || 'Sin empresa'}</span>
         </div>
       )}
