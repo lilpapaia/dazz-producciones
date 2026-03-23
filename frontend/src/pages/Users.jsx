@@ -19,7 +19,7 @@ const Users = () => {
     name: '',
     email: '',
     username: '',
-    password: 'temporal123',
+    password: 'Temporal123!',
     role: ROLES.WORKER,
     company_ids: []
   });
@@ -54,11 +54,11 @@ const Users = () => {
       // PRIMERO: Cerrar modal y limpiar form
       setShowCreate(false);
       const tempEmail = newUser.email;
-      setNewUser({ 
-        name: '', 
-        email: '', 
-        username: '', 
-        password: 'temporal123', 
+      setNewUser({
+        name: '',
+        email: '',
+        username: '',
+        password: 'Temporal123!',
         role: ROLES.WORKER,
         company_ids: []
       });
@@ -71,7 +71,9 @@ const Users = () => {
       
     } catch (error) {
       console.error('Error creating user:', error);
-      showError('Error al crear usuario: ' + (error.response?.data?.detail || error.message));
+      const detail = error.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : error.message);
+      showError('Error al crear usuario: ' + msg);
     }
   };
 
@@ -90,7 +92,9 @@ const Users = () => {
       
     } catch (error) {
       console.error('Error updating user:', error);
-      showError('Error al actualizar usuario: ' + (error.response?.data?.detail || error.message));
+      const detail = error.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : error.message);
+      showError('Error al actualizar usuario: ' + msg);
     }
   };
 
@@ -103,7 +107,9 @@ const Users = () => {
       showSuccess('Usuario eliminado correctamente');
     } catch (error) {
       console.error('Error deleting user:', error);
-      showError('Error al eliminar usuario: ' + (error.response?.data?.detail || error.message));
+      const detail = error.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : error.message);
+      showError('Error al eliminar usuario: ' + msg);
     }
   };
 

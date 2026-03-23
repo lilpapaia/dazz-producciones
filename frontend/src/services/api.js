@@ -17,6 +17,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Helper: check if status should trigger refresh flow
+const isAuthError = (status) => status === 401 || status === 403;
+
 // VULN-009: Interceptor con refresh token automático
 let isRefreshing = false;
 let failedQueue = [];
@@ -37,9 +40,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si es 401 y no es un retry ni es el endpoint de refresh/login
+    // Si es 401/403 y no es un retry ni es el endpoint de refresh/login
+    // HTTPBearer devuelve 403 cuando falta el header Authorization, 401 cuando el token es inválido
     if (
-      error.response?.status === 401 &&
+      isAuthError(error.response?.status) &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh') &&
       !originalRequest.url?.includes('/auth/login')

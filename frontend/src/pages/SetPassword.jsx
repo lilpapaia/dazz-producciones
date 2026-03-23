@@ -14,7 +14,8 @@ const SetPassword = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const tokenFromUrl = searchParams.get('token');
+    // Read token once on mount — before replaceState clears it
+    const tokenFromUrl = new URLSearchParams(window.location.search).get('token');
     if (!tokenFromUrl) {
       setError('Token no encontrado. El enlace puede ser inválido.');
     } else {
@@ -30,7 +31,7 @@ const SetPassword = () => {
     meta.content = 'no-referrer';
     document.head.appendChild(meta);
     return () => { document.head.removeChild(meta); };
-  }, [searchParams]);
+  }, []); // Empty deps — run once on mount only
 
   const validatePassword = () => {
     if (password.length < 6) {
