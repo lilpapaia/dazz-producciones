@@ -34,8 +34,20 @@ const SetPassword = () => {
   }, []); // Empty deps — run once on mount only
 
   const validatePassword = () => {
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
+      return false;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('La contraseña debe contener al menos una mayúscula');
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError('La contraseña debe contener al menos un número');
+      return false;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{}|;:'",.<>?/\\`~]/.test(password)) {
+      setError('La contraseña debe contener al menos un símbolo especial');
       return false;
     }
     if (password !== confirmPassword) {
@@ -67,7 +79,9 @@ const SetPassword = () => {
       }, 2000);
       
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error al configurar la contraseña. El token puede haber expirado.');
+      const detail = err.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : 'Error al configurar la contraseña. El token puede haber expirado.');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -138,10 +152,10 @@ const SetPassword = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-3 text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Min 8 chars, 1 mayúscula, 1 número, 1 símbolo"
                 autoComplete="new-password"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -157,7 +171,7 @@ const SetPassword = () => {
                 placeholder="Repite la contraseña"
                 autoComplete="new-password"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -194,7 +208,7 @@ const SetPassword = () => {
           {/* Info panel */}
           <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-sm">
             <p className="text-xs text-blue-400">
-              <strong>💡 Consejo:</strong> Usa una contraseña segura que incluya letras, números y símbolos.
+              <strong>Requisitos:</strong> Mínimo 8 caracteres, 1 mayúscula, 1 número, 1 símbolo especial.
             </p>
           </div>
         </div>
