@@ -93,6 +93,9 @@ async def register(
             )
 
     # Crear usuario en BD
+    if not user.password or not user.password.strip():
+        raise HTTPException(status_code=400, detail="Password is required for new users")
+
     try:
         hashed_password = get_password_hash(user.password)
         role_value = user.role.value if hasattr(user.role, 'value') else user.role

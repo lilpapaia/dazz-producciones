@@ -15,6 +15,7 @@ const Users = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [editInitial, setEditInitial] = useState(null);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -79,7 +80,9 @@ const Users = () => {
 
   const handleEdit = async () => {
     try {
-      await updateUser(editingUser.id, editingUser);
+      const payload = { ...editingUser };
+      if (!payload.password || !payload.password.trim()) delete payload.password;
+      await updateUser(payload.id, payload);
       
       // Cerrar modal
       setShowEdit(false);
@@ -114,16 +117,31 @@ const Users = () => {
   };
 
   const openEditModal = (user) => {
-    setEditingUser({
+    const values = {
       id: user.id,
       name: user.name,
       email: user.email,
       username: user.username || '',
-      password: '', // Vacío = no cambiar
+      password: '',
       role: user.role,
       company_ids: user.companies?.map(c => c.id) || []
-    });
+    };
+    setEditingUser(values);
+    setEditInitial({ ...values, company_ids: [...values.company_ids] });
     setShowEdit(true);
+  };
+
+  const editHasChanges = () => {
+    if (!editingUser || !editInitial) return false;
+    if (editingUser.name !== editInitial.name) return true;
+    if (editingUser.email !== editInitial.email) return true;
+    if (editingUser.username !== editInitial.username) return true;
+    if (editingUser.role !== editInitial.role) return true;
+    if (editingUser.password && editingUser.password.trim()) return true;
+    const a = [...editingUser.company_ids].sort();
+    const b = [...editInitial.company_ids].sort();
+    if (a.length !== b.length || a.some((v, i) => v !== b[i])) return true;
+    return false;
   };
 
   // Generar username automático del nombre
@@ -413,7 +431,7 @@ const Users = () => {
                   </button>
                   <button
                     onClick={handleEdit}
-                    disabled={!editingUser.name || !editingUser.email || !editingUser.username}
+                    disabled={!editingUser.name || !editingUser.email || !editingUser.username || !editHasChanges()}
                     className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     type="button"
                   >

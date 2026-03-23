@@ -69,13 +69,15 @@ class UserBase(BaseModel):
     role: UserRole = UserRole.WORKER
 
 class UserCreate(UserBase):
-    password: str = Field(min_length=8)
+    password: Optional[str] = None
     company_ids: Optional[List[int]] = []
 
     @field_validator('password')
     @classmethod
-    def validate_password_complexity(cls, v: str) -> str:
-        return _validate_password_strength(v)
+    def validate_password_complexity(cls, v):
+        if v is not None and v.strip():
+            return _validate_password_strength(v)
+        return v
 
 class UserLogin(BaseModel):
     identifier: str  # Email O username
