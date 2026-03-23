@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, UserX, Link2, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2 } from 'lucide-react';
 import { getSupplier, updateSupplier, deactivateSupplier, reactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
+import useEscapeKey from '../../hooks/useEscapeKey';
 import { showError } from '../../utils/toast';
 import useClickOutside from '../../hooks/useClickOutside';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -45,12 +47,15 @@ const SupplierDetail = () => {
 
   // Edit modal
   const [editModal, setEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ supplier_type: '', oc_number: '' });
+  const [editForm, setEditForm] = useState({ oc_number: '' });
   const [editSaving, setEditSaving] = useState(false);
 
   // Delete invoice modal
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleteReason, setDeleteReason] = useState('');
+
+  // Confirm deactivate/reactivate
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Voice search
   const { isListening, startVoiceSearch } = useVoiceSearch({
@@ -61,6 +66,8 @@ const SupplierDetail = () => {
     }, []),
   });
   useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
+  useEscapeKey(() => setEditModal(false), editModal);
+  useEscapeKey(() => { setDeleteModal(null); setDeleteReason(''); }, !!deleteModal);
 
   const load = () => {
     Promise.all([
@@ -82,15 +89,13 @@ const SupplierDetail = () => {
   }, [id]);
 
   // --- Handlers ---
-  const handleDeactivate = async () => {
-    if (!confirm('¿Desactivar este proveedor? Se invalidarán todos sus tokens.')) return;
-    await deactivateSupplier(id);
-    load();
-  };
+  const handleDeactivate = () => setConfirmAction({ type: 'deactivate' });
+  const handleReactivate = () => setConfirmAction({ type: 'reactivate' });
 
-  const handleReactivate = async () => {
-    if (!confirm('¿Reactivar este proveedor?')) return;
-    await reactivateSupplier(id);
+  const handleConfirmAction = async () => {
+    if (confirmAction?.type === 'deactivate') await deactivateSupplier(id);
+    else if (confirmAction?.type === 'reactivate') await reactivateSupplier(id);
+    setConfirmAction(null);
     load();
   };
 
@@ -153,7 +158,6 @@ const SupplierDetail = () => {
   const handleEditSave = async () => {
     setEditSaving(true);
     try {
-      await updateSupplier(id, { supplier_type: editForm.supplier_type });
       if (editForm.oc_number.trim() && editForm.oc_number.trim() !== (supplier.oc_number || '')) {
         await assignOC(id, editForm.oc_number.trim());
       }
@@ -164,10 +168,7 @@ const SupplierDetail = () => {
   };
 
   const openEditModal = () => {
-    setEditForm({
-      supplier_type: supplier.supplier_type || 'GENERAL',
-      oc_number: supplier.oc_number || '',
-    });
+    setEditForm({ oc_number: supplier.oc_number || '' });
     setEditModal(true);
   };
 
@@ -246,9 +247,11 @@ const SupplierDetail = () => {
                 <span className={`text-[13px] font-bold px-[8px] py-[3px] rounded border ${supplier.is_active ? 'bg-green-400/10 text-green-400 border-green-400/20' : 'bg-zinc-700/50 text-zinc-500 border-zinc-700'}`}>
                   {STATUS_LABEL[supplier.status] || supplier.status}
                 </span>
-                <span className={`text-[13px] font-bold px-[8px] py-[3px] rounded border ${supplier.supplier_type === 'INFLUENCER' ? 'bg-purple-400/10 text-purple-400 border-purple-400/20' : supplier.supplier_type === 'MIXED' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-400/10 text-blue-400 border-blue-400/20'}`}>
-                  {supplier.supplier_type === 'INFLUENCER' ? 'Talent' : supplier.supplier_type === 'GENERAL' ? 'General' : 'Mixed'}
-                </span>
+                {supplier.oc_number && (
+                  <span className="text-[13px] font-bold px-[8px] py-[3px] rounded border bg-purple-400/10 text-purple-400 border-purple-400/20">
+                    OC permanente
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -569,15 +572,6 @@ const SupplierDetail = () => {
             <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-4">Editar proveedor</h3>
             <div className="space-y-3">
               <div>
-                <label className={labelCls}>Tipo de proveedor</label>
-                <select value={editForm.supplier_type} onChange={e => setEditForm(f => ({ ...f, supplier_type: e.target.value }))}
-                  className={`${inputCls} appearance-none`}>
-                  <option value="GENERAL">General</option>
-                  <option value="INFLUENCER">Talent / Influencer</option>
-                  <option value="MIXED">Mixed</option>
-                </select>
-              </div>
-              <div>
                 <label className={labelCls}>OC asignado</label>
                 <input value={editForm.oc_number} onChange={e => setEditForm(f => ({ ...f, oc_number: e.target.value }))} placeholder="OC-MGMTINT2026047" className={`${inputCls} font-mono`} />
                 <div className="text-[9px] text-zinc-600 mt-1">El OC debe existir en el sistema. Dejar vacío para no cambiar.</div>
@@ -615,6 +609,17 @@ const SupplierDetail = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+        title={confirmAction?.type === 'deactivate' ? 'Desactivar proveedor' : 'Reactivar proveedor'}
+        message={confirmAction?.type === 'deactivate'
+          ? '¿Desactivar este proveedor? Se invalidarán todos sus tokens.'
+          : '¿Reactivar este proveedor?'}
+        type={confirmAction?.type === 'deactivate' ? 'danger' : 'warning'}
+      />
     </div>
   );
 };

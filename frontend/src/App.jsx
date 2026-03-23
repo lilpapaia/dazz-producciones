@@ -30,6 +30,7 @@ const InvoicesList = lazy(() => import('./pages/suppliers/InvoicesList'));
 const SupplierInvite = lazy(() => import('./pages/suppliers/SupplierInvite'));
 const SupplierNotifications = lazy(() => import('./pages/suppliers/SupplierNotifications'));
 const InvoiceDetail = lazy(() => import('./pages/suppliers/InvoiceDetail'));
+const AutoInvoice = lazy(() => import('./pages/suppliers/AutoInvoice'));
 
 // PWA Components
 import { PWAUpdatePrompt, PWAInstallPrompt } from './components/PWAComponents';
@@ -168,6 +169,7 @@ function App() {
               <Route path="invoices" element={<InvoicesList />} />
               <Route path="invoices/:invoiceId" element={<InvoiceDetail />} />
               <Route path="invite" element={<SupplierInvite />} />
+              <Route path="autoinvoice" element={<AutoInvoice />} />
               <Route path="notifications" element={<SupplierNotifications />} />
               <Route path=":id" element={<SupplierDetail />} />
             </Route>

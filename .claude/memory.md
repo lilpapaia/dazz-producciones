@@ -243,7 +243,7 @@ frontend/
 - ❌ `/health` y `/` devuelven 500 (bug rate limiter slowapi)
 - ⚠️ Rate limiting no se activa (workers gunicorn no comparten memoria)
 
-### Estado actual (2026-03-17)
+### Estado actual (2026-03-18)
 - ✅ 3 CRITICAL arreglados: C-1 IBAN encriptado Fernet, C-2 file stream fix, C-3 rate limiting
 - ✅ 7 HIGH arreglados: H-1/H-2 N+1 joinedload, H-3 date String→Date migración, H-4 magic bytes PDF, H-5 filename sanitize, H-6 logout auth, H-7 enum Literal
 - ✅ Bug OC validation: lógica INFLUENCER/GENERAL/MIXED implementada
@@ -252,9 +252,11 @@ frontend/
 - ✅ InvoiceDetail nuevo: detalle factura con datos, importes, validación IA, acciones, navegación anterior/siguiente
 - ✅ InvoicesList completado: sin columna IA, Trash2 funcional con modal motivo, buscador con voz
 - ✅ Grupo 1 UI fixes: bank cert View PDF, custom message invitación, cert upload error visible
+- ✅ Cloudinary fixes (2026-03-17): DELETE factura borra PDF+páginas, páginas usan folder correcto, extract_public_id de URL antes de destroy
+- ✅ Fixes 2026-03-18: descarga PDF forzada (fetch+blob), nombre archivo descriptivo, dominio legacy eliminado, extract_public_id solo busca 'upload', .pdf en public_id raw, badge IA ok eliminado, endpoint reactivate + botón dinámico Activar/Desactivar
 - ⏳ UI admin pendiente: SuppliersDashboard revisar, SupplierNotifications revisar
 - ⏳ Portal proveedor: pendiente revisión UI completa
-- ✅ Cloudinary fixes (2026-03-17): DELETE factura borra PDF+páginas, páginas usan folder correcto `dazz-suppliers/pages/{supplier_id}/`, `delete_invoice_pdf` extrae public_id de URL antes de destroy
+- ⚠️ No existe endpoint DELETE para borrar un proveedor completo (solo facturas individuales)
 
 ---
 
@@ -387,7 +389,7 @@ frontend/
 
 1. ~~**Fixes CRITICAL proveedores:**~~ ✅ C-1, C-2, C-3 arreglados
 2. ~~**Fixes HIGH proveedores:**~~ ✅ H-1 a H-7 arreglados
-3. **UI Admin proveedores:** En progreso — SupplierDetail, InvoicesList, InvoiceDetail completados. Pendiente: SuppliersDashboard, SupplierNotifications revisar
+3. ~~**UI Admin proveedores:**~~ ✅ COMPLETADA (2026-03-18) — tamaños estandarizados, kanban eliminado, badge EQUIPO eliminado, responsive móvil completo en todos los componentes
 4. **Portal proveedor UI:** Pendiente revisión completa
 5. **Fixes MEDIUM proveedores:** 8 pendientes (índices, atomicidad, etc.)
 6. **Testing general:** 70%+ coverage backend, E2E críticos frontend
@@ -396,5 +398,86 @@ frontend/
 
 ---
 
-**Última actualización:** 2026-03-17
-**Estado:** Producción activa — CRITICAL+HIGH arreglados, Cloudinary fixes completados, UI admin en progreso, portal proveedor pendiente
+**Última actualización:** 2026-03-18
+**Estado:** Producción activa — CRITICAL+HIGH arreglados, UI admin proveedores COMPLETADA (tamaños + responsive móvil), portal proveedor UI pendiente
+
+---
+
+## 🎨 UI Admin Proveedores (Completada 2026-03-18)
+
+### Tamaños estandarizados (desktop)
+- Títulos: Bebas Neue 22px
+- Cuerpo: 13px
+- Labels uppercase: 11-12px
+- Subtextos: 11px
+- Títulos secciones: 13-15px
+- Botones: 13px
+- OC badge: 12px
+- IBAN: whitespace-nowrap (una línea)
+
+### Cambios funcionales
+- Kanban eliminado de InvoicesList (no aportaba valor)
+- Badge EQUIPO eliminado de filas factura
+- Botón "Ver →" eliminado de SuppliersList (fila entera clickable)
+- Papelera 34x34px cuadrada en SupplierDetail e InvoicesList
+- Botón Aprobar amber sólido (no ghost)
+- Filas factura: OC badge + fecha separados, sin texto campaña
+
+### Responsive móvil (solo añade clases sm:/lg:, desktop intacto)
+- **SuppliersLayout:** sidebar hidden móvil + bottom nav fija 5 items con badge notificaciones
+- **SuppliersDashboard:** grid cols-1 móvil, KPI labels 11px móvil
+- **SuppliersList:** cards móvil + tabla desktop, chips empresa en fila scrollable -mx-4 pegada a bordes
+- **InvoicesList:** cards móvil + tabla desktop con acciones inline
+- **SupplierDetail:** grid apilado móvil, cards facturas móvil, chips filtro scrollables -mx-4
+- **SupplierInvite:** grids cols-1 móvil (tipo proveedor, nombre/NIF/empresa, email/nombre)
+- **SupplierNotifications:** título 22px, "Se archivan" color zinc-400
+
+---
+
+## 🚀 Portal Proveedores v2 (Acordado 2026-03-23)
+
+### Cambios estructurales acordados con el cliente
+
+**Tipos de proveedor eliminados:**
+- Se eliminan INFLUENCER/GENERAL/MIXED del modelo
+- Un solo tipo de proveedor
+- La distinción pasa a ser: tiene OC permanente o no
+- Visualmente: badge del OC si lo tiene asignado
+- Puede facturar a cualquier empresa
+
+**Facturas sin OC:**
+- Filtro "No OC" en InvoicesList admin
+- Buscador con autocompletado (OCs permanentes + proyectos abiertos)
+- Si no existe → escritura libre
+- Al asignar: OC_PENDING → PENDING
+
+**Autofacturación:**
+- Nueva sección admin: el admin genera facturas en nombre del proveedor
+- Una plantilla Excel base (pendiente de recibir de Julio)
+- Los datos del emisor cambian según empresa DAZZ seleccionada
+- Todos los campos obligatorios y editables aunque se autocompleten
+- PDF generado → Cloudinary → portal proveedor → email automático
+- Portal proveedor: nueva pestaña "Received invoices"
+
+**Portal Proveedores v2 UI:**
+- Layout: sidebar desktop + bottom nav móvil
+- 4 secciones: Home, Upload, Notifications, Profile
+- Home: 2 pestañas (My invoices / Received invoices)
+- Mockup aprobado: `docs/DAZZ_Suppliers_Portal_Mockup.html`
+- PWA: pendiente configurar vite-plugin-pwa
+
+**Validación IA IBAN:**
+- Al subir factura: compara IBAN de la factura vs IBAN en BD
+- En registro: compara IBAN del certificado vs IBAN escrito
+- Bloquea si no coinciden
+
+**Cambio de datos:**
+- Formulario en portal → revisión y aprobación del admin
+- IBAN: sigue el antiguo hasta que el admin aprueba el nuevo
+
+**Desactivación:**
+- Solicitud desde portal → admin confirma
+- Datos conservados por ley (6 años)
+
+**RGPD:**
+- Política de privacidad: lo último, con abogado

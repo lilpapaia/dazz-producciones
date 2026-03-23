@@ -279,63 +279,43 @@ def validate_supplier_invoice(
     elif extracted_nif and not supplier_nif:
         warnings.append("El proveedor no tiene NIF/CIF registrado — no se pudo validar")
 
-    # --- 3. IBAN coincide ---
+    # --- 3. IBAN coincide (warning, no bloquea) ---
     extracted_iban = _normalize_iban(extracted_data.get("iban"))
     supplier_iban = None
     if supplier.iban_encrypted:
         supplier_iban = _normalize_iban(decrypt_iban(supplier.iban_encrypted))
 
+    iban_match = None  # None = not checked, True = match, False = mismatch
     if extracted_iban and supplier_iban:
         if extracted_iban != supplier_iban:
-            errors.append(
-                "IBAN de la factura no coincide con el IBAN registrado del proveedor"
-            )
+            iban_match = False
+            warnings.append("IBAN on invoice does not match the registered IBAN")
+        else:
+            iban_match = True
     elif extracted_iban and not supplier_iban:
-        warnings.append("El proveedor no tiene IBAN registrado — no se pudo validar")
+        warnings.append("Supplier has no IBAN registered — could not validate")
 
     # --- 4. OC existe y empresa correcta ---
     oc_number = (extracted_data.get("oc_number") or "").strip()
-    supplier_type = supplier.supplier_type.value if supplier.supplier_type else "GENERAL"
 
     if oc_number:
-        if supplier_type == "INFLUENCER":
-            # INFLUENCER: OC must exist in supplier_ocs and match their assigned OC
+        if supplier.oc_id:
+            # Proveedor con OC permanente: verificar si coincide
             oc_match = db.query(SupplierOC).filter(
                 SupplierOC.oc_number.ilike(oc_number)
             ).first()
 
-            if not oc_match:
-                oc_status = "NOT_FOUND"
-                errors.append(
-                    f"OC '{oc_number}' no existe en el sistema de OCs de influencers"
-                )
-            elif not supplier.oc_id or supplier.oc_id != oc_match.id:
-                oc_status = "WRONG_SUPPLIER"
-                errors.append(
-                    f"OC '{oc_number}' no corresponde a este proveedor"
-                )
-            else:
-                oc_status = "FOUND"
-                company_id = oc_match.company_id
-
-        elif supplier_type == "MIXED":
-            # MIXED: try supplier_ocs first, then projects
-            oc_match = db.query(SupplierOC).filter(
-                SupplierOC.oc_number.ilike(oc_number)
-            ).first()
-
-            if oc_match and supplier.oc_id and supplier.oc_id == oc_match.id:
-                # Matched their assigned OC
+            if oc_match and oc_match.id == supplier.oc_id:
+                # OC permanente del proveedor — OK
                 oc_status = "FOUND"
                 company_id = oc_match.company_id
             else:
-                # Try as project (general supplier flow)
+                # No es su OC permanente — intentar como proyecto
                 oc_status, company_id, project_id = _resolve_oc_as_project(
                     oc_number, db, errors
                 )
-
         else:
-            # GENERAL: OC must exist as a project in DAZZ
+            # Sin OC permanente — resolver como proyecto
             oc_status, company_id, project_id = _resolve_oc_as_project(
                 oc_number, db, errors
             )
@@ -384,6 +364,7 @@ def validate_supplier_invoice(
         "company_id": company_id,
         "project_id": project_id,
         "date_parsed": parsed_date,
+        "iban_match": iban_match,
     }
 
 
@@ -395,7 +376,7 @@ def _resolve_oc_as_project(
     oc_number: str, db: Session, errors: List[str]
 ) -> tuple:
     """
-    Resolve OC as a DAZZ project (for GENERAL and MIXED suppliers).
+    Resolve OC as a DAZZ project.
 
     Returns:
         (oc_status, company_id, project_id)
@@ -422,6 +403,56 @@ def _resolve_oc_as_project(
         f"The project must be created before submitting the invoice."
     )
     return "NOT_FOUND", company_id, None
+
+
+CERT_IBAN_PROMPT = """Analyze this bank certificate PDF and extract the IBAN number.
+Return ONLY a JSON object with a single field:
+{"iban": "ESXX XXXX XXXX XXXX XXXX XXXX"}
+If no IBAN is found, return: {"iban": null}
+No explanations, no markdown."""
+
+
+def extract_iban_from_cert(file_path: str) -> Optional[str]:
+    """
+    Extract IBAN from a bank certificate PDF using Claude.
+
+    Returns:
+        IBAN string or None if not found/not parseable
+    """
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+
+    base64_data = base64.b64encode(file_data).decode("utf-8")
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+    message = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=256,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "document",
+                    "source": {"type": "base64", "media_type": "application/pdf", "data": base64_data},
+                },
+                {"type": "text", "text": CERT_IBAN_PROMPT},
+            ],
+        }],
+    )
+
+    response_text = message.content[0].text.strip()
+    if response_text.startswith("```"):
+        response_text = response_text.split("```")[1]
+        if response_text.startswith("json"):
+            response_text = response_text[4:]
+        response_text = response_text.strip()
+
+    try:
+        result = json.loads(response_text)
+        return result.get("iban")
+    except json.JSONDecodeError:
+        return None
 
 
 def _normalize_nif(nif: Optional[str]) -> Optional[str]:

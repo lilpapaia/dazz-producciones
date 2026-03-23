@@ -15,7 +15,7 @@ import secrets
 import string
 
 from config.database import get_db
-from app.models.database import User, Company, Ticket, TicketType
+from app.models.database import User, Company, Project, ProjectStatus, Ticket, TicketType
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierOC, SupplierNotification,
     SupplierInvitation, InvoiceStatus, SupplierStatus,
@@ -24,7 +24,8 @@ from app.models.suppliers import (
 from app.services.auth import get_current_admin_user
 from app.models.supplier_schemas import (
     InviteRequest, InviteResponse, SupplierResponse, SupplierUpdate,
-    AssignOCRequest, NoteRequest, InvoiceStatusUpdate, InvoiceResponse, InvoiceDetailResponse,
+    AssignOCRequest, AssignInvoiceOCRequest, NoteRequest, InvoiceStatusUpdate,
+    InvoiceResponse, InvoiceDetailResponse,
     NotificationResponse, DashboardResponse, CreateOCRequest, CreateOCResponse,
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
@@ -106,6 +107,56 @@ async def create_oc(
     )
 
 
+@router.get("/oc-suggestions")
+async def oc_suggestions(
+    q: str = Query("", max_length=50),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Autocomplete: search permanent OCs + open projects by code/name."""
+    results = []
+    term = q.strip()
+    if len(term) < 2:
+        return results
+
+    # 1. OCs permanentes (supplier_ocs)
+    ocs = db.query(SupplierOC).filter(
+        SupplierOC.oc_number.ilike(f"%{term}%")
+    ).limit(5).all()
+    for oc in ocs:
+        company_name = None
+        if oc.company_id:
+            co = db.query(Company).filter(Company.id == oc.company_id).first()
+            company_name = co.name if co else None
+        results.append({
+            "type": "permanent_oc",
+            "oc_number": oc.oc_number,
+            "label": oc.talent_name,
+            "company_name": company_name,
+        })
+
+    # 2. Proyectos abiertos (creative_code o description)
+    projects = db.query(Project).filter(
+        Project.status == ProjectStatus.EN_CURSO,
+        (Project.creative_code.ilike(f"%{term}%") | Project.description.ilike(f"%{term}%")),
+    ).limit(5).all()
+    for p in projects:
+        company_name = None
+        if p.owner_company_id:
+            co = db.query(Company).filter(Company.id == p.owner_company_id).first()
+            company_name = co.name if co else None
+        results.append({
+            "type": "project",
+            "oc_number": p.creative_code,
+            "label": p.description or p.creative_code,
+            "company_name": company_name,
+            "project_id": p.id,
+            "company_id": p.owner_company_id,
+        })
+
+    return results
+
+
 # ============================================
 # INVITATIONS
 # ============================================
@@ -134,14 +185,6 @@ async def invite_supplier(
     token = _generate_token()
     expires_at = datetime.now(timezone.utc) + timedelta(hours=72)
 
-    # Ensure supplier_type column exists in invitations
-    from sqlalchemy import text as sa_text
-    try:
-        db.execute(sa_text("ALTER TABLE supplier_invitations ADD COLUMN IF NOT EXISTS supplier_type VARCHAR(20)"))
-        db.commit()
-    except Exception:
-        db.rollback()
-
     invitation = SupplierInvitation(
         email=body.email,
         name=body.name,
@@ -153,20 +196,11 @@ async def invite_supplier(
     db.commit()
     db.refresh(invitation)
 
-    # Save supplier_type via raw SQL (column not in ORM)
-    if body.supplier_type:
-        try:
-            db.execute(sa_text("UPDATE supplier_invitations SET supplier_type = :st WHERE id = :id"),
-                {"st": body.supplier_type, "id": invitation.id})
-            db.commit()
-        except Exception:
-            pass
-
     # Send email (non-blocking — don't fail if email fails)
     try:
         send_supplier_invitation(body.name, body.email, token, body.message)
     except Exception as e:
-        print(f"Warning: invitation email failed: {e}")
+        logger.warning(f"Invitation email failed: {e}")
 
     return InviteResponse(
         id=invitation.id,
@@ -246,8 +280,8 @@ async def list_suppliers(
             id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
             phone=s.phone, address=s.address, iban=_decode_iban(s),
             bank_cert_url=s.bank_cert_url,
-            supplier_type=s.supplier_type.value if s.supplier_type else "GENERAL",
             status=s.status.value if s.status else "NEW",
+            has_permanent_oc=s.oc_id is not None,
             oc_id=s.oc_id, oc_number=oc_number, company_name=company_name,
             is_active=s.is_active, notes_internal=s.notes_internal,
             gdpr_consent=s.gdpr_consent,
@@ -288,8 +322,8 @@ def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
         id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
         phone=s.phone, address=s.address, iban=_decode_iban(s),
         bank_cert_url=s.bank_cert_url,
-        supplier_type=s.supplier_type.value if s.supplier_type else "GENERAL",
         status=s.status.value if s.status else "NEW",
+        has_permanent_oc=s.oc_id is not None,
         oc_id=s.oc_id, oc_number=oc_number, company_name=company_name,
         is_active=s.is_active, notes_internal=s.notes_internal,
         gdpr_consent=s.gdpr_consent,
@@ -404,7 +438,7 @@ async def update_supplier(
     if not supplier:
         raise HTTPException(404, "Supplier not found")
 
-    ALLOWED_FIELDS = {"name", "nif_cif", "phone", "address", "supplier_type", "notes_internal"}
+    ALLOWED_FIELDS = {"name", "nif_cif", "phone", "address", "notes_internal"}
     for field, value in body.model_dump(exclude_unset=True).items():
         if field in ALLOWED_FIELDS:
             setattr(supplier, field, value)
@@ -541,6 +575,59 @@ async def list_all_invoices(
     return result
 
 
+@router.patch("/invoices/{invoice_id}/assign-oc")
+async def assign_invoice_oc(
+    invoice_id: int,
+    body: AssignInvoiceOCRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Assign OC to an OC_PENDING invoice, transitioning it to PENDING."""
+    invoice = db.query(SupplierInvoice).filter(
+        SupplierInvoice.id == invoice_id
+    ).first()
+    if not invoice:
+        raise HTTPException(404, "Invoice not found")
+
+    if invoice.status != InvoiceStatus.OC_PENDING:
+        raise HTTPException(400, "Only OC_PENDING invoices can be assigned an OC")
+
+    oc_number = body.oc_number.strip()
+    invoice.oc_number = oc_number
+
+    # Try to resolve project_id and company_id from the OC
+    project = db.query(Project).filter(
+        Project.creative_code.ilike(oc_number)
+    ).first()
+    if project:
+        invoice.project_id = project.id
+        invoice.company_id = project.owner_company_id
+    else:
+        # Try supplier_ocs for company_id
+        oc = db.query(SupplierOC).filter(
+            SupplierOC.oc_number.ilike(oc_number)
+        ).first()
+        if oc:
+            invoice.company_id = oc.company_id
+        else:
+            # Free text OC — try to resolve company via prefix map
+            from app.services.supplier_ai import resolve_company_from_oc
+            invoice.company_id = resolve_company_from_oc(oc_number, db)
+
+    invoice.status = InvoiceStatus.PENDING
+
+    # Notify supplier
+    supplier = db.query(Supplier).filter(Supplier.id == invoice.supplier_id).first()
+    if supplier:
+        _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+                NotificationEventType.OC_LINKED, "OC Assigned",
+                f"Invoice {invoice.invoice_number} linked to OC {oc_number}",
+                invoice_id=invoice.id, supplier_id=supplier.id)
+
+    db.commit()
+    return {"message": f"OC '{oc_number}' assigned, invoice is now PENDING"}
+
+
 @router.get("/invoices/{invoice_id}", response_model=InvoiceDetailResponse)
 async def get_invoice(
     invoice_id: int,
@@ -605,13 +692,18 @@ async def update_invoice_status(
     # Validate transitions
     valid_transitions = {
         "PENDING": ["APPROVED", "REJECTED"],
-        "OC_PENDING": ["PENDING", "REJECTED"],  # Legacy: kept for existing data
+        "OC_PENDING": ["PENDING", "REJECTED"],
         "APPROVED": ["PAID"],
+        "DELETE_REQUESTED": [],  # M-17: Must use DELETE endpoint, not status change
     }
     current = invoice.status.value if invoice.status else "PENDING"
     allowed = valid_transitions.get(current, [])
 
     if new_status not in allowed:
+        if current == "DELETE_REQUESTED":
+            raise HTTPException(400, "This invoice has a pending deletion request. Use the delete endpoint to confirm or reject it.")
+        if current in ("PAID", "REJECTED"):
+            raise HTTPException(400, f"Invoice is {current} — no further status changes allowed.")
         raise HTTPException(400, f"Cannot transition from {current} to {new_status}. Allowed: {allowed}")
 
     if new_status == "REJECTED" and not body.reason:
@@ -653,7 +745,7 @@ async def update_invoice_status(
                 supplier_invoice_id=invoice.id,
             )
             db.add(ticket)
-            print(f"Ticket created in DAZZ for invoice {invoice.invoice_number} -> project {invoice.project_id}")
+            logger.info(f"Ticket created in DAZZ for invoice {invoice.invoice_number} -> project {invoice.project_id}")
 
     # Notifications + emails
     if supplier:
@@ -710,10 +802,10 @@ async def confirm_invoice_deletion(
         if linked_ticket.is_reviewed:
             linked_ticket.payment_status = "Anulado"
             linked_ticket.notes = (linked_ticket.notes or "") + "\n[AUTO] Voided: supplier invoice deleted from portal"
-            print(f"Ticket {linked_ticket.id} marked as Anulado (had activity)")
+            logger.info(f"Ticket {linked_ticket.id} marked as Anulado (had activity)")
         else:
             db.delete(linked_ticket)
-            print(f"Ticket {linked_ticket.id} deleted (cascade from supplier invoice)")
+            logger.info(f"Ticket {linked_ticket.id} deleted (cascade from supplier invoice)")
 
     # LOGIC-M5: Delete Cloudinary files with error logging (was silent pass)
     if invoice.file_url:
@@ -801,6 +893,33 @@ async def mark_all_notifications_read(
     ).update({"is_read": True})
     db.commit()
     return {"message": "All notifications marked as read"}
+
+
+# ============================================
+# ADMIN UTILITIES
+# ============================================
+
+@router.post("/admin/backfill-date-parsed")
+async def backfill_date_parsed(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """One-time backfill: parse date string → date_parsed for old invoices with NULL date_parsed."""
+    invoices = db.query(SupplierInvoice).filter(
+        SupplierInvoice.date_parsed == None,
+        SupplierInvoice.date != None,
+        SupplierInvoice.date != "",
+    ).all()
+
+    updated = 0
+    for inv in invoices:
+        parsed = parse_invoice_date(inv.date)
+        if parsed:
+            inv.date_parsed = parsed
+            updated += 1
+
+    db.commit()
+    return {"message": f"Backfilled {updated}/{len(invoices)} invoices"}
 
 
 # ============================================

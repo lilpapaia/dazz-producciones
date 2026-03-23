@@ -31,8 +31,6 @@ class InviteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     email: EmailStr
     message: Optional[str] = Field(default=None, max_length=500)
-    # LOGIC-M1: Validar supplier_type con Literal (lowercase — es lo que guarda raw SQL en invitations)
-    supplier_type: Optional[Literal["talent", "general", "mixed"]] = None
 
 
 class InviteResponse(BaseModel):
@@ -52,8 +50,8 @@ class SupplierResponse(BaseModel):
     address: Optional[str] = None
     iban: Optional[str] = None
     bank_cert_url: Optional[str] = None
-    supplier_type: str
     status: str
+    has_permanent_oc: bool = False
     oc_id: Optional[int] = None
     oc_number: Optional[str] = None
     company_name: Optional[str] = None
@@ -75,13 +73,15 @@ class SupplierUpdate(BaseModel):
     nif_cif: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-    # LOGIC-M1: Validar supplier_type con Literal (uppercase — enum SupplierType)
-    supplier_type: Optional[Literal["INFLUENCER", "GENERAL", "MIXED"]] = None
     notes_internal: Optional[str] = None
 
 
 class AssignOCRequest(BaseModel):
     oc_number: str = Field(min_length=1, max_length=50)
+
+
+class AssignInvoiceOCRequest(BaseModel):
+    oc_number: str = Field(min_length=1, max_length=100)
 
 
 class NoteRequest(BaseModel):
@@ -115,6 +115,7 @@ class InvoiceResponse(BaseModel):
     status: str
     rejection_reason: Optional[str] = None
     delete_reason: Optional[str] = None
+    is_autoinvoice: bool = False
     created_at: datetime
 
     class Config:
@@ -157,7 +158,6 @@ class ValidateTokenResponse(BaseModel):
     valid: bool
     name: Optional[str] = None
     email: Optional[str] = None
-    supplier_type: Optional[str] = None
 
 
 class RegisterRequest(BaseModel):
@@ -217,8 +217,11 @@ class ProfileResponse(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     iban_masked: Optional[str] = None
-    supplier_type: str
+    has_permanent_oc: bool = False
     oc_number: Optional[str] = None
+    company_name: Optional[str] = None
+    has_pending_change: bool = False
+    pending_change_info: Optional[str] = None
     created_at: datetime
 
 
@@ -235,6 +238,8 @@ class PortalInvoiceResponse(BaseModel):
     status: str
     rejection_reason: Optional[str] = None
     file_url: Optional[str] = None
+    is_autoinvoice: bool = False
+    company_name: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -249,3 +254,30 @@ class SummaryResponse(BaseModel):
     pending_amount: float
     paid_this_month: float
     total_invoices: int
+    unread_notifications: int = 0
+
+
+class DataChangeRequest(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=300)
+    phone: Optional[str] = Field(default=None, max_length=50)
+    address: Optional[str] = Field(default=None, max_length=500)
+
+
+class IbanChangeRequest(BaseModel):
+    new_iban: str = Field(min_length=10, max_length=50)
+
+
+class DeactivationRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class AutoInvoiceRequest(BaseModel):
+    company_id: int
+    supplier_id: int
+    invoice_number: str = Field(min_length=1, max_length=50)
+    date: str = Field(min_length=1, max_length=20)
+    concept: str = Field(min_length=1, max_length=1000)
+    base_amount: float = Field(gt=0)
+    iva_percentage: float = Field(ge=0, le=1)
+    irpf_percentage: float = Field(ge=0, le=1)
+    oc_number: str = Field(min_length=1, max_length=100)

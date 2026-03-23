@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { validateToken, registerSupplier, uploadBankCert } from '../services/api';
+import { validateToken, registerSupplier, uploadBankCert, validateBankCertIban } from '../services/api';
 import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
 
 const Register = () => {
@@ -19,6 +19,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [certFailed, setCertFailed] = useState(false);
   const [certRetrying, setCertRetrying] = useState(false);
+  const [validatingCert, setValidatingCert] = useState(false);
 
   useEffect(() => {
     if (!token) { setTokenValid(false); return; }
@@ -197,9 +198,25 @@ const Register = () => {
                 )}
                 <p className="text-[10px] text-zinc-600 mt-1">Document proving bank account ownership (required by DAZZ).</p>
               </div>
+              {error && (
+                <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-md p-2.5 text-xs mb-3">{error}</div>
+              )}
               <div className="flex gap-2">
                 <button onClick={() => setStep(1)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
-                <button onClick={() => setStep(3)} disabled={!form.iban.trim() || !bankCertFile} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">Continue</button>
+                <button onClick={async () => {
+                  setError('');
+                  setValidatingCert(true);
+                  try {
+                    await validateBankCertIban(form.iban, bankCertFile);
+                    setStep(3);
+                  } catch (err) {
+                    setError(err.response?.data?.detail || 'IBAN validation failed');
+                  }
+                  setValidatingCert(false);
+                }} disabled={!form.iban.trim() || !bankCertFile || validatingCert}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
+                  {validatingCert ? 'Verifying IBAN...' : 'Continue'}
+                </button>
               </div>
             </>
           )}

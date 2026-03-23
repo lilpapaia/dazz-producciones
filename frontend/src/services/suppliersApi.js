@@ -22,6 +22,16 @@ export const getInvoice = (id) => api.get(`/suppliers/invoices/${id}`);
 export const getAllInvoices = (params) => api.get('/suppliers/invoices/all', { params });
 export const updateInvoiceStatus = (id, data) => api.put(`/suppliers/invoices/${id}/status`, data);
 export const deleteInvoice = (id) => api.delete(`/suppliers/invoices/${id}`);
+export const assignInvoiceOC = (invoiceId, ocNumber) => api.patch(`/suppliers/invoices/${invoiceId}/assign-oc`, { oc_number: ocNumber });
+
+// OC autocomplete
+export const getOCSuggestions = (q) => api.get('/suppliers/oc-suggestions', { params: { q } });
+
+// Autoinvoice
+export const getNextInvoiceNumber = (companyId) => api.get('/suppliers/autoinvoice/next-number', { params: { company_id: companyId } });
+export const searchSuppliersForAutoinvoice = (q) => api.get('/suppliers/autoinvoice/supplier-search', { params: { q } });
+export const generateAutoinvoice = (data) => api.post('/suppliers/autoinvoice/generate', data);
+export const previewAutoinvoice = (data) => api.post('/suppliers/autoinvoice/preview', data, { responseType: 'blob' });
 
 // Notifications
 export const getNotifications = (params) => api.get('/suppliers/notifications/all', { params });

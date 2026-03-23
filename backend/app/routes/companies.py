@@ -4,7 +4,7 @@ from typing import List
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import User, Company
+from app.models.database import User, Company, UserRole
 from app.services.auth import get_current_active_user
 
 router = APIRouter(prefix="/companies", tags=["Companies"])
@@ -21,7 +21,7 @@ async def get_companies(
     - WORKER: ve sus empresas asignadas
     """
     
-    if current_user.role == "ADMIN":
+    if current_user.role == UserRole.ADMIN:
         # ADMIN ve TODAS las empresas
         companies = db.query(Company).order_by(Company.name).all()
         return companies
@@ -58,7 +58,7 @@ async def get_company(
         )
     
     # Verificar acceso
-    if current_user.role != "ADMIN":
+    if current_user.role != UserRole.ADMIN:
         # BOSS y WORKER solo pueden ver sus empresas
         user_company_ids = [c.id for c in current_user.companies]
         

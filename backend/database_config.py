@@ -7,15 +7,18 @@ AUTOMÁTICO:
 """
 
 import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+logger = logging.getLogger(__name__)
 
 # Detectar si estamos en Railway (tiene DATABASE_URL)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
     # PRODUCCIÓN: PostgreSQL en Railway
-    print("🚀 Usando PostgreSQL (Railway)")
+    logger.info("Usando PostgreSQL (Railway)")
     
     # Railway a veces usa 'postgres://' pero SQLAlchemy necesita 'postgresql://'
     if DATABASE_URL.startswith("postgres://"):
@@ -24,7 +27,7 @@ if DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = DATABASE_URL
 else:
     # LOCAL: SQLite
-    print("💻 Usando SQLite (local)")
+    logger.info("Usando SQLite (local)")
     SQLALCHEMY_DATABASE_URL = "sqlite:///./dazz_producciones.db"
 
 # Crear engine con configuración apropiada

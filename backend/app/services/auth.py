@@ -12,7 +12,7 @@ import string
 from dotenv import load_dotenv
 
 from config.database import get_db
-from app.models.database import User, RefreshToken
+from app.models.database import User, RefreshToken, UserRole
 
 load_dotenv()
 
@@ -173,7 +173,7 @@ async def get_current_admin_user(
     current_user: User = Depends(get_current_active_user)
 ) -> User:
     """Get current admin user"""
-    if current_user.role != "ADMIN":
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"

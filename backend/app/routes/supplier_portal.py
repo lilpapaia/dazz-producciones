@@ -19,10 +19,11 @@ from app.models.supplier_schemas import (
     ValidateTokenResponse, RegisterRequest, RegisterResponse,
     LoginRequest, LoginResponse, RefreshRequest, ProfileResponse,
     PortalInvoiceResponse, DeleteInvoiceRequest, SummaryResponse,
+    DataChangeRequest, IbanChangeRequest, DeactivationRequest,
 )
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierOC, SupplierNotification,
-    SupplierInvitation, InvoiceStatus, SupplierStatus, SupplierType,
+    SupplierInvitation, InvoiceStatus, SupplierStatus,
     NotificationRecipientType, NotificationEventType,
 )
 from app.services.supplier_auth import (
@@ -33,6 +34,7 @@ from app.services.supplier_auth import (
 )
 from app.services.supplier_ai import (
     extract_supplier_invoice, validate_supplier_invoice, resolve_company_from_oc,
+    extract_iban_from_cert, _normalize_iban, _normalize_nif,
 )
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url
 from app.services.encryption import encrypt_iban, decrypt_iban
@@ -82,17 +84,7 @@ async def validate_invitation_token(
     if not invitation:
         return ValidateTokenResponse(valid=False)
 
-    # Read supplier_type via raw SQL (column not in ORM)
-    from sqlalchemy import text as sa_text
-    invited_type = None
-    try:
-        row = db.execute(sa_text("SELECT supplier_type FROM supplier_invitations WHERE id = :id"), {"id": invitation.id}).first()
-        if row:
-            invited_type = row[0]
-    except Exception:
-        pass
-
-    return ValidateTokenResponse(valid=True, name=invitation.name, email=invitation.email, supplier_type=invited_type)
+    return ValidateTokenResponse(valid=True, name=invitation.name, email=invitation.email)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
@@ -123,39 +115,16 @@ async def register_supplier(
     # Mark token as used (one-time)
     invitation.used_at = datetime.now(timezone.utc)
 
-    # Read invited supplier_type from invitation (raw SQL — column not in ORM)
-    from sqlalchemy import text as sa_text
-    invited_type = None
-    try:
-        row = db.execute(sa_text("SELECT supplier_type FROM supplier_invitations WHERE id = :id"), {"id": invitation.id}).first()
-        if row:
-            invited_type = row[0]
-    except Exception:
-        pass
-
-    # NIF/CIF matching for OC assignment
+    # M-13: NIF/CIF matching for OC assignment (uses shared _normalize_nif)
     oc_id = None
     if body.nif_cif:
-        normalized = body.nif_cif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
-        ocs_with_nif = db.query(SupplierOC).filter(SupplierOC.nif_cif != None).all()
-        for oc in ocs_with_nif:
-            oc_nif = oc.nif_cif.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
-            if normalized == oc_nif:
-                oc_id = oc.id
-                break
-
-    # Determine supplier_type based on invitation type + NIF match
-    if invited_type == 'talent' and oc_id:
-        supplier_type = SupplierType.INFLUENCER
-    elif invited_type == 'mixed':
-        supplier_type = SupplierType.MIXED
-    elif invited_type == 'general':
-        supplier_type = SupplierType.GENERAL
-    elif not invited_type:
-        # Legacy invitations without type — fallback to NIF match
-        supplier_type = SupplierType.INFLUENCER if oc_id else SupplierType.GENERAL
-    else:
-        supplier_type = SupplierType.GENERAL
+        normalized = _normalize_nif(body.nif_cif)
+        if normalized:
+            ocs_with_nif = db.query(SupplierOC).filter(SupplierOC.nif_cif != None).all()
+            for oc in ocs_with_nif:
+                if _normalize_nif(oc.nif_cif) == normalized:
+                    oc_id = oc.id
+                    break
 
     # SEC-M1: Validate IBAN format (mod-97 checksum) before encrypting
     if body.iban:
@@ -174,7 +143,6 @@ async def register_supplier(
         phone=body.phone,
         address=body.address,
         iban_encrypted=iban_bytes,
-        supplier_type=supplier_type,
         status=SupplierStatus.ACTIVE,
         oc_id=oc_id,
         gdpr_consent=True,
@@ -232,7 +200,6 @@ async def login_supplier(
             "id": supplier.id,
             "name": supplier.name,
             "email": supplier.email,
-            "supplier_type": supplier.supplier_type.value if supplier.supplier_type else "GENERAL",
         },
     )
 
@@ -276,9 +243,15 @@ async def get_profile(
     db: Session = Depends(get_db),
 ):
     oc_number = None
+    company_name = None
     if supplier.oc_id:
         oc = db.query(SupplierOC).filter(SupplierOC.id == supplier.oc_id).first()
-        oc_number = oc.oc_number if oc else None
+        if oc:
+            oc_number = oc.oc_number
+            if oc.company_id:
+                from app.models.database import Company
+                co = db.query(Company).filter(Company.id == oc.company_id).first()
+                company_name = co.name if co else None
 
     # Mask IBAN for supplier view: show country code + last 4 digits
     iban_masked = None
@@ -295,12 +268,26 @@ async def get_profile(
         else:
             iban_masked = "****"
 
+    # Check for pending change requests (unread admin notifications from this supplier)
+    pending_change = db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.related_supplier_id == supplier.id,
+        SupplierNotification.is_read == False,
+        SupplierNotification.event_type.in_([
+            NotificationEventType.REGISTRATION,  # reuse for data changes
+        ]),
+        SupplierNotification.title.in_(["Data Change Request", "IBAN Change Request", "Deactivation Request"]),
+    ).first()
+
     return ProfileResponse(
         id=supplier.id, name=supplier.name, email=supplier.email,
         nif_cif=supplier.nif_cif, phone=supplier.phone, address=supplier.address,
         iban_masked=iban_masked,
-        supplier_type=supplier.supplier_type.value if supplier.supplier_type else "GENERAL",
+        has_permanent_oc=supplier.oc_id is not None,
         oc_number=oc_number,
+        company_name=company_name,
+        has_pending_change=pending_change is not None,
+        pending_change_info=pending_change.message if pending_change else None,
         created_at=supplier.created_at,
     )
 
@@ -335,6 +322,49 @@ async def get_my_bank_cert_url(
     if not supplier.bank_cert_url:
         raise HTTPException(404, "No bank certificate uploaded")
     return {"url": get_bank_cert_url(supplier.bank_cert_url)}
+
+
+@router.post("/validate-bank-cert")
+@limiter.limit("10/hour")
+async def validate_bank_cert_iban(
+    request: Request,
+    iban: str = Query(..., min_length=10, max_length=50),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Validate that IBAN on bank certificate matches the provided IBAN (pre-registration)."""
+    import uuid as _uuid
+
+    contents = await file.read()
+    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
+
+    temp_path = os.path.join("uploads", "suppliers", f"tmp_cert_{_uuid.uuid4().hex[:8]}.pdf")
+    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+    with open(temp_path, "wb") as f:
+        f.write(contents)
+
+    try:
+        extracted_iban = await asyncio.to_thread(extract_iban_from_cert, temp_path)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    if not extracted_iban:
+        # AI could not read IBAN from cert — notify admin for manual review, but don't block
+        _notify(db, NotificationRecipientType.ADMIN, 0,
+                NotificationEventType.IA_REJECTED, "Bank cert IBAN not verified",
+                "New supplier registration: could not extract IBAN from bank certificate — manual review recommended",
+                supplier_id=None)
+        db.commit()
+        return {"valid": True, "iban_match": None, "message": "Could not extract IBAN from certificate — skipping validation"}
+
+    normalized_input = _normalize_iban(iban)
+    normalized_cert = _normalize_iban(extracted_iban)
+
+    if normalized_input == normalized_cert:
+        return {"valid": True, "iban_match": True}
+    else:
+        raise HTTPException(422, "IBAN on the bank certificate does not match the IBAN you entered")
 
 
 # ============================================
@@ -374,6 +404,13 @@ async def upload_invoice(
 
         # Validation against DB
         validation = validate_supplier_invoice(extracted, supplier.id, db)
+
+        # IBAN mismatch: non-blocking warning + admin notification
+        if validation.get("iban_match") is False:
+            _notify(db, NotificationRecipientType.ADMIN, 0,
+                    NotificationEventType.IA_REJECTED, "IBAN Mismatch",
+                    f"Invoice from {supplier.name}: IBAN on invoice does not match registered IBAN",
+                    supplier_id=supplier.id)
 
         if not validation["valid"]:
             _notify(db, NotificationRecipientType.ADMIN, 0,
@@ -444,12 +481,12 @@ async def upload_invoice(
             raise
         db.refresh(invoice)
 
+        # M-16: Atomic commit — file_pages + date_parsed + notifications together
         # Save file_pages via raw SQL (column not in ORM)
         if upload_result.get("pages"):
             try:
                 db.execute(sa_text("UPDATE supplier_invoices SET file_pages = :fp WHERE id = :id"),
                     {"fp": json.dumps(upload_result["pages"]), "id": invoice.id})
-                db.commit()
             except Exception:
                 pass
 
@@ -457,7 +494,18 @@ async def upload_invoice(
         date_parsed = validation.get("date_parsed")
         if date_parsed:
             invoice.date_parsed = date_parsed
-            db.commit()
+
+        # Notifications (same transaction as file_pages + date_parsed)
+        _notify(db, NotificationRecipientType.ADMIN, 0,
+                NotificationEventType.NEW_INVOICE, "New Invoice Submitted",
+                f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR)",
+                invoice_id=invoice.id, supplier_id=supplier.id)
+        _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+                NotificationEventType.NEW_INVOICE, "Invoice Received",
+                f"Invoice {invoice.invoice_number} submitted successfully",
+                invoice_id=invoice.id, supplier_id=supplier.id)
+
+        db.commit()  # Atomic: file_pages + date_parsed + notifications
 
     finally:
         # Always clean up temp file
@@ -466,17 +514,6 @@ async def upload_invoice(
                 os.remove(temp_path)
         except OSError:
             pass
-
-    # Notifications
-    _notify(db, NotificationRecipientType.ADMIN, 0,
-            NotificationEventType.NEW_INVOICE, "New Invoice Submitted",
-            f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR)",
-            invoice_id=invoice.id, supplier_id=supplier.id)
-    _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
-            NotificationEventType.NEW_INVOICE, "Invoice Received",
-            f"Invoice {invoice.invoice_number} submitted successfully",
-            invoice_id=invoice.id, supplier_id=supplier.id)
-    db.commit()
 
     return {
         "message": "Invoice uploaded successfully",
@@ -514,6 +551,42 @@ async def list_my_invoices(
     ) for inv in invoices]
 
 
+@router.get("/invoices/received", response_model=List[PortalInvoiceResponse])
+async def list_received_invoices(
+    limit: int = Query(50, le=200),
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """List autoinvoices generated by DAZZ for this supplier."""
+    invoices = db.query(SupplierInvoice).filter(
+        SupplierInvoice.supplier_id == supplier.id,
+        SupplierInvoice.is_autoinvoice == True,
+    ).order_by(desc(SupplierInvoice.created_at)).limit(limit).all()
+
+    results = []
+    for inv in invoices:
+        company_name = None
+        if inv.company_id:
+            from app.models.database import Company
+            co = db.query(Company).filter(Company.id == inv.company_id).first()
+            company_name = co.name if co else None
+
+        results.append(PortalInvoiceResponse(
+            id=inv.id, invoice_number=inv.invoice_number,
+            date=format_date_for_response(inv.date),
+            provider_name=inv.provider_name, oc_number=inv.oc_number,
+            base_amount=inv.base_amount, iva_amount=inv.iva_amount,
+            final_total=inv.final_total, currency=inv.currency or "EUR",
+            status=inv.status.value if inv.status else "PENDING",
+            rejection_reason=inv.rejection_reason,
+            file_url=inv.file_url if (inv.file_url and inv.file_url.startswith("http")) else get_invoice_pdf_url(inv.file_url) if inv.file_url else None,
+            is_autoinvoice=True,
+            company_name=company_name,
+            created_at=inv.created_at,
+        ))
+    return results
+
+
 @router.delete("/invoices/{invoice_id}")
 async def request_invoice_deletion(
     invoice_id: int,
@@ -530,7 +603,8 @@ async def request_invoice_deletion(
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
-    if invoice.status != InvoiceStatus.PENDING:
+    # M-15: Allow deletion of both PENDING and OC_PENDING invoices
+    if invoice.status not in (InvoiceStatus.PENDING, InvoiceStatus.OC_PENDING):
         raise HTTPException(400, "Only pending invoices can be deleted")
 
     invoice.status = InvoiceStatus.DELETE_REQUESTED
@@ -578,8 +652,152 @@ async def financial_summary(
     total = db.query(func.count(SupplierInvoice.id)).filter(
         SupplierInvoice.supplier_id == supplier.id).scalar() or 0
 
+    unread = db.query(func.count(SupplierNotification.id)).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.SUPPLIER,
+        SupplierNotification.recipient_id == supplier.id,
+        SupplierNotification.is_read == False,
+    ).scalar() or 0
+
     return SummaryResponse(
         pending_amount=float(pending_amount),
         paid_this_month=float(paid_month),
         total_invoices=total,
+        unread_notifications=unread,
     )
+
+
+# ============================================
+# NOTIFICATIONS (supplier-facing)
+# ============================================
+
+@router.get("/notifications")
+async def get_my_notifications(
+    limit: int = Query(50, le=200),
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """List notifications for the authenticated supplier."""
+    notifs = db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.SUPPLIER,
+        SupplierNotification.recipient_id == supplier.id,
+    ).order_by(desc(SupplierNotification.created_at)).limit(limit).all()
+
+    return [{
+        "id": n.id,
+        "event_type": n.event_type.value if n.event_type else "",
+        "title": n.title,
+        "message": n.message,
+        "is_read": n.is_read,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+        "related_invoice_id": n.related_invoice_id,
+    } for n in notifs]
+
+
+@router.put("/notifications/{notification_id}/read")
+async def mark_my_notification_read(
+    notification_id: int,
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    notif = db.query(SupplierNotification).filter(
+        SupplierNotification.id == notification_id,
+        SupplierNotification.recipient_type == NotificationRecipientType.SUPPLIER,
+        SupplierNotification.recipient_id == supplier.id,
+    ).first()
+    if not notif:
+        raise HTTPException(404, "Notification not found")
+    notif.is_read = True
+    db.commit()
+    return {"message": "Marked as read"}
+
+
+@router.put("/notifications/read-all")
+async def mark_all_my_notifications_read(
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.SUPPLIER,
+        SupplierNotification.recipient_id == supplier.id,
+        SupplierNotification.is_read == False,
+    ).update({"is_read": True})
+    db.commit()
+    return {"message": "All notifications marked as read"}
+
+
+# ============================================
+# ACCOUNT ACTIONS (data change, IBAN, deactivation)
+# ============================================
+
+@router.post("/request-data-change")
+async def request_data_change(
+    body: DataChangeRequest,
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """Request to change name/phone/address. Admin must approve."""
+    import json
+    changes = body.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(400, "No changes provided")
+
+    _notify(db, NotificationRecipientType.ADMIN, 0,
+            NotificationEventType.REGISTRATION, "Data Change Request",
+            f"{supplier.name} requests data change: {json.dumps(changes)}",
+            supplier_id=supplier.id)
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+            NotificationEventType.REGISTRATION, "Data change submitted",
+            "Your data change request has been sent. The admin will review it.",
+            supplier_id=supplier.id)
+    db.commit()
+    return {"message": "Data change request submitted for admin review"}
+
+
+@router.post("/request-iban-change")
+async def request_iban_change(
+    new_iban: str = Query(..., min_length=10, max_length=50),
+    file: UploadFile = File(...),
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """Request IBAN change with new bank certificate. Admin must approve."""
+    contents = await file.read()
+    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
+
+    # Validate IBAN format
+    validate_iban_format(new_iban)
+
+    # Save new cert to R2 (separate key — does not overwrite current)
+    import uuid
+    temp_key = f"bank-certs/{supplier.id}/pending_{uuid.uuid4().hex[:8]}.pdf"
+    cert_key = await asyncio.to_thread(save_bank_cert, file, supplier.id, contents)
+
+    _notify(db, NotificationRecipientType.ADMIN, 0,
+            NotificationEventType.REGISTRATION, "IBAN Change Request",
+            f"{supplier.name} requests IBAN change to {new_iban[:4]}****{new_iban[-4:]} — cert: {cert_key}",
+            supplier_id=supplier.id)
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+            NotificationEventType.REGISTRATION, "IBAN change submitted",
+            "Your IBAN change request has been sent. Your current IBAN remains active until approved.",
+            supplier_id=supplier.id)
+    db.commit()
+    return {"message": "IBAN change request submitted for admin review"}
+
+
+@router.post("/request-deactivation")
+async def request_deactivation(
+    body: DeactivationRequest,
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """Request account deactivation. Admin must confirm."""
+    _notify(db, NotificationRecipientType.ADMIN, 0,
+            NotificationEventType.REGISTRATION, "Deactivation Request",
+            f"{supplier.name} requests account deactivation. Reason: {body.reason}",
+            supplier_id=supplier.id)
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+            NotificationEventType.REGISTRATION, "Deactivation request sent",
+            "Your deactivation request has been sent. The admin will review it.",
+            supplier_id=supplier.id)
+    db.commit()
+    return {"message": "Deactivation request submitted for admin review"}

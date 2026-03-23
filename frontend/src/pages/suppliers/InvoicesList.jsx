@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Trash2, X, CreditCard, Mic } from 'lucide-react';
+import { Search, Trash2, X, CreditCard, Mic, Info } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
 import { showError } from '../../utils/toast';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
+import useEscapeKey from '../../hooks/useEscapeKey';
 import useClickOutside from '../../hooks/useClickOutside';
 
 const PILL = {
@@ -39,6 +40,7 @@ const InvoicesList = () => {
     onResult: useCallback((transcript) => { setSearch(transcript); setShowSuggestions(false); }, []),
   });
   useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
+  useEscapeKey(() => { setActionModal(null); setReason(''); }, !!actionModal);
 
   const handleSearchChange = (value) => { setSearch(value); setShowSuggestions(value.length > 0); };
   const clearSearch = () => { setSearch(''); setShowSuggestions(false); };
@@ -172,11 +174,20 @@ const InvoicesList = () => {
           style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")" }}>
           <option value="">Todos los estados</option>
           <option value="PENDING">Pendiente</option>
+          <option value="OC_PENDING">Sin OC</option>
           <option value="APPROVED">Aprobada</option>
           <option value="PAID">Pagada</option>
           <option value="REJECTED">Rechazada</option>
         </select>
       </div>
+
+      {/* Info banner for OC_PENDING filter */}
+      {statusFilter === 'OC_PENDING' && filtered.length > 0 && (
+        <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded p-2.5 text-[13px] mb-3 flex items-start gap-2">
+          <Info size={14} className="flex-shrink-0 mt-0.5" />
+          {filtered.length} factura(s) sin OC asignado — la IA no pudo identificar el proyecto. Haz clic en la factura para asignar OC manualmente.
+        </div>
+      )}
 
       {/* CARDS — solo móvil */}
       <div className="lg:hidden flex flex-col gap-2 mb-4">
@@ -186,7 +197,7 @@ const InvoicesList = () => {
           const pill = PILL[inv.status] || PILL.PENDING;
           return (
             <div key={inv.id} onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=list`)}
-              className="bg-zinc-900 border border-zinc-800 rounded-md p-3.5 cursor-pointer active:border-amber-500 transition-colors">
+              className={`bg-zinc-900 border rounded-md p-3.5 cursor-pointer active:border-amber-500 transition-colors ${inv.status === 'OC_PENDING' ? 'border-blue-400/20 bg-blue-400/[.02]' : 'border-zinc-800'}`}>
               <div className="flex items-start justify-between mb-2">
                 <span className="font-mono text-[13px] text-zinc-200">{inv.invoice_number}
                   {inv.from_supplier_portal && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
@@ -196,12 +207,19 @@ const InvoicesList = () => {
               <div className="text-[12px] text-zinc-400 mb-2">{inv.supplier_name}</div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                  {inv.status === 'OC_PENDING'
+                    ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
+                    : <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                  }
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
-                    <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status}
+                    <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status === 'OC_PENDING' ? 'Sin OC' : inv.status}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                  {inv.status === 'OC_PENDING' && (
+                    <button onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/invoices/${inv.id}?from=list`); }}
+                      className="text-[12px] text-blue-400 border border-blue-400/30 px-2.5 py-1 rounded hover:bg-blue-400/10">Asignar OC →</button>
+                  )}
                   {inv.status === 'PENDING' && (
                     <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'approve' }); }}
                       className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400">Aprobar</button>
@@ -250,7 +268,10 @@ const InvoicesList = () => {
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-200">{inv.supplier_name}</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        {inv.status === 'OC_PENDING'
+                          ? <span className="text-[11px] px-1.5 py-[1px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
+                          : <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        }
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[13px] text-zinc-200">{inv.final_total?.toFixed(2)} EUR</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
@@ -259,6 +280,10 @@ const InvoicesList = () => {
                         </span>
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
+                        {inv.status === 'OC_PENDING' && (
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/invoices/${inv.id}?from=list`); }}
+                            className="text-[13px] text-blue-400 border border-blue-400/30 px-2.5 py-1 rounded hover:bg-blue-400/10 transition-colors">Asignar OC →</button>
+                        )}
                         {inv.status === 'PENDING' && (
                           <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'approve' }); }} className="text-[13px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded transition-colors hover:bg-amber-400">Aprobar</button>
                         )}

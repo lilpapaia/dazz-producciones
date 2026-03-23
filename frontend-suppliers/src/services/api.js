@@ -78,6 +78,11 @@ export const uploadBankCert = (file) => {
 };
 
 export const getBankCertUrl = () => api.get('/portal/bank-cert-url');
+export const validateBankCertIban = (iban, file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post(`/portal/validate-bank-cert?iban=${encodeURIComponent(iban)}`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
 
 // Invoices
 export const uploadInvoice = (file) => {
@@ -86,9 +91,24 @@ export const uploadInvoice = (file) => {
   return api.post('/portal/invoices/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 export const getMyInvoices = (params) => api.get('/portal/invoices', { params });
+export const getReceivedInvoices = (params) => api.get('/portal/invoices/received', { params });
 export const requestDeleteInvoice = (id, reason) => api.delete(`/portal/invoices/${id}`, { data: { reason } });
 
 // Summary
 export const getSummary = () => api.get('/portal/summary');
+
+// Notifications
+export const getNotifications = (params) => api.get('/portal/notifications', { params });
+export const markNotificationRead = (id) => api.put(`/portal/notifications/${id}/read`);
+export const markAllNotificationsRead = () => api.put('/portal/notifications/read-all');
+
+// Account actions
+export const requestDataChange = (data) => api.post('/portal/request-data-change', data);
+export const requestIbanChange = (newIban, file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post(`/portal/request-iban-change?new_iban=${encodeURIComponent(newIban)}`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
+export const requestDeactivation = (data) => api.post('/portal/request-deactivation', data);
 
 export default api;

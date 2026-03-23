@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAZZ Suppliers Portal — Mockup v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --z950:#09090b;--z900:#18181b;--z800:#27272a;--z700:#3f3f46;--z600:#52525b;
+  --z500:#71717a;--z400:#a1a1aa;--z300:#d4d4d8;--z200:#e4e4e7;--z100:#f4f4f5;
+  --a500:#f59e0b;--a400:#fbbf24;--a300:#fcd34d;
+  --g400:#4ade80;--g300:#86efac;--r400:#f87171;--b400:#60a5fa;--p400:#a78bfa;
+  --ft:'Bebas Neue',sans-serif;--fb:'DM Sans',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--fb);background:#0d0d0f;color:var(--z100);min-height:100vh}
+
+/* PAGE CHROME */
+.page-header{text-align:center;padding:24px 16px 16px;border-bottom:1px solid #1a1a1a}
+.page-header h1{font-family:var(--ft);font-size:15px;letter-spacing:.12em;color:var(--a500);margin-bottom:3px}
+.page-header p{font-size:11px;color:var(--z500)}
+.view-tabs{display:flex;gap:5px;padding:12px 16px;justify-content:center;flex-wrap:wrap;border-bottom:1px solid #1a1a1a;background:#0d0d0f;position:sticky;top:0;z-index:100}
+.view-tab{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--z700);color:var(--z500);cursor:pointer;background:transparent;font-family:var(--fb);transition:all .15s;white-space:nowrap}
+.view-tab.active{background:var(--a500);color:var(--z950);border-color:var(--a500);font-weight:600}
+.view-tab.new{border-color:var(--g400);color:var(--g400)}
+.view-tab.new.active{background:var(--g400);color:var(--z950)}
+.screens-wrap{display:flex;gap:36px;padding:28px 20px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+
+/* DEVICE FRAMES */
+.device{display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0}
+.device-label{font-size:10px;color:var(--z600);letter-spacing:.1em;text-transform:uppercase}
+
+/* Desktop */
+.desktop-frame{width:960px;background:var(--z950);border:1px solid var(--z800);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.desktop-bar{height:34px;background:var(--z900);border-bottom:1px solid var(--z800);display:flex;align-items:center;padding:0 12px;gap:5px}
+.d-dot{width:10px;height:10px;border-radius:50%}
+.d-url{flex:1;margin:0 10px;background:var(--z800);border-radius:4px;height:18px;display:flex;align-items:center;padding:0 8px;font-size:10px;color:var(--z500);font-family:var(--fm)}
+
+/* Mobile */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.phone-lbl{font-size:10px;color:var(--z600);letter-spacing:.1em;text-transform:uppercase;text-align:center}
+.phone{width:375px;background:#000;border-radius:42px;border:3px solid #2a2a2a;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:100px;height:26px;background:#000;border-radius:0 0 14px 14px;z-index:100}
+.phone-inner{overflow:hidden;border-radius:40px;background:var(--z950)}
+
+/* APP LAYOUT */
+.app-shell{display:flex;height:600px}
+
+/* Sidebar */
+.sb{width:196px;background:var(--z900);border-right:1px solid var(--z800);padding:12px 8px;display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{display:flex;align-items:center;gap:7px;padding:6px 8px;margin-bottom:16px}
+.sb-logo svg{width:18px;height:18px;color:var(--a500)}
+.sb-logo-t{font-family:var(--ft);font-size:14px;letter-spacing:.07em;color:var(--z100)}
+.sb-logo-s{font-size:8px;color:var(--z500);margin-top:1px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:5px;cursor:pointer;margin-bottom:1px;font-size:11px;color:var(--z400)}
+.sb-item:hover{background:var(--z800)}
+.sb-item.active{background:rgba(245,158,11,.08);border-left:2px solid var(--a500);padding-left:6px;color:var(--a400)}
+.sb-item svg{width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.5}
+.sb-badge{margin-left:auto;min-width:16px;height:16px;background:var(--a500);border-radius:8px;font-size:8px;font-weight:700;color:var(--z950);display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:var(--fm)}
+.sb-bot{margin-top:auto;padding-top:10px;border-top:1px solid var(--z800)}
+.sb-user{display:flex;align-items:center;gap:7px;padding:6px 8px}
+.sb-av{width:26px;height:26px;border-radius:50%;background:var(--a500);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--z950);font-family:var(--ft);flex-shrink:0}
+
+/* Main */
+.main{flex:1;overflow-y:auto;background:var(--z950);display:flex;flex-direction:column}
+.topbar{height:46px;border-bottom:1px solid var(--z800);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.topbar-title{font-family:var(--ft);font-size:17px;color:var(--z100)}
+.notif-btn{width:28px;height:28px;background:var(--z800);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.notif-btn svg{width:13px;height:13px;stroke:var(--z400);fill:none;stroke-width:1.5}
+.notif-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;background:var(--a500);border-radius:50%;border:2px solid var(--z950)}
+.body{padding:16px;overflow-y:auto;flex:1}
+
+/* MOBILE LAYOUT */
+.m-status{height:40px;padding:0 20px;display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:6px;background:var(--z950)}
+.m-time{font-size:12px;font-weight:600;color:var(--z100)}
+.m-topbar{padding:6px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--z950)}
+.m-logo{font-family:var(--ft);font-size:17px;letter-spacing:.07em;color:var(--a500)}
+.m-notif{width:28px;height:28px;background:var(--z800);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative}
+.m-notif svg{width:13px;height:13px;stroke:var(--z400);fill:none;stroke-width:1.5}
+.m-scroll{flex:1;overflow-y:auto;background:var(--z950)}
+.m-scroll::-webkit-scrollbar{display:none}
+.m-bottom{height:64px;background:var(--z900);border-top:1px solid var(--z800);display:flex;align-items:center;justify-content:space-around;padding:0 6px 6px;flex-shrink:0}
+.m-nav{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;padding:5px 0;position:relative}
+.m-nav svg{width:20px;height:20px;stroke:var(--z600);fill:none;stroke-width:1.5}
+.m-nav span{font-size:9px;color:var(--z600)}
+.m-nav.active svg{stroke:var(--a500)}
+.m-nav.active span{color:var(--a400)}
+.m-nbadge{position:absolute;top:2px;right:6px;min-width:14px;height:14px;background:var(--a500);border-radius:7px;font-size:7px;font-weight:700;color:var(--z950);display:flex;align-items:center;justify-content:center;padding:0 3px}
+
+/* COMPONENTS */
+.pill{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;border:1px solid}
+.pill-dot{width:5px;height:5px;border-radius:50%}
+.p-pend{background:rgba(245,158,11,.1);color:var(--a400);border-color:rgba(245,158,11,.2)}.p-pend .pill-dot{background:var(--a500)}
+.p-appr{background:rgba(74,222,128,.1);color:var(--g400);border-color:rgba(74,222,128,.2)}.p-appr .pill-dot{background:var(--g400)}
+.p-paid{background:rgba(134,239,172,.1);color:var(--g300);border-color:rgba(134,239,172,.2)}.p-paid .pill-dot{background:var(--g300)}
+.p-rej{background:rgba(248,113,113,.1);color:var(--r400);border-color:rgba(248,113,113,.2)}.p-rej .pill-dot{background:var(--r400)}
+.p-recv{background:rgba(96,165,250,.1);color:var(--b400);border-color:rgba(96,165,250,.2)}.p-recv .pill-dot{background:var(--b400)}
+
+.oc-tag{font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,.08);color:var(--a400);font-family:var(--fm);border:1px solid rgba(245,158,11,.15)}
+.oc-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(167,139,250,.08);color:var(--p400);font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(167,139,250,.15);font-family:var(--fm)}
+
+.kpi{background:var(--z900);border:1px solid var(--z800);border-radius:10px;padding:13px}
+.kpi.accent{border-left:2px solid var(--a500)}
+.kpi-lbl{font-size:9px;color:var(--z500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.kpi-val{font-family:var(--ft);font-size:24px;color:var(--z100);line-height:1}
+.kpi-val.amber{color:var(--a500)}
+.kpi-val.green{color:var(--g400)}
+.kpi-sub{font-size:11px;color:var(--z500);margin-top:3px}
+
+.card{background:var(--z900);border:1px solid var(--z800);border-radius:10px;padding:14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:600;color:var(--z400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+
+.data-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.data-row:last-child{border-bottom:none}
+.dl{color:var(--z500)}
+.dv{color:var(--z200);text-align:right}
+.dv.mono{font-family:var(--fm);font-size:12px}
+.dv.amber{color:var(--a400)}
+
+.inv-card{background:var(--z900);border:1px solid var(--z800);border-radius:10px;padding:13px;margin-bottom:8px}
+.inv-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.inv-card-bot{display:flex;justify-content:space-between;align-items:flex-end}
+.inv-card.received{border:1px solid rgba(96,165,250,.15);background:rgba(96,165,250,.02)}
+
+.btn-p{background:var(--a500);border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;color:var(--z950);cursor:pointer;font-family:var(--fb)}
+.btn-g{background:var(--z800);border:1px solid var(--z700);border-radius:8px;padding:9px 14px;font-size:13px;color:var(--z300);cursor:pointer}
+.btn-d{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:8px;padding:9px 14px;font-size:13px;color:var(--r400);cursor:pointer}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-full{width:100%;text-align:center}
+
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--z500);fill:none;stroke-width:1.5}
+.search-input{width:100%;background:var(--z900);border:1px solid var(--z700);border-radius:8px;padding:8px 10px 8px 28px;font-size:13px;color:var(--z100);outline:none;font-family:var(--fb)}
+.search-input::placeholder{color:var(--z600)}
+.search-input:focus{border-color:var(--a500)}
+
+.info-bar{border-radius:8px;padding:9px 11px;font-size:12px;display:flex;align-items:flex-start;gap:7px;line-height:1.5;margin-bottom:12px}
+.info-bar svg{width:12px;height:12px;fill:none;stroke-width:1.5;flex-shrink:0;margin-top:1px}
+.ib-blue{background:rgba(96,165,250,.06);color:var(--b400);border:1px solid rgba(96,165,250,.12)}.ib-blue svg{stroke:var(--b400)}
+.ib-amber{background:rgba(245,158,11,.06);color:var(--a400);border:1px solid rgba(245,158,11,.12)}.ib-amber svg{stroke:var(--a500)}
+.ib-green{background:rgba(74,222,128,.06);color:var(--g400);border:1px solid rgba(74,222,128,.12)}.ib-green svg{stroke:var(--g400)}
+.ib-red{background:rgba(248,113,113,.06);color:var(--r400);border:1px solid rgba(248,113,113,.12)}.ib-red svg{stroke:var(--r400)}
+
+.input-group{margin-bottom:12px}
+.input-label{font-size:10px;color:var(--z400);letter-spacing:.07em;text-transform:uppercase;font-weight:600;margin-bottom:4px;display:block}
+.input-field{width:100%;background:var(--z800);border:1px solid var(--z700);border-radius:7px;padding:9px 11px;font-size:13px;color:var(--z100);font-family:var(--fb);outline:none}
+.input-field:focus{border-color:var(--a500)}
+.input-sub{font-size:11px;color:var(--z600);margin-top:3px}
+
+.pending-card{background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:12px;margin-bottom:10px}
+.pdot{width:6px;height:6px;background:var(--a500);border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:5px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--z800);margin-bottom:14px}
+.tab-item{flex:1;padding:9px 4px;text-align:center;font-size:12px;color:var(--z500);cursor:pointer;border-bottom:2px solid transparent}
+.tab-item.active{color:var(--a400);border-bottom-color:var(--a500);font-weight:600}
+
+.notif-item{display:flex;align-items:flex-start;gap:8px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.notif-item:last-child{border-bottom:none}
+.ni{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ni svg{width:12px;height:12px;fill:none;stroke-width:1.8}
+.ni-g{background:rgba(74,222,128,.1)}.ni-g svg{stroke:var(--g400)}
+.ni-r{background:rgba(248,113,113,.1)}.ni-r svg{stroke:var(--r400)}
+.ni-a{background:rgba(245,158,11,.1)}.ni-a svg{stroke:var(--a500)}
+.ni-b{background:rgba(96,165,250,.1)}.ni-b svg{stroke:var(--b400)}
+.unread-dot{width:7px;height:7px;border-radius:50%;background:var(--a500);flex-shrink:0;margin-top:3px}
+
+.upload-zone{border:2px dashed var(--z700);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:12px}
+.upload-zone:hover{border-color:var(--a500);background:rgba(245,158,11,.02)}
+
+/* Screen sections */
+.screen-section{display:none}
+.screen-section.active{display:block}
+
+/* Mobile screen wrapper */
+.m-screen{display:none;flex-direction:column;height:100%}
+.m-screen.active{display:flex}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>DAZZ SUPPLIERS PORTAL — MOCKUP v2</h1>
+  <p>Desktop (sidebar) · Mobile (bottom nav 4 items) · Todas las pantallas</p>
+</div>
+
+<div class="view-tabs">
+  <button class="view-tab active" onclick="show('home')">Home</button>
+  <button class="view-tab" onclick="show('home-received')">Received invoices</button>
+  <button class="view-tab" onclick="show('upload')">Upload</button>
+  <button class="view-tab" onclick="show('invoice-detail')">Invoice detail</button>
+  <button class="view-tab new" onclick="show('notifications')">Notifications ✦</button>
+  <button class="view-tab" onclick="show('profile')">Profile</button>
+  <button class="view-tab new" onclick="show('edit-data')">Edit data ✦</button>
+  <button class="view-tab new" onclick="show('change-iban')">Change IBAN ✦</button>
+  <button class="view-tab new" onclick="show('deactivate')">Deactivate ✦</button>
+</div>
+
+<div class="screens-wrap">
+
+<!-- ════════════════════════ DESKTOP ════════════════════════ -->
+<div class="device">
+  <div class="device-label">Desktop</div>
+  <div class="desktop-frame">
+    <div class="desktop-bar">
+      <div class="d-dot" style="background:#ff5f57"></div>
+      <div class="d-dot" style="background:#ffbd2e"></div>
+      <div class="d-dot" style="background:#28c840"></div>
+      <div class="d-url">dazzsuppliers.vercel.app</div>
+    </div>
+    <div class="app-shell">
+      <!-- SIDEBAR -->
+      <div class="sb">
+        <div class="sb-logo">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          <div><div class="sb-logo-t">DAZZ</div><div class="sb-logo-s">Supplier Portal</div></div>
+        </div>
+        <div id="sb-home" class="sb-item active"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</div>
+        <div id="sb-upload" class="sb-item"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload invoice</div>
+        <div id="sb-notifications" class="sb-item"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications<span class="sb-badge">3</span></div>
+        <div id="sb-profile" class="sb-item"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My profile</div>
+        <div class="sb-bot">
+          <div class="sb-user"><div class="sb-av">MG</div><div><div style="font-size:11px;font-weight:600;color:var(--z300)">@mariagomez</div><div style="font-size:9px;color:var(--z500)">Talent · OC permanent</div></div></div>
+        </div>
+      </div>
+      <!-- MAIN -->
+      <div class="main">
+        <div class="topbar">
+          <div class="topbar-title" id="d-page-title">Home</div>
+          <div style="display:flex;gap:8px">
+            <div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div>
+          </div>
+        </div>
+
+        <!-- HOME -->
+        <div id="dd-home" class="screen-section active body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+            <div class="kpi accent"><div class="kpi-lbl">Pending payment</div><div class="kpi-val amber">3.680<span style="font-size:13px;color:var(--z500);margin-left:2px">EUR</span></div><div class="kpi-sub">2 invoices</div></div>
+            <div class="kpi"><div class="kpi-lbl">Paid this month</div><div class="kpi-val green">5.400<span style="font-size:13px;color:var(--z500);margin-left:2px">EUR</span></div><div class="kpi-sub">2 invoices</div></div>
+          </div>
+          <div class="tab-bar">
+            <div class="tab-item active">My invoices (4)</div>
+            <div class="tab-item">Received invoices (2)</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <div class="search-wrap" style="flex:1"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" placeholder="Search invoice or OC..."></div>
+            <select style="background:var(--z900);border:1px solid var(--z700);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--z300);outline:none"><option>All</option><option>Pending</option><option>Approved</option><option>Paid</option><option>Rejected</option></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="inv-card">
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZ_2026_001</span><span style="font-family:var(--fm);font-size:14px;font-weight:600;color:var(--z100)">1.840,00 EUR</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:4px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">15/01/2026</div><span class="pill p-pend"><span class="pill-dot"></span>Pending</span></div><div style="display:flex;gap:6px;align-items:center"><button style="width:28px;height:28px;background:transparent;border:none;color:var(--z600);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button><div style="width:28px;height:28px;border:1px solid rgba(248,113,113,.2);border-radius:6px;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--r400)" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></div></div></div>
+            </div>
+            <div class="inv-card">
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZ_2026_002</span><span style="font-family:var(--fm);font-size:14px;font-weight:600;color:var(--z100)">1.840,00 EUR</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:4px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">28/01/2026</div><span class="pill p-appr"><span class="pill-dot"></span>Approved</span></div></div>
+            </div>
+            <div class="inv-card">
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZ_2025_031</span><span style="font-family:var(--fm);font-size:14px;font-weight:600;color:var(--z100)">550,00 EUR</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:4px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">05/11/2025</div><span class="pill p-rej"><span class="pill-dot"></span>Rejected</span></div></div>
+              <div style="margin-top:8px;font-size:11px;color:var(--r400);background:rgba(248,113,113,.06);padding:6px 8px;border-radius:6px;border:1px solid rgba(248,113,113,.12)">Rejected: IBAN on invoice does not match registered IBAN</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOME RECEIVED INVOICES TAB -->
+        <div id="dd-home-received" class="screen-section body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+            <div class="kpi accent"><div class="kpi-lbl">Pending payment</div><div class="kpi-val amber">3.680<span style="font-size:13px;color:var(--z500);margin-left:2px">EUR</span></div><div class="kpi-sub">2 invoices</div></div>
+            <div class="kpi"><div class="kpi-lbl">Paid this month</div><div class="kpi-val green">5.400<span style="font-size:13px;color:var(--z500);margin-left:2px">EUR</span></div><div class="kpi-sub">2 invoices</div></div>
+          </div>
+          <div class="tab-bar">
+            <div class="tab-item">My invoices (4)</div>
+            <div class="tab-item active">Received invoices (2)</div>
+          </div>
+          <div class="info-bar ib-blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>These invoices were generated by DAZZ on your behalf. They have been sent to your email.</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="inv-card received">
+              <div style="font-size:10px;color:var(--b400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Generated by DAZZ</div>
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZCR-2026-047</span><span style="font-family:var(--fm);font-size:14px;font-weight:600;color:var(--z100)">1.840,00 EUR</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:4px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">15/03/2026 · DAZZ Creative Audiovisual SL</div><span class="pill p-recv"><span class="pill-dot"></span>Received</span></div><button class="btn-g btn-sm" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download PDF</button></div>
+            </div>
+            <div class="inv-card received">
+              <div style="font-size:10px;color:var(--b400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Generated by DAZZ</div>
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZCR-2026-031</span><span style="font-family:var(--fm);font-size:14px;font-weight:600;color:var(--z100)">2.200,00 EUR</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:4px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">01/02/2026 · DAZZ Creative Audiovisual SL</div><span class="pill p-recv"><span class="pill-dot"></span>Received</span></div><button class="btn-g btn-sm" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download PDF</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- UPLOAD -->
+        <div id="dd-upload" class="screen-section body">
+          <div style="max-width:580px">
+            <div class="info-bar ib-amber"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>Make sure your invoice includes the correct OC. AI will identify the project and company automatically.</div>
+            <div class="card" style="margin-bottom:12px"><div class="card-title">Your permanent OC</div><span class="oc-badge">OC-MGMTINT2026001 · DAZZLE MGMT</span></div>
+            <div class="upload-zone">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--z600)" stroke-width="1.5" style="margin:0 auto 10px;display:block"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style="font-size:14px;font-weight:600;color:var(--z300);margin-bottom:4px">Drop PDFs here or click to browse</div>
+              <div style="font-size:12px;color:var(--z500)">PDF only · Max 10MB · Multiple files allowed</div>
+              <div style="font-size:11px;color:var(--z600);margin-top:8px;background:var(--z800);display:inline-block;padding:4px 12px;border-radius:6px">AI will extract, validate and check IBAN automatically</div>
+            </div>
+            <button class="btn-p btn-full" style="font-size:13px">Upload and verify with AI</button>
+          </div>
+        </div>
+
+        <!-- INVOICE DETAIL -->
+        <div id="dd-invoice-detail" class="screen-section body">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <span style="font-size:13px;color:var(--z500);cursor:pointer">Home</span><span style="color:var(--z700)">/</span>
+            <span style="font-size:13px;color:var(--z300)">DAZZ_2026_001</span>
+            <span class="pill p-pend" style="margin-left:4px"><span class="pill-dot"></span>Pending</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 300px;gap:14px">
+            <div>
+              <div class="card" style="background:var(--z950);border:1px solid var(--z700);padding:0">
+                <div style="background:var(--z800);height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border-radius:9px">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--z600)" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div style="font-size:12px;color:var(--z500)">PDF preview · Page 1/1</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Invoice data</div>
+                <div class="data-row"><span class="dl">Invoice number</span><span class="dv mono amber">DAZZ_2026_001</span></div>
+                <div class="data-row"><span class="dl">Date</span><span class="dv">15/01/2026</span></div>
+                <div class="data-row"><span class="dl">OC</span><span class="oc-tag">OC-MGMTINT2026001</span></div>
+                <div class="data-row"><span class="dl">IBAN on invoice</span><span class="dv mono" style="color:var(--g400)">ES41 2100 ···· ···· 46 ✓</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-title">Amounts</div>
+                <div class="data-row"><span class="dl">Base</span><span class="dv mono">1.520,00 EUR</span></div>
+                <div class="data-row"><span class="dl">VAT (21%)</span><span class="dv mono">319,20 EUR</span></div>
+                <div class="data-row"><span class="dl">IRPF (7%)</span><span class="dv mono" style="color:var(--r400)">−106,40 EUR</span></div>
+                <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--z700);margin-top:4px"><span style="font-size:13px;font-weight:600;color:var(--z300)">Total</span><span style="font-family:var(--fm);font-size:17px;font-weight:700;color:var(--a400)">1.840,00 EUR</span></div>
+              </div>
+              <div class="card">
+                <div class="card-title">AI validation</div>
+                <div class="info-bar ib-green" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>All checks passed</div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <div style="font-size:12px;color:var(--g400)">✓ Invoice number detected</div>
+                  <div style="font-size:12px;color:var(--g400)">✓ OC matches project</div>
+                  <div style="font-size:12px;color:var(--g400)">✓ IBAN matches registered account</div>
+                  <div style="font-size:12px;color:var(--g400)">✓ Amounts consistent</div>
+                </div>
+              </div>
+              <button class="btn-g btn-full btn-sm" style="display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div id="dd-notifications" class="screen-section body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-family:var(--ft);font-size:18px;color:var(--z100)">Notifications</div>
+            <button class="btn-g btn-sm">Mark all as read</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:14px">
+            <div style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--a500);color:var(--z950);font-weight:600;cursor:pointer">All</div>
+            <div style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--z700);color:var(--z400);cursor:pointer">Unread (3)</div>
+          </div>
+          <div style="font-size:12px;color:var(--z400);margin-bottom:12px"><b style="color:var(--a400)">3 unread</b> · Archived after 30 days</div>
+          <div class="card" style="padding:0 14px">
+            <div class="notif-item" style="background:rgba(245,158,11,.02)"><div class="unread-dot"></div><div class="ni ni-g"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Invoice approved</b> — DAZZ_2026_002 approved, pending payment</div><div style="font-size:11px;color:var(--z600);margin-top:2px">2 hours ago</div></div></div>
+            <div class="notif-item" style="background:rgba(245,158,11,.02)"><div class="unread-dot"></div><div class="ni ni-a"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Data change under review</b> — IBAN update pending admin approval</div><div style="font-size:11px;color:var(--z600);margin-top:2px">Yesterday · 14:30</div></div></div>
+            <div class="notif-item" style="background:rgba(245,158,11,.02)"><div class="unread-dot"></div><div class="ni ni-r"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Invoice rejected</b> — DAZZ_2025_031: IBAN on invoice does not match registered IBAN</div><div style="font-size:11px;color:var(--z600);margin-top:2px">3 days ago</div></div></div>
+            <div class="notif-item"><div style="width:7px;flex-shrink:0"></div><div class="ni ni-g"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Payment received</b> — DAZZ_2025_047 · 2.700,00 EUR transferred</div><div style="font-size:11px;color:var(--z600);margin-top:2px">12/12/2025</div></div></div>
+            <div class="notif-item"><div style="width:7px;flex-shrink:0"></div><div class="ni ni-b"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div><div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Invoice received from DAZZ</b> — DAZZCR-2026-047 · 1.840,00 EUR</div><div style="font-size:11px;color:var(--z600);margin-top:2px">15/03/2026</div></div></div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div id="dd-profile" class="screen-section body">
+          <div style="display:grid;grid-template-columns:280px 1fr;gap:14px">
+            <div>
+              <div class="card">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                  <div style="width:48px;height:48px;background:var(--a500);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--ft);font-size:20px;color:var(--z950)">MG</div>
+                  <div><div style="font-family:var(--ft);font-size:18px;color:var(--z100)">@MARIAGOMEZ</div><div style="margin-top:4px"><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px;background:rgba(74,222,128,.1);color:var(--g400);border:1px solid rgba(74,222,128,.2)">ACTIVE</span></div></div>
+                </div>
+                <span class="oc-badge" style="margin-bottom:12px;display:inline-flex">OC-MGMTINT2026001</span>
+                <hr style="border:none;border-top:1px solid rgba(255,255,255,.04);margin-bottom:8px">
+                <div class="data-row"><span class="dl">Company</span><span class="dv">DAZZLE MGMT</span></div>
+                <div class="data-row"><span class="dl">NIF/CIF</span><span class="dv mono">12345678A</span></div>
+                <div class="data-row"><span class="dl">Email</span><span class="dv amber">maria@gmail.com</span></div>
+                <div class="data-row"><span class="dl">Phone</span><span class="dv">+34 612 345 678</span></div>
+                <div class="data-row"><span class="dl">Address</span><span class="dv" style="max-width:130px;text-align:right">C/ Gran Vía 1, Madrid</span></div>
+                <div class="data-row"><span class="dl">IBAN</span><span class="dv mono" style="white-space:nowrap">ES41 ···· ···· 46</span></div>
+                <div class="data-row"><span class="dl">Bank cert</span><span class="dv" style="color:var(--r400);cursor:pointer">View PDF →</span></div>
+                <div class="data-row"><span class="dl">Member since</span><span class="dv mono">01/03/2025</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="pending-card">
+                <div style="display:flex;align-items:center;margin-bottom:5px"><span class="pdot"></span><span style="font-size:12px;font-weight:600;color:var(--a400)">Pending change request</span></div>
+                <div style="font-size:12px;color:var(--z400)">IBAN update submitted on 19/03/2026 — awaiting admin approval. Your current IBAN remains active.</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Account actions</div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <button class="btn-g btn-full" style="text-align:left;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit my data</button>
+                  <button class="btn-g btn-full" style="text-align:left;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Change IBAN + bank certificate</button>
+                  <button class="btn-d btn-full" style="text-align:left;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Request account deactivation</button>
+                </div>
+              </div>
+              <div class="info-bar ib-blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Email cannot be changed — it is your account identifier. For assistance contact admin@dazzcreative.com</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EDIT DATA -->
+        <div id="dd-edit-data" class="screen-section body">
+          <div style="max-width:500px">
+            <div style="font-family:var(--ft);font-size:18px;color:var(--z100);margin-bottom:4px">Edit my data</div>
+            <div style="font-size:12px;color:var(--z500);margin-bottom:16px">Changes require admin approval before taking effect</div>
+            <div class="info-bar ib-blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Email and NIF/CIF cannot be changed. Contact admin@dazzcreative.com for assistance.</div>
+            <div class="card">
+              <div class="input-group"><label class="input-label">Name / Company</label><input class="input-field" value="@mariagomez"></div>
+              <div class="input-group"><label class="input-label">Phone</label><input class="input-field" value="+34 612 345 678"></div>
+              <div class="input-group" style="margin-bottom:0"><label class="input-label">Fiscal address</label><input class="input-field" value="C/ Gran Vía 1, Madrid"></div>
+            </div>
+            <div style="display:flex;gap:8px"><button class="btn-g" style="flex:1">Cancel</button><button class="btn-p" style="flex:1">Submit for review</button></div>
+          </div>
+        </div>
+
+        <!-- CHANGE IBAN -->
+        <div id="dd-change-iban" class="screen-section body">
+          <div style="max-width:500px">
+            <div style="font-family:var(--ft);font-size:18px;color:var(--z100);margin-bottom:4px">Change IBAN & bank certificate</div>
+            <div style="font-size:12px;color:var(--z500);margin-bottom:16px">For security, changes require admin approval</div>
+            <div class="info-bar ib-amber"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>Your current IBAN will remain active until admin approves the change. Invoices will continue to be validated against the current IBAN.</div>
+            <div class="card">
+              <div class="input-group"><label class="input-label">New IBAN <span style="color:var(--a500)">*</span></label><input class="input-field" placeholder="ES12 1234 5678 9012 3456 7890" style="font-family:var(--fm)"><div class="input-sub">Must match the IBAN on the bank certificate — AI will verify</div></div>
+              <div class="input-group" style="margin-bottom:0">
+                <label class="input-label">New bank certificate (PDF) <span style="color:var(--a500)">*</span></label>
+                <div style="border:2px dashed var(--z700);border-radius:8px;padding:20px;text-align:center;cursor:pointer">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--z600)" stroke-width="1.5" style="margin:0 auto 8px;display:block"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div style="font-size:12px;color:var(--z400)">Select PDF</div>
+                </div>
+                <div class="input-sub">The AI will verify that the IBAN on the certificate matches the one entered above</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px"><button class="btn-g" style="flex:1">Cancel</button><button class="btn-p" style="flex:1">Submit for review</button></div>
+          </div>
+        </div>
+
+        <!-- DEACTIVATE -->
+        <div id="dd-deactivate" class="screen-section body">
+          <div style="max-width:480px">
+            <div style="font-family:var(--ft);font-size:18px;color:var(--z100);margin-bottom:16px">Request account deactivation</div>
+            <div class="info-bar ib-red"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>Your account and invoice history will be retained for legal compliance (6 years, Spanish tax law). You will not be able to log in or submit invoices after deactivation.</div>
+            <div class="card"><div class="input-group" style="margin-bottom:0"><label class="input-label">Reason for deactivation <span style="color:var(--a500)">*</span></label><textarea class="input-field" rows="4" placeholder="Please tell us why you want to deactivate your account..." style="resize:none"></textarea></div></div>
+            <div style="display:flex;gap:8px"><button class="btn-g" style="flex:1">Cancel</button><button class="btn-d" style="flex:1">Send deactivation request</button></div>
+          </div>
+        </div>
+
+      </div><!-- /main -->
+    </div><!-- /app-shell -->
+  </div><!-- /desktop-frame -->
+</div>
+
+<!-- ════════════════════════ MOBILE ════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-lbl">Mobile — Home (My invoices)</div>
+  <div class="phone" style="height:780px">
+    <div class="phone-inner" style="position:absolute;inset:0;display:flex;flex-direction:column">
+      <div class="m-status"><span class="m-time">9:41</span></div>
+      <div class="m-topbar"><div class="m-logo">DAZZ</div><div class="m-notif" style="position:relative"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
+      <div class="m-scroll">
+        <div style="padding:0 16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div class="kpi accent"><div class="kpi-lbl">Pending</div><div class="kpi-val amber" style="font-size:22px">3.680<span style="font-size:11px;color:var(--z500)">€</span></div><div class="kpi-sub">2 invoices</div></div>
+            <div class="kpi"><div class="kpi-lbl">Paid this month</div><div class="kpi-val green" style="font-size:22px">5.400<span style="font-size:11px;color:var(--z500)">€</span></div><div class="kpi-sub">2 invoices</div></div>
+          </div>
+          <div class="tab-bar"><div class="tab-item active" style="font-size:12px">My invoices (4)</div><div class="tab-item" style="font-size:12px">Received (2)</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:600;color:var(--z400);text-transform:uppercase;letter-spacing:.06em">Invoices</span>
+            <select style="background:var(--z800);border:1px solid var(--z700);border-radius:7px;padding:5px 9px;font-size:11px;color:var(--z300);outline:none"><option>All</option></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:90px">
+            <div class="inv-card">
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;color:var(--z200)">DAZZ_2026_001</span><span style="font-family:var(--fm);font-size:13px;font-weight:600;color:var(--z100)">1.840,00 €</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:3px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">15/01/2026</div><span class="pill p-pend"><span class="pill-dot"></span>Pending</span></div><div style="width:28px;height:28px;border:1px solid rgba(248,113,113,.2);border-radius:6px;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--r400)" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></div></div>
+            </div>
+            <div class="inv-card">
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;color:var(--z200)">DAZZ_2026_002</span><span style="font-family:var(--fm);font-size:13px;font-weight:600;color:var(--z100)">1.840,00 €</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:3px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">28/01/2026</div><span class="pill p-appr"><span class="pill-dot"></span>Approved</span></div></div>
+            </div>
+            <div class="inv-card">
+              <div class="inv-card-top"><span style="font-family:var(--fm);font-size:13px;color:var(--z200)">DAZZ_2025_031</span><span style="font-family:var(--fm);font-size:13px;font-weight:600;color:var(--z100)">550,00 €</span></div>
+              <div class="inv-card-bot"><div><div style="margin-bottom:3px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">05/11/2025</div><span class="pill p-rej"><span class="pill-dot"></span>Rejected</span></div></div>
+              <div style="margin-top:8px;font-size:11px;color:var(--r400);background:rgba(248,113,113,.06);padding:6px 8px;border-radius:6px;border:1px solid rgba(248,113,113,.12)">IBAN on invoice does not match registered IBAN</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- FAB -->
+      <div style="position:absolute;bottom:80px;right:16px;width:50px;height:50px;background:var(--a500);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(245,158,11,.4);z-index:40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--z950)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <div class="m-bottom">
+        <div class="m-nav active"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Upload</span></div>
+        <div class="m-nav" style="position:relative"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notifications</span><div class="m-nbadge">3</div></div>
+        <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE PROFILE -->
+<div class="phone-wrap">
+  <div class="phone-lbl">Mobile — Profile</div>
+  <div class="phone" style="height:780px">
+    <div class="phone-inner" style="position:absolute;inset:0;display:flex;flex-direction:column">
+      <div class="m-status"><span class="m-time">9:41</span></div>
+      <div class="m-topbar"><div style="font-family:var(--ft);font-size:20px;color:var(--z100)">My profile</div><div style="width:30px;height:30px;background:var(--a500);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--ft);font-size:12px;color:var(--z950)">MG</div></div>
+      <div class="m-scroll">
+        <div style="padding:0 16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="width:48px;height:48px;background:var(--a500);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--ft);font-size:20px;color:var(--z950)">MG</div>
+            <div><div style="font-family:var(--ft);font-size:18px;color:var(--z100)">@MARIAGOMEZ</div><div style="margin-top:3px"><span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px;background:rgba(74,222,128,.1);color:var(--g400);border:1px solid rgba(74,222,128,.2)">ACTIVE</span></div></div>
+          </div>
+          <span class="oc-badge" style="margin-bottom:12px;display:inline-flex">OC-MGMTINT2026001</span>
+          <div class="pending-card" style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;margin-bottom:4px"><span class="pdot"></span><span style="font-size:12px;font-weight:600;color:var(--a400)">Pending change</span></div>
+            <div style="font-size:12px;color:var(--z400)">IBAN update submitted 19/03/2026 — awaiting admin approval</div>
+          </div>
+          <div class="card" style="margin-bottom:10px">
+            <div class="data-row"><span class="dl">Email</span><span class="dv amber">maria@gmail.com</span></div>
+            <div class="data-row"><span class="dl">NIF/CIF</span><span class="dv mono">12345678A</span></div>
+            <div class="data-row"><span class="dl">Phone</span><span class="dv">+34 612 345 678</span></div>
+            <div class="data-row"><span class="dl">IBAN</span><span class="dv mono">ES41 ···· 46</span></div>
+            <div class="data-row"><span class="dl">Bank cert</span><span class="dv" style="color:var(--r400)">View PDF →</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:90px">
+            <button class="btn-g btn-full" style="text-align:left;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit my data</button>
+            <button class="btn-g btn-full" style="text-align:left;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Change IBAN & bank certificate</button>
+            <button class="btn-d btn-full" style="text-align:left;display:flex;align-items:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Request deactivation</button>
+          </div>
+        </div>
+      </div>
+      <div class="m-bottom">
+        <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Upload</span></div>
+        <div class="m-nav" style="position:relative"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notifications</span><div class="m-nbadge">3</div></div>
+        <div class="m-nav active"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /screens-wrap -->
+
+<script>
+const desktopMap = {
+  'home':'dd-home','home-received':'dd-home-received','upload':'dd-upload',
+  'invoice-detail':'dd-invoice-detail','notifications':'dd-notifications',
+  'profile':'dd-profile','edit-data':'dd-edit-data','change-iban':'dd-change-iban',
+  'deactivate':'dd-deactivate'
+};
+const sidebarMap = {
+  'home':'sb-home','home-received':'sb-home','upload':'sb-upload',
+  'invoice-detail':'sb-home','notifications':'sb-notifications',
+  'profile':'sb-profile','edit-data':'sb-profile','change-iban':'sb-profile','deactivate':'sb-profile'
+};
+const titles = {
+  'home':'Home','home-received':'Home','upload':'Upload invoice',
+  'invoice-detail':'Invoice detail','notifications':'Notifications',
+  'profile':'My profile','edit-data':'Edit my data','change-iban':'Change IBAN','deactivate':'Request deactivation'
+};
+
+function show(screen) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  Object.values(desktopMap).forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
+  const ds = document.getElementById(desktopMap[screen]);
+  if(ds) ds.classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  const sid = document.getElementById(sidebarMap[screen]);
+  if(sid) sid.classList.add('active');
+  const t = document.getElementById('d-page-title');
+  if(t) t.textContent = titles[screen] || screen;
+}
+document.getElementById('sb-home').classList.add('active');
+</script>
+</body>
+</html>

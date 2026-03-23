@@ -6,11 +6,6 @@ import { getCompanies } from '../../services/api';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
 
-const TYPE_BADGE = {
-  INFLUENCER: 'bg-purple-400/10 text-purple-400 border border-purple-400/20',
-  GENERAL: 'bg-blue-400/10 text-blue-400 border border-blue-400/20',
-  MIXED: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-};
 const STATUS_BADGE = {
   ACTIVE: 'bg-green-400/10 text-green-400 border border-green-400/20',
   NEW: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
@@ -193,14 +188,11 @@ const SuppliersList = () => {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] text-zinc-500 font-mono">{s.nif_cif || '—'}</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${TYPE_BADGE[s.supplier_type] || TYPE_BADGE.GENERAL}`}>{s.supplier_type}</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
-              </div>
-              {s.oc_number && (
-                <div className="mt-1">
+                {s.oc_number && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{s.oc_number}</span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             <span className="text-[11px] text-zinc-600 flex-shrink-0">{timeAgo(s.last_activity)}</span>
           </div>
@@ -215,7 +207,6 @@ const SuppliersList = () => {
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium w-5"></th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">NIF/CIF</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Tipo</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Empresa</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">OC</th>
@@ -233,9 +224,6 @@ const SuppliersList = () => {
                   <div className="text-[11px] text-zinc-500">{s.email}</div>
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400 font-mono">{s.nif_cif || '—'}</td>
-                <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${TYPE_BADGE[s.supplier_type] || TYPE_BADGE.GENERAL}`}>{s.supplier_type}</span>
-                </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400">{s.company_name || 'All'}</td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
@@ -249,7 +237,7 @@ const SuppliersList = () => {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan="9" className="text-center py-8 text-xs text-zinc-600">No se encontraron proveedores</td></tr>
+              <tr><td colSpan="7" className="text-center py-8 text-xs text-zinc-600">No se encontraron proveedores</td></tr>
             )}
           </tbody>
         </table>

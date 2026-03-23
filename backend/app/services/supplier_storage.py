@@ -8,11 +8,14 @@ Cloudinary credentials reuse the existing project config (CLOUDINARY_CLOUD_NAME,
 R2 credentials: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_ENDPOINT.
 """
 
+import logging
 import os
 import uuid
 import shutil
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
+
+logger = logging.getLogger(__name__)
 
 from app.services.validators import sanitize_filename
 from app.services.cloudinary_service import compress_if_needed
@@ -87,7 +90,7 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
         )
         returned_id = result.get("public_id", f"{folder}/{file_name}")
         pdf_url = result.get("secure_url", "")
-        print(f"Cloudinary PDF upload OK: {returned_id}")
+        logger.info(f"Cloudinary PDF upload OK: {returned_id}")
 
         # 2. Convert pages to images (same as upload_ticket_file)
         page_urls = []
@@ -121,10 +124,10 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
                     overwrite=True,
                 )
                 page_urls.append(raw_result["secure_url"])
-                print(f"  Page {i + 1}/{len(pages)} uploaded")
+                logger.info(f"Page {i + 1}/{len(pages)} uploaded")
 
         except Exception as e:
-            print(f"Warning: page image generation failed: {e}")
+            logger.warning(f"Page image generation failed: {e}")
             # PDF upload succeeded — pages are optional
 
         return {
@@ -184,10 +187,10 @@ def delete_invoice_pdf(file_url: str) -> bool:
             pid = f"{pid}.pdf"
 
         cloudinary.uploader.destroy(pid, resource_type="raw", type="upload")
-        print(f"Cloudinary delete OK: {pid}")
+        logger.info(f"Cloudinary delete OK: {pid}")
         return True
     except Exception as e:
-        print(f"Cloudinary delete error: {e}")
+        logger.error(f"Cloudinary delete error: {e}")
         return False
 
 
@@ -258,7 +261,7 @@ def save_bank_cert(file: UploadFile, supplier_id: int, contents: bytes = None) -
             ExtraArgs={"ContentType": "application/pdf"},
         )
 
-        print(f"R2 upload OK: {object_key}")
+        logger.info(f"R2 upload OK: {object_key}")
         return object_key
 
     finally:
@@ -296,8 +299,8 @@ def delete_bank_cert(object_key: str) -> bool:
     try:
         client = _get_r2_client()
         client.delete_object(Bucket=R2_BUCKET_NAME, Key=object_key)
-        print(f"R2 delete OK: {object_key}")
+        logger.info(f"R2 delete OK: {object_key}")
         return True
     except Exception as e:
-        print(f"R2 delete error: {e}")
+        logger.error(f"R2 delete error: {e}")
         return False

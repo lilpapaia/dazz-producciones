@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download } from 'lucide-react';
-import { getInvoice, getAllInvoices, updateInvoiceStatus } from '../../services/suppliersApi';
-import { showError } from '../../utils/toast';
+import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download, Search } from 'lucide-react';
+import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions } from '../../services/suppliersApi';
+import { showError, showSuccess } from '../../utils/toast';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -30,6 +31,11 @@ const InvoiceDetail = () => {
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
 
+  // OC assignment
+  const [ocSearch, setOcSearch] = useState('');
+  const [ocSuggestions, setOcSuggestions] = useState([]);
+  const [assigning, setAssigning] = useState(false);
+
   // Lightbox (ReviewTicket pattern)
   const [currentPage, setCurrentPage] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
@@ -41,6 +47,9 @@ const InvoiceDetail = () => {
   const currentIdx = allIds.indexOf(parseInt(invoiceId));
 
   const queryString = from === 'supplier' && supplierId ? `?from=supplier&supplierId=${supplierId}` : from === 'list' ? '?from=list' : '';
+
+  useEscapeKey(() => setShowLightbox(false), showLightbox);
+  useEscapeKey(() => { setRejectModal(false); setReason(''); }, rejectModal);
 
   const load = () => {
     getInvoice(invoiceId)
@@ -72,6 +81,27 @@ const InvoiceDetail = () => {
     document.body.style.overflow = showLightbox ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
   }, [showLightbox]);
+
+  // OC autocomplete with debounce
+  useEffect(() => {
+    if (ocSearch.length < 2) { setOcSuggestions([]); return; }
+    const timer = setTimeout(() => {
+      getOCSuggestions(ocSearch).then(r => setOcSuggestions(r.data)).catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [ocSearch]);
+
+  const handleAssignOC = async (ocNumber) => {
+    setAssigning(true);
+    try {
+      await assignInvoiceOC(invoiceId, ocNumber);
+      showSuccess(`OC "${ocNumber}" asignado`);
+      setOcSearch('');
+      setOcSuggestions([]);
+      load();
+    } catch (e) { showError(e.response?.data?.detail || 'Error al asignar OC'); }
+    setAssigning(false);
+  };
 
   const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e) => {
@@ -267,7 +297,10 @@ const InvoiceDetail = () => {
             <div className={rowCls}><span className={labelCls}>IBAN</span><span className={ibanCls}>{invoice.iban || '—'}</span></div>
             <div className={rowCls}>
               <span className={labelCls}>OC</span>
-              <span className="text-[12px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{invoice.oc_number}</span>
+              {invoice.status === 'OC_PENDING'
+                ? <span className="text-[12px] px-1.5 py-[1px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15">Sin OC</span>
+                : <span className="text-[12px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{invoice.oc_number}</span>
+              }
             </div>
           </div>
         </div>
@@ -315,6 +348,24 @@ const InvoiceDetail = () => {
                   ))}
                 </div>
               )}
+              {/* IBAN match checklist */}
+              {'iban_match' in iaResult && (
+                <div className="mt-2">
+                  {iaResult.iban_match === true && (
+                    <div className="text-[12px] text-green-400 flex items-center gap-1.5">
+                      <Check size={12} strokeWidth={2} /> IBAN matches registered account
+                    </div>
+                  )}
+                  {iaResult.iban_match === false && (
+                    <div className="text-[12px] text-red-400 flex items-center gap-1.5">
+                      <AlertTriangle size={12} /> IBAN does NOT match registered account
+                    </div>
+                  )}
+                  {iaResult.iban_match === null && (
+                    <div className="text-[12px] text-zinc-500">— IBAN not found on invoice</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -329,6 +380,45 @@ const InvoiceDetail = () => {
           {/* Acciones */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Acciones</div>
+            {invoice.status === 'OC_PENDING' && (
+              <div>
+                <div className="bg-amber-500/[.06] text-amber-400 border border-amber-500/[.12] rounded p-2.5 text-[11px] mb-3 flex items-start gap-2">
+                  <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                  La IA no detectó el OC en esta factura. Asígnalo manualmente.
+                </div>
+                <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Buscar OC o proyecto</label>
+                <div className="relative mb-2">
+                  <Search size={13} className="absolute left-2.5 top-2.5 text-zinc-500 pointer-events-none" />
+                  <input
+                    value={ocSearch}
+                    onChange={e => setOcSearch(e.target.value)}
+                    placeholder="Escribe OC o nombre de proyecto..."
+                    className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none"
+                  />
+                  {ocSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-md overflow-hidden z-50 shadow-xl">
+                      {ocSuggestions.map((s, i) => (
+                        <div key={i} onClick={() => handleAssignOC(s.oc_number)}
+                          className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs border-b border-white/[.04] last:border-0 flex items-center gap-2">
+                          <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{s.oc_number}</span>
+                          <span className="text-zinc-400 truncate">{s.label}{s.company_name ? ` · ${s.company_name}` : ''}</span>
+                        </div>
+                      ))}
+                      <div onClick={() => handleAssignOC(ocSearch)}
+                        className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-[12px] text-zinc-500 text-center border-t border-white/[.04]">
+                        + Escribir OC personalizado
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {ocSearch.length >= 2 && ocSuggestions.length === 0 && (
+                  <button onClick={() => handleAssignOC(ocSearch)} disabled={assigning}
+                    className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
+                    {assigning ? 'Asignando...' : `Asignar "${ocSearch}" como OC`}
+                  </button>
+                )}
+              </div>
+            )}
             {invoice.status === 'PENDING' && (
               <div className="flex gap-2">
                 <button onClick={() => handleAction('APPROVED')} disabled={acting}

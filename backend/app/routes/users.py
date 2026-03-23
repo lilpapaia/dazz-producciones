@@ -1,14 +1,17 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import User, Project, Company, UserCompany  # ← AÑADIDO Company, UserCompany
+from app.models.database import User, Project, Company, UserCompany, UserRole
 from app.services.auth import get_current_admin_user, get_current_active_user, get_password_hash
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_user_deleted, log_role_changed
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -36,16 +39,16 @@ async def get_usernames(
     """
     
     # ADMIN: Retornar todos
-    if current_user.role == "ADMIN":
+    if current_user.role == UserRole.ADMIN:
         users = db.query(User).options(joinedload(User.companies)).all()
         return users
-    
+
     # WORKER: Solo él mismo
-    if current_user.role == "WORKER":
+    if current_user.role == UserRole.WORKER:
         return [current_user]
-    
+
     # BOSS: Usuarios de sus empresas
-    if current_user.role == "BOSS":
+    if current_user.role == UserRole.BOSS:
         # Obtener IDs de empresas del BOSS
         user_company_ids = [uc.id for uc in current_user.companies]
         
@@ -134,9 +137,9 @@ async def update_user(
                 company_id=company_id
             )
             db.add(user_company)
-        print(f"✅ {len(user_update.company_ids)} empresa(s) asignada(s) a {user.email}")
+        logger.info(f"{len(user_update.company_ids)} empresa(s) asignada(s) a {user.email}")
     else:
-        print(f"⚠️ Usuario {user.email} actualizado SIN empresas asignadas")
+        logger.warning(f"Usuario {user.email} actualizado SIN empresas asignadas")
     
     db.commit()
     db.refresh(user)
@@ -214,7 +217,7 @@ async def delete_user(
         admin_email=current_user.email
     )
     
-    print(f"✅ Usuario {user_email} eliminado correctamente (y sus asignaciones de empresas)")
+    logger.info(f"Usuario {user_email} eliminado correctamente (y sus asignaciones de empresas)")
     
     return {
         "message": f"Usuario {user_email} eliminado correctamente"

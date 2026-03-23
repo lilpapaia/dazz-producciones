@@ -1,4 +1,5 @@
 import re
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
@@ -8,13 +9,15 @@ from pydantic import BaseModel, EmailStr
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import User, Project, ProjectStatus, Company
+from app.models.database import User, Project, ProjectStatus, Company, UserRole
 from app.services.auth import get_current_active_user
 from app.services.companies_service import validate_company_access
 from app.services.permissions import get_user_company_ids, can_access_project, can_modify_project
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_project_deleted
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -91,9 +94,9 @@ async def create_project(
             db.add(notif)
         if pending_invoices:
             db.commit()
-            print(f"Auto-linked {len(pending_invoices)} OC_PENDING invoices to project {db_project.creative_code}")
+            logger.info(f"Auto-linked {len(pending_invoices)} OC_PENDING invoices to project {db_project.creative_code}")
     except Exception as e:
-        print(f"Warning: OC auto-link failed: {e}")
+        logger.warning(f"OC auto-link failed: {e}")
 
     return db_project
 
@@ -114,11 +117,11 @@ async def get_projects(
 
     query = db.query(Project).options(joinedload(Project.owner_company))
 
-    if current_user.role == "ADMIN":
+    if current_user.role == UserRole.ADMIN:
         # ADMIN ve TODOS los proyectos
         pass
 
-    elif current_user.role == "BOSS":
+    elif current_user.role == UserRole.BOSS:
         # BOSS ve todos los proyectos de su empresa
         user_company_ids = get_user_company_ids(current_user, db)
         query = query.filter(Project.owner_company_id.in_(user_company_ids))
@@ -249,7 +252,7 @@ async def close_project(
         from app.services.excel_generator import create_project_excel_bytes
         excel_bytes = create_project_excel_bytes(project, tickets)
     except Exception as e:
-        print(f"❌ Error generando Excel: {str(e)}")
+        logger.error(f"Error generando Excel: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al generar Excel"
@@ -279,7 +282,7 @@ async def close_project(
                 excel_filename=filename
             )
         except Exception as e:
-            print(f"Warning: Email sending failed: {str(e)}")
+            logger.warning(f"Email sending failed: {str(e)}")
 
     project.status = ProjectStatus.CERRADO
     project.closed_at = datetime.now(timezone.utc)
@@ -361,7 +364,7 @@ async def delete_project(
     tickets_count = len(tickets)
 
     if tickets:
-        print(f"🗑️ Borrando {tickets_count} tickets del proyecto {project_id}")
+        logger.info(f"Borrando {tickets_count} tickets del proyecto {project_id}")
 
         try:
             from app.services.cloudinary_service import delete_ticket_files
@@ -370,17 +373,17 @@ async def delete_project(
                 # Borrar archivos de Cloudinary
                 try:
                     delete_ticket_files(ticket.file_pages, ticket.pdf_url)
-                    print(f"  ✅ Archivos eliminados para ticket {ticket.id}")
+                    logger.info(f"Archivos eliminados para ticket {ticket.id}")
                 except Exception as e:
-                    print(f"  ⚠️ Error eliminando archivos del ticket {ticket.id}: {str(e)}")
+                    logger.warning(f"Error eliminando archivos del ticket {ticket.id}: {str(e)}")
                     # Continuar aunque falle
 
                 # Borrar ticket de BD
                 db.delete(ticket)
 
-            print(f"✅ {tickets_count} tickets eliminados")
+            logger.info(f"{tickets_count} tickets eliminados")
         except Exception as e:
-            print(f"⚠️ Error durante borrado de tickets: {str(e)}")
+            logger.warning(f"Error durante borrado de tickets: {str(e)}")
             # Continuar con el borrado del proyecto aunque falle
 
     # 2. BORRAR EL PROYECTO
@@ -395,5 +398,5 @@ async def delete_project(
         tickets_count=tickets_count
     )
 
-    print(f"✅ Proyecto {project_id} eliminado completamente")
+    logger.info(f"Proyecto {project_id} eliminado completamente")
     return None

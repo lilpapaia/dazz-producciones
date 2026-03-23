@@ -2,7 +2,6 @@ from fastapi import FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import os
 import logging
@@ -16,13 +15,22 @@ logger = logging.getLogger(__name__)
 from database_config import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics, companies
-from app.routes import suppliers as suppliers_admin, supplier_portal
+from app.routes import suppliers as suppliers_admin, supplier_portal, autoinvoice
 
 # ============================================
 # 🔒 RATE LIMITING
 # ============================================
+def _get_real_client_ip(request: Request) -> str:
+    """Key function for rate limiting behind Railway proxy."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=_get_real_client_ip,
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://",
     headers_enabled=True
@@ -116,6 +124,7 @@ app.include_router(users.router)
 app.include_router(statistics.router)
 app.include_router(companies.router)
 app.include_router(suppliers_admin.router)
+app.include_router(autoinvoice.router)
 app.include_router(supplier_portal.router)
 
 @app.get("/")
@@ -198,6 +207,10 @@ async def startup_event():
             # LOGIC-M2: Columna date_parsed (ahora mapeada en ORM)
             conn.execute(text(
                 "ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS date_parsed DATE"
+            ))
+            # Autoinvoice flag
+            conn.execute(text(
+                "ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS is_autoinvoice BOOLEAN DEFAULT FALSE"
             ))
             # SEC-H2: Columnas account lockout
             conn.execute(text(

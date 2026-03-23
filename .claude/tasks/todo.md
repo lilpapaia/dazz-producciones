@@ -158,10 +158,10 @@
 - [x] **M-12:** Índice compuesto `(recipient_type, recipient_id, is_read)` — Cubierto por PERF-M2
 - [x] **M-14:** supplier_type Literal enum — Cubierto por LOGIC-M1
 - [x] **M-18:** File copy async — Cubierto por PERF-M1
-- [ ] **M-13:** NIF matching: query filtrada en vez de full table scan
-- [ ] **M-15:** OC_PENDING invoices: añadir path de borrado
-- [ ] **M-16:** Atomicidad: commit invoice + notificaciones juntos
-- [ ] **M-17:** DELETE_REQUESTED en transition table con mensaje claro
+- [x] **M-13:** NIF matching: usa `_normalize_nif()` compartida de supplier_ai.py (2026-03-23)
+- [x] **M-15:** OC_PENDING invoices: proveedor puede solicitar borrado (PENDING + OC_PENDING) (2026-03-23)
+- [x] **M-16:** Atomicidad: file_pages + date_parsed + notificaciones en 1 commit atómico (2026-03-23)
+- [x] **M-17:** DELETE_REQUESTED en transition table + mensajes claros por estado terminal (2026-03-23)
 
 ## 🔵 Fixes LOW proveedores pendientes
 
@@ -189,37 +189,39 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ## 📋 Pendiente futuro sprint
 
-### DEUDA-M1 extendido: Migrar ~60 print() restantes
-- [ ] `backend/app/services/cloudinary_service.py` (~16 prints)
-- [ ] `backend/app/routes/projects.py` (~10 prints)
-- [ ] `backend/app/routes/tickets.py` (~4 prints)
-- [ ] `backend/app/routes/suppliers.py` (~4 prints)
-- [ ] `backend/app/routes/users.py` (~3 prints)
-- [ ] `backend/app/services/supplier_storage.py` (~8 prints)
-- [ ] `backend/database_config.py` (~2 prints)
+### DEUDA-M1 extendido: Migrar ~60 print() restantes — ✅ 7/7 COMPLETADOS 2026-03-23
+- [x] `backend/app/services/cloudinary_service.py` — 16 prints → logger
+- [x] `backend/app/routes/projects.py` — 10 prints → logger
+- [x] `backend/app/routes/tickets.py` — 4 prints → logger
+- [x] `backend/app/routes/suppliers.py` — 4 prints → logger
+- [x] `backend/app/routes/users.py` — 3 prints → logger
+- [x] `backend/app/services/supplier_storage.py` — 8 prints → logger
+- [x] `backend/database_config.py` — 2 prints → logger (2026-03-23)
 
-### DEUDA-M3 extendido: UserRole enum en más archivos backend
-- [ ] `backend/app/routes/statistics.py` (líneas 21, 194, 198)
-- [ ] `backend/app/routes/projects.py` (líneas 117, 121)
-- [ ] `backend/app/services/auth.py` (línea 176)
+### DEUDA-M3 extendido: UserRole enum en más archivos backend — ✅ COMPLETADO 2026-03-23
+- [x] `backend/app/routes/statistics.py` — 4 strings → UserRole enum
+- [x] `backend/app/routes/projects.py` — 2 strings → UserRole enum
+- [x] `backend/app/routes/users.py` — 3 strings → UserRole enum
+- [x] `backend/app/routes/companies.py` — 2 strings → UserRole enum
+- [x] `backend/app/services/auth.py` — 1 string → UserRole enum
+- [x] `backend/app/services/companies_service.py` — 3 strings → UserRole enum
 
-### UX-L2 extendido: Escape en modales restantes
-- [ ] `frontend/src/pages/suppliers/SupplierDetail.jsx` (modal borrado factura)
-- [ ] `frontend/src/pages/suppliers/InvoicesList.jsx` (modal borrado)
-- [ ] `frontend/src/pages/suppliers/InvoiceDetail.jsx` (lightbox)
-- [ ] `frontend/src/pages/Users.jsx` (modal crear/editar)
-- [ ] `frontend-suppliers/src/pages/Home.jsx` (modal borrado)
+### UX-L2 extendido: Escape en modales restantes — ✅ COMPLETADO 2026-03-23
+- [x] `frontend/src/pages/suppliers/SupplierDetail.jsx` — editModal + deleteModal
+- [x] `frontend/src/pages/suppliers/InvoicesList.jsx` — actionModal
+- [x] `frontend/src/pages/suppliers/InvoiceDetail.jsx` — lightbox + rejectModal
+- [x] `frontend/src/pages/Users.jsx` — showCreate + showEdit
+- [x] `frontend-suppliers/src/pages/Home.jsx` — deleteModal
+- [x] Hook copiado a `frontend-suppliers/src/hooks/useEscapeKey.js`
 
-### LOGIC-M2 extendido: Backfill date_parsed
-- [ ] Crear endpoint temporal o script para backfill `date_parsed` en registros anteriores a la migración ORM (los creados con raw SQL ya tienen valor)
+### LOGIC-M2 extendido: Backfill date_parsed — ✅ COMPLETADO 2026-03-23
+- [x] Endpoint `POST /suppliers/admin/backfill-date-parsed` — parsea date string → date_parsed para facturas con NULL
 
 ---
 
 ## 🔧 Bugs generales detectados en testing
 
-- [ ] **Bug /health y / endpoint** (500 por slowapi rate limiter)
-  - Probablemente get_remote_address falla detrás de proxy Railway
-  - Fix: Probar sin rate limiter o con X-Forwarded-For
+- [x] **Bug /health y / endpoint** (500 por slowapi rate limiter) — Fix: `_get_real_client_ip()` custom key function con X-Forwarded-For + fallback (2026-03-23)
 - [ ] **Rate limiting no funciona** (workers gunicorn no comparten memoria)
   - storage_uri="memory://" no se comparte entre workers
   - Fix: Usar Redis como backend de rate limiting
@@ -334,3 +336,89 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 | Deuda técnica MEDIUM | 3 | 3 (parcial) | 0 | ✅ |
 | Deuda técnica LOW | 2 | 2 | 0 | ✅ |
 | **Total** | **50** | **44** | **5 RGPD + pendientes futuros** | |
+
+---
+
+## 🚀 Portal Proveedores v2 — Acordado 2026-03-23
+
+### 1. Eliminar tipos de proveedor (INFLUENCER/GENERAL/MIXED) — ✅ COMPLETADO 2026-03-23
+- [x] Eliminar enum `SupplierType` y columna del ORM (columna BD se mantiene como dead data)
+- [x] Eliminar `supplier_type` de 5 schemas (InviteRequest, SupplierResponse, SupplierUpdate, ValidateTokenResponse, ProfileResponse)
+- [x] Añadir `has_permanent_oc` y `company_name` a SupplierResponse y ProfileResponse
+- [x] Reescribir `supplier_ai.py` validación OC: lógica unificada (oc_id → OC permanente, sino → proyecto)
+- [x] Simplificar `supplier_portal.py`: eliminar supplier_type de registro/login/profile
+- [x] Simplificar `routes/suppliers.py`: eliminar de invite/list/update
+- [x] Frontend admin: eliminar TYPE_BADGE de SuppliersList, columna "Tipo" de tabla
+- [x] Frontend admin: eliminar selector tipo de SupplierDetail modal editar, badge tipo → badge OC
+- [x] Frontend admin: reescribir SupplierInvite — checkbox "Crear OC permanente" en vez de 3 tipos
+- [x] Portal Profile: eliminar TYPE_BADGE, usar `company_name` del endpoint
+- [x] Portal Upload: adaptar texto OC permanente
+- [x] Verificación: 0 referencias a SupplierType/INFLUENCER/MIXED en todo el código
+
+### 2. Facturas sin OC — asignación manual por admin — ✅ COMPLETADO 2026-03-23
+- [x] Schema `AssignInvoiceOCRequest` en `supplier_schemas.py`
+- [x] Endpoint `GET /suppliers/oc-suggestions?q=` — autocompletado OCs permanentes + proyectos abiertos
+- [x] Endpoint `PATCH /suppliers/invoices/{id}/assign-oc` — asigna OC, resuelve project/company, OC_PENDING → PENDING
+- [x] `suppliersApi.js`: `assignInvoiceOC()` + `getOCSuggestions()`
+- [x] `InvoicesList.jsx`: filtro "Sin OC", banner info, highlight filas OC_PENDING (azul), botón "Asignar OC →"
+- [x] `InvoiceDetail.jsx`: sección "Asignar OC" con buscador autocompletado + opción texto libre + badge "Sin OC"
+
+### 3. Autofacturación — nueva sección admin — ✅ COMPLETADO 2026-03-23
+- [x] Backend: nuevo router `routes/autoinvoice.py` con 4 endpoints (next-number, supplier-search, generate, preview)
+- [x] Backend: `services/autoinvoice_pdf.py` — generación PDF con fpdf2 (zero system deps, no LibreOffice)
+- [x] Backend: campo `is_autoinvoice` en SupplierInvoice + ALTER TABLE en startup
+- [x] Backend: `GET /portal/invoices/received` — portal lista autofacturas recibidas
+- [x] Backend: `send_autoinvoice_notification` email al proveedor
+- [x] Frontend admin: `AutoInvoice.jsx` — formulario completo con:
+  - Selector empresa DAZZ → autocomplete datos fiscales
+  - Buscador proveedor → autocomplete nombre/NIF/dirección/IBAN
+  - Campos factura: concepto, base, IVA%, IRPF%, fecha, nº factura secuencial, OC
+  - Resumen con cálculos en tiempo real
+  - Preview PDF (nueva ventana) + Generar y enviar
+- [x] Admin sidebar: item "Autofactura" con icono FilePlus
+- [x] Portal Home.jsx: pestaña "Received" conectada con endpoint real + cards con diseño azul "Generated by DAZZ"
+- [x] `requirements.txt`: fpdf2==2.8.1
+- [x] Dependencia: `fpdf2` añadida (5KB, zero system deps)
+
+### 4. Portal Proveedores v2 — UI — ✅ COMPLETADO 2026-03-23
+- [x] Layout.jsx: sidebar desktop (196px) + topbar + bottom nav 4 items mobile
+- [x] Home.jsx: KPIs + tabs "My invoices" / "Received invoices" (placeholder)
+- [x] Notifications.jsx: lista con icons por tipo, unread dots, mark read, filter All/Unread
+- [x] Profile.jsx: 2-column desktop, pending change card, 3 action buttons
+- [x] EditData.jsx: formulario name/phone/address → submit for review
+- [x] ChangeIban.jsx: formulario new IBAN + PDF upload → submit for review
+- [x] RequestDeactivation.jsx: formulario con motivo → send request
+- [x] App.jsx: 9 rutas (/, /upload, /notifications, /profile, /profile/edit-data, /profile/change-iban, /profile/deactivation, /login, /register)
+- [x] Backend: 3 endpoints notificaciones portal (GET /portal/notifications, PUT read, PUT read-all)
+- [x] Backend: 3 endpoints account actions (POST request-data-change, request-iban-change, request-deactivation)
+- [x] Backend: unread_notifications en SummaryResponse, has_pending_change en ProfileResponse
+- [x] Mockup v2 seguido fielmente para todas las pantallas
+- [ ] PWA: pendiente configurar `vite-plugin-pwa` (ya configurado — verificar)
+
+### 5. Cambio de datos → revisión admin — ✅ COMPLETADO 2026-03-23
+- [x] Edit data: nombre, teléfono, dirección (email y NIF NO editables)
+- [x] Change IBAN: nuevo IBAN + nuevo PDF → IBAN actual sigue activo hasta aprobación admin
+- [x] Backend: `POST /portal/request-data-change` y `POST /portal/request-iban-change`
+- [x] IA valida que IBAN del certificado coincide con IBAN escrito (completado Fase 7/8)
+- [ ] Admin: UI para aprobar/rechazar cambios de datos (futuro)
+
+### 6. Solicitud desactivación — ✅ COMPLETADO 2026-03-23
+- [x] Botón en Profile → formulario con motivo → endpoint
+- [x] Backend: `POST /portal/request-deactivation`
+- [x] Datos conservados por ley (6 años Hacienda) — documentado en warning UI
+
+### 7. Validación IA — IBAN en facturas — ✅ COMPLETADO 2026-03-23
+- [x] IBAN mismatch cambiado de `errors` (bloqueante) a `warnings` (no bloqueante)
+- [x] Campo `iban_match` (true/false/null) añadido al resultado de `validate_supplier_invoice()`
+- [x] Notificación admin "IBAN Mismatch" cuando `iban_match=False` en upload_invoice
+- [x] Checklist IA en InvoiceDetail admin: ✓ match / ✗ mismatch / — not found
+- [x] `ia_validation_result` JSON ya incluye `iban_match` automáticamente
+
+### 8. Validación IA — IBAN en registro — ✅ COMPLETADO 2026-03-23
+- [x] Nueva función `extract_iban_from_cert()` en `supplier_ai.py` (Claude, prompt simple)
+- [x] Nuevo endpoint `POST /portal/validate-bank-cert` (sin auth, rate-limited 10/h)
+- [x] Si IBAN no coincide → 422 bloquea registro
+- [x] Si IA no puede leer IBAN → `valid: true` (no bloquea) + notificación admin "manual review recommended"
+- [x] Frontend Register.jsx: Step 2 "Continue" → valida IBAN vs cert antes de avanzar a Step 3
+- [x] Loading state "Verifying IBAN..." en botón Continue
+- [ ] Implementar en `routes/supplier_portal.py` antes del register endpoint

@@ -4,6 +4,7 @@ import { Plus, Trash2, Edit } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
 import { ROLES } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
+import useEscapeKey from '../hooks/useEscapeKey';
 import CompanyMultiSelect from '../components/CompanyMultiSelect';
 import StatusBadge from '../components/common/StatusBadge';
 
@@ -23,6 +24,9 @@ const Users = () => {
     company_ids: []
   });
   const { user: currentUser } = useAuth();
+
+  useEscapeKey(() => setShowCreate(false), showCreate);
+  useEscapeKey(() => { setShowEdit(false); setEditingUser(null); }, showEdit);
 
   useEffect(() => {
     loadData();

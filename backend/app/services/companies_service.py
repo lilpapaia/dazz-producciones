@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from fastapi import HTTPException, status
 
-from app.models.database import User, Company
+from app.models.database import User, Company, UserRole
 
 def _load_user_companies(user: User, db: Session) -> List[Company]:
     """Recarga companies desde DB para evitar DetachedInstanceError."""
@@ -15,7 +15,7 @@ def get_user_companies(user: User, db: Session) -> List[Company]:
     """
     Obtener las empresas a las que un usuario tiene acceso.
     """
-    if user.role == "ADMIN":
+    if user.role == UserRole.ADMIN:
         return db.query(Company).order_by(Company.name).all()
     else:
         companies = _load_user_companies(user, db)
@@ -26,7 +26,7 @@ def validate_company_access(user: User, company_id: int, db: Session = None) -> 
     """
     Verificar si un usuario tiene acceso a una empresa específica.
     """
-    if user.role == "ADMIN":
+    if user.role == UserRole.ADMIN:
         return True
 
     if db is not None:
@@ -62,7 +62,7 @@ def check_user_has_companies(user: User) -> bool:
     Returns:
         True si tiene empresas, False en caso contrario
     """
-    if user.role == "ADMIN":
+    if user.role == UserRole.ADMIN:
         # ADMIN siempre tiene acceso (a todas)
         return True
     

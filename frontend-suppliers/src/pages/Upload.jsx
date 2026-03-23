@@ -92,7 +92,7 @@ const UploadPage = () => {
         </div>
       )}
 
-      {/* OC permanente (if influencer/mixed) */}
+      {/* OC permanente (si tiene asignado) */}
       {!allDone && profile?.oc_number && (
         <div className="mx-4 mb-4">
           <div className="text-[9px] text-zinc-400 tracking-widest uppercase mb-2">Your permanent OC</div>
@@ -100,7 +100,7 @@ const UploadPage = () => {
             <User size={16} className="text-purple-400 flex-shrink-0" strokeWidth={1.5} />
             <div>
               <div className="font-['IBM_Plex_Mono'] text-xs text-purple-400">{profile.oc_number}</div>
-              <div className="text-[10px] text-zinc-500 mt-0.5">DAZZLE MGMT · Permanent</div>
+              <div className="text-[10px] text-zinc-500 mt-0.5">Permanent OC</div>
             </div>
           </div>
         </div>

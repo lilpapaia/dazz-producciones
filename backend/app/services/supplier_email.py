@@ -78,6 +78,26 @@ def send_supplier_invitation(name: str, email: str, token: str, custom_message: 
         f"Welcome, {safe_name}!", "SUPPLIER PORTAL INVITATION", body))
 
 
+def send_autoinvoice_notification(name: str, email: str, invoice_number: str, amount: float, issuer_name: str):
+    """Notify supplier that DAZZ generated an invoice on their behalf."""
+    safe_name = html_mod.escape(name)
+    safe_inv = html_mod.escape(invoice_number)
+    safe_issuer = html_mod.escape(issuer_name)
+    portal_url = f"{SUPPLIER_PORTAL_URL}/"
+    body = (
+        _text(f"Hello <strong>{safe_name}</strong>,")
+        + _text(f"<strong>{safe_issuer}</strong> has generated invoice "
+                f"<strong>{safe_inv}</strong> on your behalf for <strong style='color:#f59e0b;'>"
+                f"{amount:,.2f} EUR</strong>.")
+        + _text("You can view and download this invoice from your supplier portal.")
+        + _button(portal_url, "VIEW IN PORTAL")
+        + _warning("This invoice has been generated automatically by DAZZ. "
+                    "If you believe this is incorrect, please contact admin@dazzcreative.com")
+    )
+    return send_email(email, f"DAZZ Group — Invoice {safe_inv} generated on your behalf",
+                      _base_template("Invoice Generated", "AUTOINVOICE", body))
+
+
 def send_supplier_invoice_paid(name: str, email: str, invoice_number: str, amount: float):
     # SEC-M2: Escapar datos interpolados en HTML
     safe_name = html_mod.escape(name)

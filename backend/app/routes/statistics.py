@@ -6,7 +6,7 @@ from datetime import datetime
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import User, Project, Ticket, ProjectStatus, Company
+from app.models.database import User, Project, Ticket, ProjectStatus, Company, UserRole
 from app.services.auth import get_current_active_user
 from app.services.geographic_classifier import classify_geography, get_country_name
 
@@ -18,7 +18,7 @@ async def get_current_admin_or_boss(
     current_user: User = Depends(get_current_active_user)
 ) -> User:
     """Solo ADMIN y BOSS pueden ver estadísticas"""
-    if current_user.role not in ["ADMIN", "BOSS"]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.BOSS]:
         raise HTTPException(status_code=403, detail="Solo ADMIN y BOSS pueden ver estadísticas")
     return current_user
 
@@ -191,11 +191,11 @@ async def get_complete_statistics(
     """
 
     # ── Permisos ──────────────────────────────────────────────
-    if current_user.role not in ["ADMIN", "BOSS"]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.BOSS]:
         raise HTTPException(status_code=403, detail="Solo ADMIN y BOSS pueden ver estadísticas")
 
     # ── BOSS: forzar su empresa ────────────────────────────────
-    if current_user.role == "BOSS":
+    if current_user.role == UserRole.BOSS:
         if not current_user.companies:
             raise HTTPException(status_code=400, detail="Usuario BOSS sin empresas asignadas")
         # current_user.companies es la relación Company directa
@@ -220,7 +220,7 @@ async def get_complete_statistics(
     distribution = _calc_distribution(project_ids, quarter, None, db)
 
     # 4. BREAKDOWN INTERNACIONAL: year + company + quarter
-    is_all_companies = (current_user.role == "ADMIN" and company_id is None)
+    is_all_companies = (current_user.role == UserRole.ADMIN and company_id is None)
 
     if is_all_companies:
         breakdown = _get_breakdown_all_companies(year, quarter, db)

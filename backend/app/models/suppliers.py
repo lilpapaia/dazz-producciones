@@ -13,12 +13,6 @@ from app.models.database import Base
 # ENUMS - PROVEEDORES
 # ============================================
 
-class SupplierType(str, enum.Enum):
-    INFLUENCER = "INFLUENCER"
-    GENERAL = "GENERAL"
-    MIXED = "MIXED"
-
-
 class SupplierStatus(str, enum.Enum):
     ACTIVE = "ACTIVE"
     NEW = "NEW"
@@ -87,7 +81,7 @@ class Supplier(Base):
     address = Column(Text, nullable=True)
     iban_encrypted = Column(LargeBinary, nullable=True)
     bank_cert_url = Column(String, nullable=True)
-    supplier_type = Column(Enum(SupplierType), default=SupplierType.GENERAL, nullable=False)
+    # supplier_type column still exists in BD but removed from ORM (no DROP COLUMN needed)
     status = Column(Enum(SupplierStatus), default=SupplierStatus.NEW, nullable=False)
     oc_id = Column(Integer, ForeignKey("supplier_ocs.id", ondelete="SET NULL"), nullable=True)
     gdpr_consent = Column(Boolean, default=False, nullable=False)
@@ -141,6 +135,7 @@ class SupplierInvoice(Base):
     rejection_reason = Column(Text, nullable=True)
     delete_reason = Column(Text, nullable=True)
     ia_validation_result = Column(Text, nullable=True)
+    is_autoinvoice = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))
@@ -188,7 +183,6 @@ class SupplierInvitation(Base):
     expires_at = Column(DateTime, nullable=False)
     used_at = Column(DateTime, nullable=True)
     invited_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    # supplier_type — added via ALTER TABLE (not in ORM to avoid startup crash)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 

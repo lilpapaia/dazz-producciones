@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
@@ -17,6 +18,8 @@ from app.services.exchange_rate import get_historical_exchange_rate
 from app.services.geographic_classifier import classify_geography
 # VULN-004/005: Integrar validadores
 from app.services.validators import validate_file_upload, sanitize_filename
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 UPLOAD_DIR = Path("uploads")
@@ -85,7 +88,7 @@ async def upload_ticket(
                         if foreign_tax_amount:
                             foreign_tax_eur = foreign_tax_amount * exchange_rate
             except Exception as e:
-                print(f"⚠️ Error tasa: {str(e)}")
+                logger.warning(f"Error tasa cambio: {str(e)}")
         elif is_foreign and currency == "EUR":
             foreign_amount = extracted_data.get("base_amount", 0.0)
             foreign_total = extracted_data.get("final_total", 0.0)
@@ -164,7 +167,7 @@ async def upload_ticket(
         raise  # Re-raise HTTPExceptions from validators as-is
     except Exception as e:
         # VULN-006: Logear error real, devolver genérico
-        print(f"❌ Error procesando ticket: {str(e)}")
+        logger.error(f"Error procesando ticket: {str(e)}")
         raise HTTPException(status_code=500, detail="Error interno al procesar ticket")
     finally:
         if temp_path.exists():
@@ -224,9 +227,9 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     try:
         from app.services.cloudinary_service import delete_ticket_files
         delete_ticket_files(ticket.file_pages, ticket.pdf_url)
-        print(f"🗑️ Archivos de Cloudinary eliminados para ticket {ticket_id}")
+        logger.info(f"Archivos de Cloudinary eliminados para ticket {ticket_id}")
     except Exception as e:
-        print(f"⚠️ Error eliminando archivos de Cloudinary: {str(e)}")
+        logger.warning(f"Error eliminando archivos de Cloudinary: {str(e)}")
         # Continuar aunque falle (evitar bloqueo)
 
     # 2. BORRAR DE BASE DE DATOS

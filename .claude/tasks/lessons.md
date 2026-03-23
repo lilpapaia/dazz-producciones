@@ -280,6 +280,42 @@ Statistics/
 
 ---
 
+## 2026-03-18: [Storage] - Cloudinary raw resources incluyen extensión en public_id
+
+**Error:** `delete_invoice_pdf` extraía el public_id sin extensión (e.g. `dazz-suppliers/invoices/1/archivo`) pero `destroy()` no encontraba el recurso
+**Causa raíz:** Para `resource_type="raw"`, Cloudinary incluye la extensión del archivo como parte del public_id (a diferencia de images donde se omite)
+**Solución:** Añadir `.pdf` al public_id si no la tiene antes de llamar a `destroy()`
+**Regla:** Para raw resources en Cloudinary, el public_id INCLUYE la extensión del archivo
+**Prevención:**
+- Al borrar raw resources, verificar que el public_id incluye la extensión
+- Distinguir entre image (sin extensión) y raw (con extensión) al construir public_ids
+
+---
+
+## 2026-03-18: [Storage] - extract_public_id_from_url: 'raw' vs 'upload' en URLs Cloudinary
+
+**Error:** `extract_public_id_from_url` buscaba 'upload' o 'raw' en la URL. Para PDFs la URL es `/raw/upload/v1234/...` y encontraba 'raw' antes que 'upload', resultando en un public_id incorrecto que incluía la versión
+**Causa raíz:** El loop `if part in ['upload', 'raw']` hacía match con 'raw' primero en URLs de tipo `/raw/upload/`
+**Solución:** Cambiar a `if part == 'upload'` — buscar solo 'upload' que siempre precede al versionado
+**Regla:** En URLs de Cloudinary, el segmento relevante para extraer public_id es siempre 'upload', nunca 'raw' (que es el resource_type)
+**Prevención:**
+- Estructura URL Cloudinary: `/{resource_type}/{type}/v{version}/{public_id}`
+- 'raw' y 'image' son resource_types, 'upload' es el delivery type
+
+---
+
+## 2026-03-18: [Frontend] - Forzar descarga de archivos en vez de abrir en navegador
+
+**Error:** `window.open(url, '_blank')` abre PDFs en el navegador en vez de descargarlos
+**Causa raíz:** El navegador interpreta el Content-Type del PDF y lo renderiza en una pestaña
+**Solución:** Usar `fetch()` + `blob()` + crear anchor temporal con atributo `download` y nombre descriptivo
+**Regla:** Para forzar descarga de archivos, SIEMPRE usar fetch+blob+anchor con atributo download
+**Prevención:**
+- Pattern: `fetch(url) → blob → URL.createObjectURL → anchor.download = nombre → click → revokeObjectURL`
+- No olvidar limpiar: `a.remove()` y `URL.revokeObjectURL()`
+
+---
+
 ## Template para futuras lecciones
 
 ```

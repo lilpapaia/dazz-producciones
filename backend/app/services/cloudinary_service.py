@@ -5,11 +5,14 @@ Servicio Cloudinary para almacenamiento de tickets/facturas
 - Compresión inteligente para archivos grandes
 """
 
+import logging
 import cloudinary
 import cloudinary.uploader
 import os
 from pathlib import Path
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 # VULN-002: Credenciales obligatorias — sin valores hardcodeados
 _cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
@@ -47,7 +50,7 @@ def compress_if_needed(image_path: str, max_size_mb: float = 2.0) -> str:
     if file_size_mb <= max_size_mb:
         return image_path
     
-    print(f"  🗜️ Comprimiendo {file_size_mb:.2f}MB → objetivo {max_size_mb}MB")
+    logger.info(f"Comprimiendo {file_size_mb:.2f}MB → objetivo {max_size_mb}MB")
     
     # Comprimir
     img = Image.open(image_path)
@@ -76,13 +79,13 @@ def compress_if_needed(image_path: str, max_size_mb: float = 2.0) -> str:
         new_size_mb = os.path.getsize(compressed_path) / (1024 * 1024)
         
         if new_size_mb <= max_size_mb:
-            print(f"  ✅ Comprimido a {new_size_mb:.2f}MB (quality={quality})")
+            logger.info(f"Comprimido a {new_size_mb:.2f}MB (quality={quality})")
             return compressed_path
         
         quality -= 10
     
     # Si no se logra, devolver lo mejor posible
-    print(f"  ⚠️ Comprimido a {new_size_mb:.2f}MB (quality mínima)")
+    logger.warning(f"Comprimido a {new_size_mb:.2f}MB (quality mínima)")
     return compressed_path
 
 
@@ -114,7 +117,7 @@ def upload_image(file_path: str, public_id: str) -> dict:
         overwrite=True
     )
     
-    print(f"  ✨ Imagen mejorada automáticamente (nitidez + contraste + rotación)")
+    logger.info("Imagen mejorada automáticamente (nitidez + contraste + rotación)")
     
     return {"url": result["secure_url"], "public_id": result["public_id"]}
 
@@ -124,7 +127,7 @@ def upload_pdf_original(file_path: str, public_id: str) -> dict:
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
     
     if file_size_mb > 9:
-        print(f"⚠️ PDF muy grande ({file_size_mb:.2f}MB), no se subirá el original")
+        logger.warning(f"PDF muy grande ({file_size_mb:.2f}MB), no se subirá el original")
         return None
     
     result = cloudinary.uploader.upload(
@@ -156,14 +159,14 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
     public_id = f"{folder}/{clean_name}"
 
     if is_pdf:
-        print(f"📄 Procesando PDF: {file_name}")
+        logger.info(f"Procesando PDF: {file_name}")
         
         # Verificar tamaño del PDF
         pdf_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         
         # Usar DPI más bajo si el PDF es grande (escaneos)
         dpi = 150 if pdf_size_mb > 5 else 200
-        print(f"  Tamaño: {pdf_size_mb:.2f}MB → usando DPI={dpi}")
+        logger.info(f"Tamaño: {pdf_size_mb:.2f}MB → usando DPI={dpi}")
         
         # 1. Convertir páginas a imágenes
         from pdf2image import convert_from_path
@@ -187,9 +190,9 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
                 # Subir página a Cloudinary como WebP CON MEJORAS
                 result = upload_image(final_path, f"{public_id}_page_{i+1}")
                 page_urls.append(result["url"])
-                print(f"  ✅ Página {i+1}/{len(pages)} subida y mejorada")
+                logger.info(f"Página {i+1}/{len(pages)} subida y mejorada")
             except Exception as e:
-                print(f"  ❌ Error en página {i+1}: {str(e)}")
+                logger.error(f"Error en página {i+1}: {str(e)}")
                 raise
         
         # Limpiar archivos temporales
@@ -214,7 +217,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
         }
     else:
         # Imagen normal
-        print(f"🖼️ Procesando imagen: {file_name}")
+        logger.info(f"Procesando imagen: {file_name}")
         
         # Comprimir si es muy grande
         final_path = compress_if_needed(file_path, max_size_mb=3.0)
@@ -222,7 +225,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
         
         try:
             result = upload_image(final_path, public_id)
-            print(f"  ✅ Imagen subida y mejorada")
+            logger.info("Imagen subida y mejorada")
             
             return {
                 "url": result["url"],
@@ -267,9 +270,9 @@ def delete_ticket_files(file_pages_json: str = None, pdf_url: str = None) -> boo
                         cloudinary.uploader.destroy(public_id)
                         deleted_count += 1
                 except Exception as e:
-                    print(f"⚠️ Error eliminando imagen {page_url}: {str(e)}")
+                    logger.warning(f"Error eliminando imagen {page_url}: {str(e)}")
         except Exception as e:
-            print(f"⚠️ Error procesando páginas: {str(e)}")
+            logger.warning(f"Error procesando páginas: {str(e)}")
     
     # Eliminar PDF original
     if pdf_url:
@@ -279,9 +282,9 @@ def delete_ticket_files(file_pages_json: str = None, pdf_url: str = None) -> boo
                 cloudinary.uploader.destroy(public_id, resource_type="raw")
                 deleted_count += 1
         except Exception as e:
-            print(f"⚠️ Error eliminando PDF {pdf_url}: {str(e)}")
-    
-    print(f"🗑️ Eliminados {deleted_count} archivos de Cloudinary")
+            logger.warning(f"Error eliminando PDF {pdf_url}: {str(e)}")
+
+    logger.info(f"Eliminados {deleted_count} archivos de Cloudinary")
     return deleted_count > 0
 
 
@@ -317,7 +320,7 @@ def extract_public_id_from_url(url: str) -> str:
         
         return public_id
     except Exception as e:
-        print(f"⚠️ Error extrayendo public_id de {url}: {str(e)}")
+        logger.warning(f"Error extrayendo public_id de {url}: {str(e)}")
         return None
 
 

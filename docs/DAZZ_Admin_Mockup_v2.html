@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAZZ Admin Proveedores — Mockup v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --z950:#09090b;--z900:#18181b;--z800:#27272a;--z700:#3f3f46;--z600:#52525b;
+  --z500:#71717a;--z400:#a1a1aa;--z300:#d4d4d8;--z200:#e4e4e7;--z100:#f4f4f5;
+  --a500:#f59e0b;--a400:#fbbf24;
+  --g400:#4ade80;--g300:#86efac;--r400:#f87171;--b400:#60a5fa;--p400:#a78bfa;
+  --ft:'Bebas Neue',sans-serif;--fb:'DM Sans',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--fb);background:#0a0a0c;color:var(--z100);min-height:100vh}
+
+/* PAGE CHROME */
+.page-header{text-align:center;padding:24px 16px 16px;border-bottom:1px solid #1a1a1a}
+.page-header h1{font-family:var(--ft);font-size:15px;letter-spacing:.12em;color:var(--a500);margin-bottom:3px}
+.page-header p{font-size:11px;color:var(--z500)}
+.view-tabs{display:flex;gap:5px;padding:12px 16px;justify-content:center;flex-wrap:wrap;border-bottom:1px solid #1a1a1a;background:#0a0a0c;position:sticky;top:0;z-index:100}
+.view-tab{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--z700);color:var(--z500);cursor:pointer;background:transparent;font-family:var(--fb);transition:all .15s;white-space:nowrap}
+.view-tab.active{background:var(--a500);color:var(--z950);border-color:var(--a500);font-weight:600}
+.view-tab.new{border-color:var(--g400);color:var(--g400)}
+.view-tab.new.active{background:var(--g400);color:var(--z950)}
+.screens-wrap{display:flex;flex-direction:column;gap:32px;padding:28px 20px;align-items:center}
+
+/* BROWSER FRAME */
+.browser{width:1100px;background:var(--z950);border:1px solid var(--z800);border-radius:10px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.browser-bar{height:34px;background:var(--z900);border-bottom:1px solid var(--z800);display:flex;align-items:center;padding:0 10px;gap:5px}
+.b-dot{width:10px;height:10px;border-radius:50%}
+.b-url{flex:1;margin:0 10px;background:var(--z800);border-radius:4px;height:18px;display:flex;align-items:center;padding:0 8px;font-size:10px;color:var(--z500);font-family:var(--fm)}
+
+/* PHONE FRAME */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone-label{font-size:10px;color:var(--z600);letter-spacing:.1em;text-transform:uppercase}
+.phone{width:375px;background:#000;border-radius:42px;border:3px solid #333;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:100px;height:26px;background:#000;border-radius:0 0 14px 14px;z-index:100}
+.phone-screen{position:absolute;inset:0;border-radius:40px;overflow:hidden;background:var(--z950)}
+.phone-content{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+
+/* APP LAYOUT */
+.app{display:flex;height:570px}
+.sidebar{width:196px;background:var(--z900);border-right:1px solid var(--z800);padding:12px 8px;display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{display:flex;align-items:center;gap:7px;padding:6px 8px;margin-bottom:14px}
+.sb-logo svg{width:18px;height:18px}
+.sb-logo-text{font-family:var(--ft);font-size:14px;letter-spacing:.07em;color:var(--z100)}
+.sb-logo-sub{font-size:8px;color:var(--z500);margin-top:1px}
+.sb-section{font-size:9px;color:var(--z600);letter-spacing:.1em;text-transform:uppercase;padding:0 8px;margin-bottom:3px;margin-top:10px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:5px;cursor:pointer;transition:all .1s;margin-bottom:1px;font-size:11px;color:var(--z400);position:relative}
+.sb-item:hover{background:var(--z800)}
+.sb-item.active{background:rgba(245,158,11,.08);border-left:2px solid var(--a500);padding-left:6px;color:var(--a400)}
+.sb-item.new-feature{color:var(--g400)}
+.sb-item.new-feature.active{background:rgba(74,222,128,.08);border-left:2px solid var(--g400);color:var(--g400)}
+.sb-item svg{width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.5}
+.sb-badge{margin-left:auto;min-width:16px;height:16px;background:var(--a500);border-radius:8px;font-size:8px;font-weight:700;color:var(--z950);display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:var(--fm)}
+.sb-bottom{margin-top:auto;padding-top:10px;border-top:1px solid var(--z800)}
+.sb-user{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:5px}
+.sb-avatar{width:26px;height:26px;border-radius:50%;background:var(--a500);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--z950);font-family:var(--ft);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:var(--z300)}
+.sb-urole{font-size:9px;color:var(--z500)}
+
+/* MAIN CONTENT */
+.main{flex:1;overflow-y:auto;background:var(--z950);display:flex;flex-direction:column}
+.topbar{height:46px;border-bottom:1px solid var(--z800);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.topbar-title{font-family:var(--ft);font-size:17px;letter-spacing:.05em;color:var(--z100)}
+.topbar-notif{width:28px;height:28px;background:var(--z800);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.topbar-notif svg{width:13px;height:13px;stroke:var(--z400);fill:none;stroke-width:1.5}
+.notif-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;background:var(--a500);border-radius:50%;border:2px solid var(--z950)}
+.body{padding:16px;overflow-y:auto;flex:1}
+
+/* COMPONENTS */
+.h1{font-family:var(--ft);font-size:22px;letter-spacing:.05em;color:var(--z100);margin-bottom:14px}
+.card{background:var(--z900);border:1px solid var(--z800);border-radius:8px;padding:14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:600;color:var(--z400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+
+.kpi-grid{display:grid;gap:8px;margin-bottom:14px}
+.kpi-grid.c2{grid-template-columns:1fr 1fr}
+.kpi-grid.c4{grid-template-columns:repeat(4,1fr)}
+.kpi{background:var(--z900);border:1px solid var(--z800);border-radius:8px;padding:12px}
+.kpi.accent{border-left:2px solid var(--a500)}
+.kpi-label{font-size:11px;color:var(--z500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.kpi-val{font-family:var(--ft);font-size:26px;color:var(--z100);line-height:1}
+.kpi-val.amber{color:var(--a500)}
+.kpi-val.green{color:var(--g400)}
+.kpi-sub{font-size:11px;color:var(--z500);margin-top:3px}
+
+.pill{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px;border:1px solid}
+.pill-dot{width:5px;height:5px;border-radius:50%}
+.p-pend{background:rgba(245,158,11,.1);color:var(--a400);border-color:rgba(245,158,11,.2)}.p-pend .pill-dot{background:var(--a500)}
+.p-appr{background:rgba(74,222,128,.1);color:var(--g400);border-color:rgba(74,222,128,.2)}.p-appr .pill-dot{background:var(--g400)}
+.p-paid{background:rgba(134,239,172,.1);color:var(--g300);border-color:rgba(134,239,172,.2)}.p-paid .pill-dot{background:var(--g300)}
+.p-rej{background:rgba(248,113,113,.1);color:var(--r400);border-color:rgba(248,113,113,.2)}.p-rej .pill-dot{background:var(--r400)}
+.p-nooc{background:rgba(96,165,250,.1);color:var(--b400);border-color:rgba(96,165,250,.2)}.p-nooc .pill-dot{background:var(--b400)}
+
+.oc-tag{font-size:10px;padding:1px 6px;border-radius:3px;background:rgba(245,158,11,.08);color:var(--a400);font-family:var(--fm);border:1px solid rgba(245,158,11,.15)}
+.oc-missing{font-size:10px;padding:1px 6px;border-radius:3px;background:rgba(96,165,250,.08);color:var(--b400);font-family:var(--fm);border:1px solid rgba(96,165,250,.15)}
+
+.badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;display:inline-block}
+.b-active{background:rgba(74,222,128,.1);color:var(--g400);border:1px solid rgba(74,222,128,.2)}
+.b-new{background:rgba(245,158,11,.1);color:var(--a400);border:1px solid rgba(245,158,11,.2)}
+.b-deact{background:rgba(82,82,91,.3);color:var(--z500);border:1px solid var(--z700)}
+
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--z500);fill:none;stroke-width:1.5}
+.search-input{width:100%;background:var(--z900);border:1px solid var(--z700);border-radius:6px;padding:8px 10px 8px 28px;font-size:13px;color:var(--z100);outline:none;font-family:var(--fb)}
+.search-input:focus{border-color:var(--a500)}
+.search-input::placeholder{color:var(--z600)}
+
+.filter-chips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
+.chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--z700);color:var(--z400);white-space:nowrap;cursor:pointer;flex-shrink:0}
+.chip.active{background:var(--a500);color:var(--z950);border-color:var(--a500);font-weight:600}
+.chip.blue{border-color:rgba(96,165,250,.4);color:var(--b400)}
+.chip.blue.active{background:var(--b400);color:var(--z950)}
+
+.data-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.data-row:last-child{border-bottom:none}
+.data-label{color:var(--z500)}
+.data-val{color:var(--z200);text-align:right}
+.data-val.mono{font-family:var(--fm);font-size:12px}
+.data-val.amber{color:var(--a400)}
+
+.btn-primary{background:var(--a500);border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--z950);cursor:pointer;font-family:var(--fb)}
+.btn-ghost{background:var(--z800);border:1px solid var(--z700);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--z300);cursor:pointer;font-family:var(--fb)}
+.btn-danger{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--r400);cursor:pointer;font-family:var(--fb)}
+.btn-green{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--g400);cursor:pointer;font-family:var(--fb)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.table-wrap{background:var(--z900);border:1px solid var(--z800);border-radius:8px;overflow:hidden}
+.table{width:100%;border-collapse:collapse}
+.table th{background:var(--z800);padding:8px 10px;text-align:left;font-size:10px;color:var(--z400);letter-spacing:.08em;text-transform:uppercase;font-weight:500;white-space:nowrap}
+.table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;white-space:nowrap}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(255,255,255,.015);cursor:pointer}
+
+.inv-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer}
+.inv-row:hover{background:rgba(255,255,255,.02)}
+.inv-icon{width:28px;height:28px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.12);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inv-icon svg{width:12px;height:12px;stroke:var(--r400);fill:none;stroke-width:1.8}
+
+.info-bar{border-radius:7px;padding:9px 11px;font-size:12px;display:flex;align-items:flex-start;gap:7px;line-height:1.5;margin-bottom:12px}
+.info-bar svg{width:12px;height:12px;fill:none;stroke-width:1.5;flex-shrink:0;margin-top:1px}
+.ib-blue{background:rgba(96,165,250,.06);color:var(--b400);border:1px solid rgba(96,165,250,.12)}.ib-blue svg{stroke:var(--b400)}
+.ib-amber{background:rgba(245,158,11,.06);color:var(--a400);border:1px solid rgba(245,158,11,.12)}.ib-amber svg{stroke:var(--a500)}
+.ib-green{background:rgba(74,222,128,.06);color:var(--g400);border:1px solid rgba(74,222,128,.12)}.ib-green svg{stroke:var(--g400)}
+
+.input-group{margin-bottom:12px}
+.input-label{font-size:11px;color:var(--z400);letter-spacing:.07em;text-transform:uppercase;font-weight:600;margin-bottom:4px;display:block}
+.input-field{width:100%;background:var(--z800);border:1px solid var(--z700);border-radius:7px;padding:8px 11px;font-size:13px;color:var(--z100);font-family:var(--fb);outline:none}
+.input-sub{font-size:11px;color:var(--z600);margin-top:3px}
+
+.pending-change{background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.15);border-radius:8px;padding:12px;margin-bottom:10px}
+.pending-dot{width:6px;height:6px;background:var(--a500);border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.autocomplete-dropdown{background:var(--z900);border:1px solid var(--z700);border-radius:7px;overflow:hidden;margin-top:4px}
+.autocomplete-item{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:8px}
+.autocomplete-item:hover{background:var(--z800)}
+.autocomplete-item:last-child{border-bottom:none}
+
+/* MOBILE */
+.m-status{height:40px;padding:0 18px;display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:6px;flex-shrink:0}
+.m-time{font-size:12px;font-weight:600;color:var(--z100)}
+.m-topbar{padding:6px 14px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.m-logo{font-family:var(--ft);font-size:16px;letter-spacing:.07em;color:var(--a500)}
+.m-notif{width:28px;height:28px;background:var(--z800);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative}
+.m-notif svg{width:13px;height:13px;stroke:var(--z400);fill:none;stroke-width:1.5}
+.m-scroll{flex:1;overflow-y:auto}
+.m-scroll::-webkit-scrollbar{display:none}
+.m-bottom{height:60px;background:var(--z900);border-top:1px solid var(--z800);display:flex;align-items:center;justify-content:space-around;padding:0 6px 4px;flex-shrink:0}
+.m-nav{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;padding:5px 0;position:relative}
+.m-nav svg{width:19px;height:19px;stroke:var(--z600);fill:none;stroke-width:1.5}
+.m-nav span{font-size:8px;color:var(--z600)}
+.m-nav.active svg{stroke:var(--a500)}
+.m-nav.active span{color:var(--a400)}
+.m-badge{position:absolute;top:3px;right:5px;width:14px;height:14px;background:var(--a500);border-radius:50%;font-size:7px;font-weight:700;color:var(--z950);display:flex;align-items:center;justify-content:center}
+
+.m-card{background:var(--z900);border:1px solid var(--z800);border-radius:9px;padding:12px;margin-bottom:8px}
+.m-inv{background:var(--z900);border:1px solid var(--z800);border-radius:9px;padding:12px 13px}
+.m-section-label{font-size:9px;text-align:center;padding:8px 0 5px;color:var(--z600);letter-spacing:.1em;text-transform:uppercase;border-top:1px solid var(--z800)}
+
+/* Screen sections */
+.screen-section{display:none}
+.screen-section.active{display:block}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>DAZZ ADMIN PROVEEDORES — MOCKUP v2</h1>
+  <p>Todas las pantallas · Desktop + Mobile · Tamaños reales de los JSX</p>
+</div>
+
+<div class="view-tabs">
+  <button class="view-tab active" onclick="show('dashboard')">Dashboard</button>
+  <button class="view-tab" onclick="show('suppliers')">Proveedores</button>
+  <button class="view-tab" onclick="show('detail')">Detalle proveedor</button>
+  <button class="view-tab" onclick="show('invoices')">Facturas</button>
+  <button class="view-tab" onclick="show('no-oc')">Sin OC ★</button>
+  <button class="view-tab" onclick="show('assign-oc')">Asignar OC ★</button>
+  <button class="view-tab" onclick="show('invoice-detail')">Detalle factura</button>
+  <button class="view-tab" onclick="show('notifications')">Notificaciones</button>
+  <button class="view-tab" onclick="show('invite')">Invitar</button>
+  <button class="view-tab new" onclick="show('autoinvoice')">Autofactura ✦</button>
+</div>
+
+<div class="screens-wrap">
+
+<!-- ═══════ DESKTOP ═══════ -->
+<div>
+  <div style="font-size:10px;color:var(--z600);text-align:center;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Desktop</div>
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="b-dot" style="background:#ff5f57"></div>
+      <div class="b-dot" style="background:#ffbd2e"></div>
+      <div class="b-dot" style="background:#28c840"></div>
+      <div class="b-url">dazz-producciones.vercel.app/suppliers</div>
+    </div>
+
+    <div class="app">
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="sb-logo">
+          <svg viewBox="0 0 24 24" fill="var(--a500)" width="18" height="18"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          <div><div class="sb-logo-text">DAZZ</div><div class="sb-logo-sub">Suppliers Admin</div></div>
+        </div>
+        <div class="sb-section">General</div>
+        <div class="sb-item" id="sb-dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</div>
+        <div class="sb-item" id="sb-suppliers"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Proveedores</div>
+        <div class="sb-item" id="sb-invoices"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Facturas<span class="sb-badge">5</span></div>
+        <div class="sb-item" id="sb-notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notificaciones<span class="sb-badge">3</span></div>
+        <div class="sb-section">Añadir</div>
+        <div class="sb-item" id="sb-invite"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Invitar proveedor</div>
+        <div class="sb-item new-feature" id="sb-autoinvoice"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Autofactura</div>
+        <div class="sb-bottom">
+          <div class="sb-user"><div class="sb-avatar">JL</div><div><div class="sb-uname">Julio</div><div class="sb-urole">ADMIN</div></div></div>
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main">
+        <div class="topbar">
+          <div class="topbar-title" id="d-title">Dashboard</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="topbar-notif"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div>
+          </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dd-dashboard" class="screen-section active body">
+          <div class="h1">Dashboard</div>
+          <div class="kpi-grid c4" style="margin-bottom:16px">
+            <div class="kpi accent"><div class="kpi-label">Facturas pendientes</div><div class="kpi-val amber">5</div><div class="kpi-sub">Sin revisar</div></div>
+            <div class="kpi"><div class="kpi-label">Aprobadas este mes</div><div class="kpi-val">12</div><div class="kpi-sub">3 aún pendientes</div></div>
+            <div class="kpi"><div class="kpi-label">Proveedores activos</div><div class="kpi-val green">7</div><div class="kpi-sub">Registrados en portal</div></div>
+            <div class="kpi"><div class="kpi-label">Total pagado</div><div class="kpi-val" style="font-size:22px">18.4K<span style="font-size:14px;color:var(--z500);margin-left:2px">EUR</span></div><div class="kpi-sub">Este mes</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="card">
+              <div class="card-title">Actividad reciente</div>
+              <div style="display:flex;flex-direction:column;gap:0">
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+                  <div style="width:26px;height:26px;background:rgba(96,165,250,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--b400)" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                  <div><div style="font-size:13px;color:var(--z300)">@mariagomez subió DAZZ_2026_001</div><div style="font-size:11px;color:var(--z600)">hace 8min · <b style="color:var(--a400)">sin leer</b></div></div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+                  <div style="width:26px;height:26px;background:rgba(74,222,128,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g400)" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+                  <div><div style="font-size:13px;color:var(--z300)">Nuevo proveedor: Estudio Martínez SL</div><div style="font-size:11px;color:var(--z600)">hace 2h · <b style="color:var(--a400)">sin leer</b></div></div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0">
+                  <div style="width:26px;height:26px;background:rgba(245,158,11,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--a500)" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+                  <div><div style="font-size:13px;color:var(--z300)">IA rechazó DAZZ_2025_031 · IBAN no coincide</div><div style="font-size:11px;color:var(--z600)">ayer</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Estado de facturas</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:7px;height:7px;background:var(--a500);border-radius:2px;flex-shrink:0"></div><span style="flex:1;color:var(--z400)">Pendiente</span><span style="font-family:var(--fm);color:var(--a400)">5</span><div style="width:80px;height:4px;background:var(--z800);border-radius:2px"><div style="width:50%;height:100%;background:var(--a500);border-radius:2px"></div></div></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:7px;height:7px;background:var(--g400);border-radius:2px;flex-shrink:0"></div><span style="flex:1;color:var(--z400)">Aprobada</span><span style="font-family:var(--fm);color:var(--g400)">12</span><div style="width:80px;height:4px;background:var(--z800);border-radius:2px"><div style="width:100%;height:100%;background:var(--g400);border-radius:2px"></div></div></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px"><div style="width:7px;height:7px;background:var(--g300);border-radius:2px;flex-shrink:0"></div><span style="flex:1;color:var(--z400)">Pagada</span><span style="font-family:var(--fm);color:var(--g300)">48</span><div style="width:80px;height:4px;background:var(--z800);border-radius:2px"><div style="width:80%;height:100%;background:var(--g300);border-radius:2px"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUPPLIERS LIST -->
+        <div id="dd-suppliers" class="screen-section body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div class="h1" style="margin:0">Proveedores</div>
+            <button class="btn-primary btn-sm">+ Invitar</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+            <div class="search-wrap" style="width:280px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" placeholder="Buscar por nombre o NIF..."></div>
+            <div class="filter-chips">
+              <div class="chip active">Todas</div><div class="chip">DAZZLE MGMT</div><div class="chip">DAZZ Creative</div><div class="chip">DAZZLE Agency</div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th></th><th>Proveedor</th><th>NIF/CIF</th><th>OC</th><th>Empresa</th><th>Estado</th><th>Últ. actividad</th></tr></thead>
+              <tbody>
+                <tr><td><div style="width:7px;height:7px;background:var(--a500);border-radius:50%"></div></td><td><div style="font-size:13px;font-weight:500;color:var(--z200)">@mariagomez</div><div style="font-size:11px;color:var(--z500)">maria@gmail.com</div></td><td style="font-family:var(--fm);color:var(--z400)">12345678A</td><td><span class="oc-tag">OC-MGMTINT2026001</span></td><td style="color:var(--z400)">DAZZLE MGMT</td><td><span class="badge b-active">ACTIVE</span></td><td style="color:var(--z500)">8min</td></tr>
+                <tr><td></td><td><div style="font-size:13px;font-weight:500;color:var(--z200)">Estudio Martínez SL</div><div style="font-size:11px;color:var(--z500)">info@emartinez.com</div></td><td style="font-family:var(--fm);color:var(--z400)">A-87654321</td><td><span style="font-size:13px;color:var(--z600)">—</span></td><td style="color:var(--z400)">Todas</td><td><span class="badge b-new">NEW</span></td><td style="color:var(--z500)">2h</td></tr>
+                <tr><td></td><td><div style="font-size:13px;font-weight:500;color:var(--z200)">Audiovisual Pérez SL</div><div style="font-size:11px;color:var(--z500)">ap@avperez.com</div></td><td style="font-family:var(--fm);color:var(--z400)">B-12345678</td><td><span style="font-size:13px;color:var(--z600)">—</span></td><td style="color:var(--z400)">Todas</td><td><span class="badge b-active">ACTIVE</span></td><td style="color:var(--z500)">1d</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUPPLIER DETAIL -->
+        <div id="dd-detail" class="screen-section body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div class="h1" style="margin:0"><span style="color:var(--z500);cursor:pointer">PROVEEDORES</span> / @MARIAGOMEZ</div>
+            <button class="btn-ghost btn-sm">Editar datos</button>
+          </div>
+          <div style="display:grid;grid-template-columns:300px 1fr;gap:12px">
+            <div>
+              <div class="card">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                  <div style="width:44px;height:44px;background:var(--a500);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--ft);font-size:18px;color:var(--z950);flex-shrink:0">MG</div>
+                  <div><div style="font-family:var(--ft);font-size:18px;color:var(--z100)">@MARIAGOMEZ</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge b-active">ACTIVE</span></div></div>
+                </div>
+                <div style="margin-bottom:12px"><span style="display:inline-flex;align-items:center;gap:5px;background:rgba(167,139,250,.08);color:var(--p400);font-size:11px;padding:4px 9px;border-radius:5px;border:1px solid rgba(167,139,250,.15);font-family:var(--fm)">OC-MGMTINT2026001</span></div>
+                <hr style="border:none;border-top:1px solid rgba(255,255,255,.04);margin-bottom:8px">
+                <div class="data-row"><span class="data-label">Empresa</span><span class="data-val">DAZZLE MGMT</span></div>
+                <div class="data-row"><span class="data-label">NIF/CIF</span><span class="data-val mono">12345678A</span></div>
+                <div class="data-row"><span class="data-label">Email</span><span class="data-val amber">maria@gmail.com</span></div>
+                <div class="data-row"><span class="data-label">IBAN</span><span class="data-val mono" style="white-space:nowrap">ES41 ···· ···· 46</span></div>
+                <div class="data-row"><span class="data-label">Cert. bancario</span><span class="data-val" style="color:var(--r400);cursor:pointer">Ver PDF →</span></div>
+              </div>
+              <div class="pending-change">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><span class="pending-dot"></span><span style="font-size:12px;font-weight:600;color:var(--a400)">Cambio pendiente</span></div>
+                <div style="font-size:12px;color:var(--z400)">Solicitud cambio IBAN · 19/03/2026</div>
+                <div style="display:flex;gap:6px;margin-top:8px"><button class="btn-green btn-sm" style="flex:1;font-size:11px">Aprobar</button><button class="btn-danger btn-sm" style="flex:1;font-size:11px">Rechazar</button></div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn-ghost btn-sm" style="flex:1;font-size:12px">Añadir nota</button>
+                <button class="btn-danger btn-sm" style="flex:1;font-size:12px">Desactivar</button>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                <div class="search-wrap" style="width:260px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" placeholder="Buscar factura, OC..."></div>
+                <div class="filter-chips"><div class="chip active">Todas</div><div class="chip">Pendientes</div><div class="chip">Aprobadas</div><div class="chip">Pagadas</div></div>
+              </div>
+              <div class="card" style="padding:0">
+                <div class="inv-row">
+                  <div class="inv-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZ_2026_001</div>
+                    <div style="font-size:11px;color:var(--z500);margin-top:2px"><span class="oc-tag">OC-MGMTINT2026001</span> &nbsp;15/01/2026</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-family:var(--fm);font-size:13px;color:var(--z100)">1.840,00 €</div>
+                    <div style="margin-top:4px;display:flex;align-items:center;gap:5px;justify-content:flex-end"><button class="btn-primary btn-sm" style="font-size:12px">Aprobar</button><div style="width:34px;height:34px;border:1px solid rgba(248,113,113,.2);border-radius:5px;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--r400)" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></div></div>
+                  </div>
+                </div>
+                <div class="inv-row">
+                  <div class="inv-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:var(--fm);font-size:13px;font-weight:500;color:var(--z200)">DAZZ_2025_047</div>
+                    <div style="font-size:11px;color:var(--z500);margin-top:2px"><span class="oc-tag">OC-MGMTINT2026001</span> &nbsp;10/12/2025</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-family:var(--fm);font-size:13px;color:var(--z100)">2.700,00 €</div>
+                    <div style="margin-top:4px"><span class="pill p-paid"><span class="pill-dot"></span>Pagada</span></div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:8px">
+                <button class="btn-ghost btn-sm" style="font-size:12px;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar a Excel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVOICES LIST -->
+        <div id="dd-invoices" class="screen-section body">
+          <div class="h1">Facturas</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+            <div class="search-wrap" style="width:260px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" placeholder="Buscar factura, OC, proveedor..."></div>
+            <select style="background:var(--z900);border:1px solid var(--z700);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--z300);outline:none"><option>Todas las empresas</option></select>
+            <select style="background:var(--z900);border:1px solid var(--z700);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--z300);outline:none"><option>Todos los estados</option><option>Pendiente</option><option>Sin OC</option><option>Aprobada</option><option>Pagada</option></select>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Nº Factura</th><th>Proveedor</th><th>OC</th><th>Fecha</th><th>Importe</th><th>Estado</th><th>Acción</th><th></th></tr></thead>
+              <tbody>
+                <tr><td style="font-family:var(--fm);color:var(--z200)">DAZZ_2026_001</td><td style="color:var(--z200)">@mariagomez</td><td><span class="oc-tag">OC-MGMTINT2026001</span></td><td style="color:var(--z400)">15/01/2026</td><td style="font-family:var(--fm);color:var(--z200)">1.840,00 €</td><td><span class="pill p-pend"><span class="pill-dot"></span>Pendiente</span></td><td><button class="btn-primary btn-sm" style="font-size:12px">Aprobar</button></td><td><div style="width:28px;height:28px;border:1px solid rgba(248,113,113,.2);border-radius:5px;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--r400)" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></div></td></tr>
+                <tr style="background:rgba(96,165,250,.02)"><td style="font-family:var(--fm);color:var(--z200)">DAZZ_2026_003</td><td style="color:var(--z200)">Estudio Martínez SL</td><td><span class="oc-missing">Sin OC</span></td><td style="color:var(--z400)">20/01/2026</td><td style="font-family:var(--fm);color:var(--z200)">3.200,00 €</td><td><span class="pill p-nooc"><span class="pill-dot"></span>Sin OC</span></td><td><button class="btn-ghost btn-sm" style="font-size:12px;color:var(--b400);border-color:rgba(96,165,250,.3)">Asignar OC →</button></td><td></td></tr>
+                <tr><td style="font-family:var(--fm);color:var(--z200)">DAZZ_2025_047</td><td style="color:var(--z200)">@mariagomez</td><td><span class="oc-tag">OC-MGMTINT2026001</span></td><td style="color:var(--z400)">10/12/2025</td><td style="font-family:var(--fm);color:var(--z200)">2.700,00 €</td><td><span class="pill p-paid"><span class="pill-dot"></span>Pagada</span></td><td><span style="font-size:13px;color:var(--z600)">Cerrada</span></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- NO OC FILTER VIEW -->
+        <div id="dd-no-oc" class="screen-section body">
+          <div class="h1">Facturas</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+            <div class="search-wrap" style="width:260px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" placeholder="Buscar factura, OC, proveedor..."></div>
+            <select style="background:var(--z900);border:1px solid var(--z700);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--z300);outline:none"><option>Todas las empresas</option></select>
+            <div class="filter-chips"><div class="chip">Todas</div><div class="chip">Pendiente</div><div class="chip blue active">Sin OC (2)</div><div class="chip">Aprobada</div><div class="chip">Pagada</div></div>
+          </div>
+          <div class="info-bar ib-blue">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            2 facturas sin OC asignado — la IA no pudo identificar el proyecto. Haz clic en "Asignar OC" para asignarlas manualmente.
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Nº Factura</th><th>Proveedor</th><th>OC</th><th>Fecha</th><th>Importe</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody>
+                <tr style="background:rgba(96,165,250,.02)"><td style="font-family:var(--fm);color:var(--z200)">DAZZ_2026_003</td><td style="color:var(--z200)">Estudio Martínez SL</td><td><span class="oc-missing">Sin OC</span></td><td style="color:var(--z400)">20/01/2026</td><td style="font-family:var(--fm);color:var(--z200)">3.200,00 €</td><td><span class="pill p-nooc"><span class="pill-dot"></span>Sin OC</span></td><td><button class="btn-ghost btn-sm" style="font-size:12px;color:var(--b400);border-color:rgba(96,165,250,.3)">Asignar OC →</button></td></tr>
+                <tr style="background:rgba(96,165,250,.02)"><td style="font-family:var(--fm);color:var(--z200)">DAZZ_2026_004</td><td style="color:var(--z200)">Sonido Total SA</td><td><span class="oc-missing">Sin OC</span></td><td style="color:var(--z400)">22/01/2026</td><td style="font-family:var(--fm);color:var(--z200)">890,00 €</td><td><span class="pill p-nooc"><span class="pill-dot"></span>Sin OC</span></td><td><button class="btn-ghost btn-sm" style="font-size:12px;color:var(--b400);border-color:rgba(96,165,250,.3)">Asignar OC →</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ASSIGN OC -->
+        <div id="dd-assign-oc" class="screen-section body">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <span style="font-size:13px;color:var(--z500);cursor:pointer">FACTURAS</span><span style="color:var(--z700)">/</span>
+            <span style="font-size:13px;color:var(--z300)">DAZZ_2026_003</span>
+            <span class="pill p-nooc" style="margin-left:4px"><span class="pill-dot"></span>Sin OC</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:14px">
+            <div>
+              <div class="card" style="background:var(--z950);border:1px solid var(--z700)">
+                <div style="background:var(--z800);border-radius:4px;height:240px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--z600)" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div style="font-size:12px;color:var(--z500)">Vista previa PDF</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-title">Datos de la factura</div>
+                <div class="data-row"><span class="data-label">Proveedor</span><span class="data-val">Estudio Martínez SL</span></div>
+                <div class="data-row"><span class="data-label">NIF/CIF</span><span class="data-val mono">A-87654321</span></div>
+                <div class="data-row"><span class="data-label">Fecha</span><span class="data-val">20/01/2026</span></div>
+                <div class="data-row"><span class="data-label">Importe</span><span class="data-val mono">3.200,00 €</span></div>
+                <div class="data-row"><span class="data-label">OC en factura</span><span class="data-val" style="color:var(--z500)">No detectado</span></div>
+              </div>
+              <div class="card">
+                <div class="card-title">Asignar OC manualmente</div>
+                <div class="info-bar ib-amber" style="margin-bottom:10px">
+                  <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+                  El IBAN activo seguirá validando futuras facturas
+                </div>
+                <div class="input-group">
+                  <label class="input-label">Buscar OC o proyecto</label>
+                  <div class="search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" value="CRPROD" placeholder="Escribe OC o nombre de proyecto..."></div>
+                  <div class="autocomplete-dropdown">
+                    <div class="autocomplete-item"><span class="oc-tag">CRPROD2026047</span><span style="font-size:12px;color:var(--z400)">Campaña Nike Q4 · DAZZ Creative</span></div>
+                    <div class="autocomplete-item"><span class="oc-tag">CRPROD2026051</span><span style="font-size:12px;color:var(--z400)">Spot TV Navidad · DAZZ Creative</span></div>
+                    <div class="autocomplete-item" style="color:var(--z500);font-size:12px;justify-content:center">+ Escribir OC personalizado</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-ghost" style="flex:1;font-size:13px">Cancelar</button>
+                  <button class="btn-primary" style="flex:1;font-size:13px">Asignar OC</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVOICE DETAIL -->
+        <div id="dd-invoice-detail" class="screen-section body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div class="h1" style="margin:0"><span style="color:var(--z500)">FACTURAS</span> / DAZZ_2026_001</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn-ghost btn-sm" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar PDF</button>
+              <span class="pill p-pend"><span class="pill-dot"></span>Pendiente</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 280px;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="card" style="background:var(--z950);border:1px solid var(--z700);padding:0">
+                <div style="background:var(--z800);height:220px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border-radius:7px">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--z600)" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div style="font-size:12px;color:var(--z500)">Vista previa PDF · Página 1/1</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Datos de la factura</div>
+                <div class="data-row"><span class="data-label">Nº Factura</span><span class="data-val mono amber">DAZZ_2026_001</span></div>
+                <div class="data-row"><span class="data-label">Fecha</span><span class="data-val">15/01/2026</span></div>
+                <div class="data-row"><span class="data-label">Proveedor</span><span class="data-val">@mariagomez</span></div>
+                <div class="data-row"><span class="data-label">NIF/CIF</span><span class="data-val mono">12345678A</span></div>
+                <div class="data-row"><span class="data-label">IBAN</span><span class="data-val mono" style="white-space:nowrap">ES41 2100 3607 5613 0011 46</span></div>
+                <div class="data-row"><span class="data-label">OC</span><span class="oc-tag">OC-MGMTINT2026001</span></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="card">
+                <div class="card-title">Importes</div>
+                <div class="data-row"><span class="data-label">Base imponible</span><span class="data-val mono">1.520,00 €</span></div>
+                <div class="data-row"><span class="data-label">IVA (21%)</span><span class="data-val mono">319,20 €</span></div>
+                <div class="data-row"><span class="data-label">IRPF (7%)</span><span class="data-val mono" style="color:var(--r400)">-106,40 €</span></div>
+                <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--z700);margin-top:4px"><span style="font-size:13px;font-weight:600;color:var(--z300)">Total</span><span style="font-family:var(--fm);font-size:17px;font-weight:700;color:var(--a400)">1.840,00 €</span></div>
+              </div>
+              <div class="card">
+                <div class="card-title">Validación IA</div>
+                <div class="info-bar ib-green" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Todos los checks OK</div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <div style="font-size:12px;color:var(--g400)">✓ Número de factura detectado</div>
+                  <div style="font-size:12px;color:var(--g400)">✓ OC coincide con el registrado</div>
+                  <div style="font-size:12px;color:var(--g400)">✓ IBAN coincide con la BD</div>
+                  <div style="font-size:12px;color:var(--g400)">✓ Importes coherentes</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Acciones</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <button class="btn-primary" style="width:100%;font-size:13px">Aprobar</button>
+                  <button class="btn-danger" style="width:100%;font-size:13px">Rechazar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div id="dd-notifications" class="screen-section body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div class="h1" style="margin:0">Notificaciones</div>
+            <button class="btn-ghost btn-sm">Marcar todo leído</button>
+          </div>
+          <div class="filter-chips" style="margin-bottom:12px"><div class="chip active">Todas</div><div class="chip">Sin leer (3)</div></div>
+          <div style="font-size:12px;color:var(--z400);margin-bottom:12px"><b style="color:var(--a400)">3 sin leer</b> de 8 notificaciones · <span style="color:var(--z400)">Se archivan a los 30 días</span></div>
+          <div class="card" style="padding:0 14px">
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+              <div style="width:7px;height:7px;background:var(--a500);border-radius:50%;flex-shrink:0;margin-top:3px"></div>
+              <div style="width:26px;height:26px;background:rgba(96,165,250,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--b400)" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+              <div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Nueva factura</b> — @mariagomez subió DAZZ_2026_001</div><div style="font-size:11px;color:var(--z600)">hace 8min</div></div>
+              <button class="btn-ghost btn-sm" style="font-size:11px">Ver →</button>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+              <div style="width:7px;height:7px;background:var(--a500);border-radius:50%;flex-shrink:0;margin-top:3px"></div>
+              <div style="width:26px;height:26px;background:rgba(245,158,11,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--a500)" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+              <div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Cambio de datos</b> — @mariagomez solicita cambio de IBAN</div><div style="font-size:11px;color:var(--z600)">ayer</div></div>
+              <button class="btn-ghost btn-sm" style="font-size:11px">Ver →</button>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:11px 0">
+              <div style="width:7px;flex-shrink:0"></div>
+              <div style="width:26px;height:26px;background:rgba(74,222,128,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g400)" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+              <div style="flex:1"><div style="font-size:13px;color:var(--z300)"><b>Registro</b> — Estudio Martínez SL completó el registro</div><div style="font-size:11px;color:var(--z600)">hace 2h</div></div>
+              <button class="btn-ghost btn-sm" style="font-size:11px">Ver →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVITE -->
+        <div id="dd-invite" class="screen-section body">
+          <div class="h1">Invitar proveedor</div>
+          <div style="max-width:560px">
+            <div class="info-bar ib-blue" style="margin-bottom:14px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Link único de 72h — el proveedor rellena sus datos y crea su contraseña.</div>
+            <div class="card">
+              <div style="display:flex;gap:6px;margin-bottom:14px">
+                <div style="flex:1;border:1px solid var(--a500);background:rgba(245,158,11,.04);border-radius:7px;padding:12px;cursor:pointer">
+                  <div style="width:10px;height:10px;border-radius:50%;background:var(--a500);margin-bottom:6px"></div>
+                  <div style="font-family:var(--ft);font-size:14px;color:var(--a400)">Con OC permanente</div>
+                  <div style="font-size:11px;color:var(--z500);margin-top:2px">Se crea el OC antes de invitar</div>
+                </div>
+                <div style="flex:1;border:1px solid var(--z700);background:var(--z900);border-radius:7px;padding:12px;cursor:pointer">
+                  <div style="width:10px;height:10px;border-radius:50%;border:2px solid var(--z600);margin-bottom:6px"></div>
+                  <div style="font-family:var(--ft);font-size:14px;color:var(--z400)">Sin OC fijo</div>
+                  <div style="font-size:11px;color:var(--z500);margin-top:2px">Usa el OC del proyecto en cada factura</div>
+                </div>
+              </div>
+              <div class="input-group"><label class="input-label">Nombre del proveedor *</label><input class="input-field" placeholder="@mariagomez"></div>
+              <div class="input-group"><label class="input-label">NIF / DNI</label><input class="input-field" placeholder="12345678A"></div>
+              <div class="input-group"><label class="input-label">Código OC *</label><input class="input-field" placeholder="OC-MGMTINT2026047" style="font-family:var(--fm)"></div>
+              <button class="btn-primary" style="width:100%;font-size:13px">Crear OC →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUTOFACTURA ★ -->
+        <div id="dd-autoinvoice" class="screen-section body">
+          <div class="h1">Nueva autofactura</div>
+          <div class="info-bar ib-green" style="margin-bottom:14px;max-width:700px"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>El PDF se genera automáticamente con la plantilla, se sube a Cloudinary y se envía por email al proveedor.</div>
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;max-width:900px">
+            <div>
+              <div class="card">
+                <div class="card-title">Empresa emisora</div>
+                <div class="input-group">
+                  <label class="input-label">Empresa DAZZ *</label>
+                  <select class="input-field"><option>DAZZ Creative Audiovisual SL</option><option>Digital Advertising Social Services SL</option><option>DAZZLE MGMT SL</option></select>
+                  <div class="input-sub">Los datos fiscales del emisor se autocompletan según la empresa</div>
+                </div>
+                <div style="background:var(--z800);border-radius:7px;padding:10px 12px;font-size:12px;color:var(--z400)">
+                  <div style="font-weight:600;color:var(--z300);margin-bottom:4px">DAZZ Creative Audiovisual SL</div>
+                  <div>CIF: B-12345678 · C/ Serrano 22, Madrid 28001</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Proveedor receptor</div>
+                <div class="input-group">
+                  <label class="input-label">Buscar proveedor *</label>
+                  <div class="search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" value="maria" placeholder="Nombre o NIF..."></div>
+                  <div class="autocomplete-dropdown">
+                    <div class="autocomplete-item"><div style="width:24px;height:24px;background:var(--a500);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--ft);font-size:10px;color:var(--z950)">MG</div><div><div style="font-size:13px;color:var(--z200)">@mariagomez</div><div style="font-size:11px;color:var(--z500)">12345678A</div></div></div>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div class="input-group"><label class="input-label">Nombre *</label><input class="input-field" value="@mariagomez"></div>
+                  <div class="input-group"><label class="input-label">NIF/CIF *</label><input class="input-field" value="12345678A" style="font-family:var(--fm)"></div>
+                  <div class="input-group"><label class="input-label">Dirección *</label><input class="input-field" value="C/ Gran Vía 1, Madrid"></div>
+                  <div class="input-group"><label class="input-label">IBAN *</label><input class="input-field" value="ES41 ···· ···· 46" style="font-family:var(--fm)"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Detalles de la factura</div>
+                <div class="input-group"><label class="input-label">Concepto *</label><input class="input-field" placeholder="Servicios de creación de contenido · Campaña Nike Q4 2026"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                  <div class="input-group"><label class="input-label">Importe base *</label><input class="input-field" placeholder="1.520,00" style="font-family:var(--fm)"></div>
+                  <div class="input-group"><label class="input-label">IVA % *</label><select class="input-field"><option>21%</option><option>10%</option><option>0%</option></select></div>
+                  <div class="input-group"><label class="input-label">IRPF % *</label><select class="input-field"><option>7%</option><option>15%</option><option>0%</option></select></div>
+                  <div class="input-group"><label class="input-label">Fecha *</label><input class="input-field" value="23/03/2026" type="text"></div>
+                  <div class="input-group"><label class="input-label">Nº Factura *</label><input class="input-field" value="DAZZCR-2026-047" style="font-family:var(--fm)"></div>
+                  <div class="input-group"><label class="input-label">OC *</label><input class="input-field" value="OC-MGMTINT2026001" style="font-family:var(--fm)"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-title">Resumen</div>
+                <div class="data-row"><span class="data-label">Base imponible</span><span class="data-val mono">1.520,00 €</span></div>
+                <div class="data-row"><span class="data-label">IVA (21%)</span><span class="data-val mono">319,20 €</span></div>
+                <div class="data-row"><span class="data-label">IRPF (7%)</span><span class="data-val mono" style="color:var(--r400)">-106,40 €</span></div>
+                <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--z700);margin-top:4px;margin-bottom:12px"><span style="font-size:13px;font-weight:600;color:var(--z300)">Total</span><span style="font-family:var(--fm);font-size:17px;font-weight:700;color:var(--a400)">1.840,00 €</span></div>
+                <button class="btn-ghost" style="width:100%;font-size:13px;margin-bottom:6px">Vista previa PDF</button>
+                <button class="btn-primary" style="width:100%;font-size:13px">Generar y enviar</button>
+                <div style="font-size:11px;color:var(--z600);text-align:center;margin-top:8px">Se enviará por email a maria@gmail.com y aparecerá en su portal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /main -->
+    </div><!-- /app -->
+  </div><!-- /browser -->
+</div>
+
+<!-- ═══════ MOBILE ═══════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Mobile</div>
+  <div class="phone" style="height:780px">
+    <div class="phone-screen">
+      <div class="phone-content">
+        <div class="m-status"><span class="m-time">9:41</span></div>
+
+        <!-- MOBILE DASHBOARD -->
+        <div id="mm-dashboard" class="screen-section active" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+          <div class="m-topbar"><div class="m-logo">DAZZ</div><div class="m-notif"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
+          <div class="m-scroll">
+            <div style="padding:0 14px;margin-bottom:12px">
+              <div style="font-family:var(--ft);font-size:22px;color:var(--z100);margin-bottom:10px">Dashboard</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px">
+                <div class="kpi accent"><div class="kpi-label" style="font-size:9px">Pendientes</div><div class="kpi-val amber" style="font-size:22px">5</div><div class="kpi-sub">sin revisar</div></div>
+                <div class="kpi"><div class="kpi-label" style="font-size:9px">Activos</div><div class="kpi-val green" style="font-size:22px">7</div><div class="kpi-sub">proveedores</div></div>
+                <div class="kpi"><div class="kpi-label" style="font-size:9px">Aprobadas</div><div class="kpi-val" style="font-size:22px">12</div><div class="kpi-sub">este mes</div></div>
+                <div class="kpi"><div class="kpi-label" style="font-size:9px">Pagado</div><div class="kpi-val" style="font-size:20px;font-family:var(--fm)">18K€</div><div class="kpi-sub">este mes</div></div>
+              </div>
+              <div style="font-size:11px;font-weight:600;color:var(--z400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Actividad reciente</div>
+              <div style="display:flex;flex-direction:column;gap:0;margin-bottom:80px">
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:26px;height:26px;background:rgba(96,165,250,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--b400)" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div><div style="font-size:13px;color:var(--z300)">@mariagomez subió DAZZ_2026_001</div><div style="font-size:11px;color:var(--z600)">8min · <b style="color:var(--a400)">sin leer</b></div></div></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:26px;height:26px;background:rgba(74,222,128,.1);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g400)" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg></div><div><div style="font-size:13px;color:var(--z300)">Nuevo proveedor: Estudio Martínez SL</div><div style="font-size:11px;color:var(--z600)">2h · <b style="color:var(--a400)">sin leer</b></div></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="m-bottom">
+            <div class="m-nav active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Inicio</span></div>
+            <div class="m-nav" style="position:relative"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Proveedores</span></div>
+            <div class="m-nav" style="position:relative"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Facturas</span><div class="m-badge">5</div></div>
+            <div class="m-nav" style="position:relative"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Avisos</span><div class="m-badge">3</div></div>
+            <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span>Invitar</span></div>
+          </div>
+        </div>
+
+        <!-- MOBILE INVOICES -->
+        <div id="mm-invoices" class="screen-section" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div class="m-topbar"><div style="font-family:var(--ft);font-size:20px;color:var(--z100)">Facturas</div></div>
+          <div class="m-scroll">
+            <div style="padding:0 14px;margin-bottom:10px">
+              <div class="search-wrap" style="margin-bottom:8px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" placeholder="Buscar factura, OC..."></div>
+              <div class="filter-chips" style="margin-bottom:10px"><div class="chip active">Todas</div><div class="chip">Pendiente</div><div class="chip blue">Sin OC (2)</div><div class="chip">Pagada</div></div>
+            </div>
+            <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:80px">
+              <div class="m-inv">
+                <div style="display:flex;justify-content:space-between;margin-bottom:7px"><span style="font-family:var(--fm);font-size:13px;color:var(--z200)">DAZZ_2026_001</span><span style="font-family:var(--fm);font-size:13px;color:var(--z100)">1.840 €</span></div>
+                <div style="font-size:12px;color:var(--z400);margin-bottom:6px">@mariagomez</div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between">
+                  <div><div style="margin-bottom:3px"><span class="oc-tag">OC-MGMTINT2026001</span></div><div style="font-size:11px;color:var(--z500);margin-bottom:4px">15/01/2026</div><span class="pill p-pend"><span class="pill-dot"></span>Pendiente</span></div>
+                  <button class="btn-primary btn-sm" style="font-size:12px">Aprobar</button>
+                </div>
+              </div>
+              <div class="m-inv" style="border:1px solid rgba(96,165,250,.2);background:rgba(96,165,250,.02)">
+                <div style="display:flex;justify-content:space-between;margin-bottom:7px"><span style="font-family:var(--fm);font-size:13px;color:var(--z200)">DAZZ_2026_003</span><span style="font-family:var(--fm);font-size:13px;color:var(--z100)">3.200 €</span></div>
+                <div style="font-size:12px;color:var(--z400);margin-bottom:6px">Estudio Martínez SL</div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between">
+                  <div><div style="margin-bottom:4px"><span class="oc-missing">Sin OC</span></div><span class="pill p-nooc"><span class="pill-dot"></span>Sin OC</span></div>
+                  <button class="btn-ghost btn-sm" style="font-size:11px;color:var(--b400);border-color:rgba(96,165,250,.3)">Asignar OC →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="m-bottom">
+            <div class="m-nav"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Inicio</span></div>
+            <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Proveedores</span></div>
+            <div class="m-nav active" style="position:relative"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Facturas</span><div class="m-badge">5</div></div>
+            <div class="m-nav" style="position:relative"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Avisos</span><div class="m-badge">3</div></div>
+            <div class="m-nav"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span>Invitar</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /screens-wrap -->
+
+<script>
+const desktopMap = {
+  'dashboard':'dd-dashboard','suppliers':'dd-suppliers','detail':'dd-detail',
+  'invoices':'dd-invoices','no-oc':'dd-no-oc','assign-oc':'dd-assign-oc',
+  'invoice-detail':'dd-invoice-detail','notifications':'dd-notifications',
+  'invite':'dd-invite','autoinvoice':'dd-autoinvoice'
+};
+const sidebarMap = {
+  'dashboard':'sb-dashboard','suppliers':'sb-suppliers','detail':'sb-suppliers',
+  'invoices':'sb-invoices','no-oc':'sb-invoices','assign-oc':'sb-invoices',
+  'invoice-detail':'sb-invoices','notifications':'sb-notifications',
+  'invite':'sb-invite','autoinvoice':'sb-autoinvoice'
+};
+const titles = {
+  'dashboard':'Dashboard','suppliers':'Proveedores','detail':'Proveedor',
+  'invoices':'Facturas','no-oc':'Facturas — Sin OC','assign-oc':'Asignar OC',
+  'invoice-detail':'Detalle factura','notifications':'Notificaciones',
+  'invite':'Invitar proveedor','autoinvoice':'Nueva autofactura'
+};
+const mobileMap = {
+  'dashboard':'mm-dashboard','suppliers':'mm-dashboard','detail':'mm-dashboard',
+  'invoices':'mm-invoices','no-oc':'mm-invoices','assign-oc':'mm-invoices',
+  'invoice-detail':'mm-invoices','notifications':'mm-dashboard',
+  'invite':'mm-dashboard','autoinvoice':'mm-dashboard'
+};
+
+function show(screen) {
+  // Tabs
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Desktop screens
+  Object.values(desktopMap).forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
+  const ds = document.getElementById(desktopMap[screen]);
+  if(ds) ds.classList.add('active');
+
+  // Sidebar
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  const sid = document.getElementById(sidebarMap[screen]);
+  if(sid) sid.classList.add('active');
+
+  // Title
+  const t = document.getElementById('d-title');
+  if(t) t.textContent = titles[screen] || screen;
+
+  // Mobile
+  ['mm-dashboard','mm-invoices'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const ms = document.getElementById(mobileMap[screen]);
+  if(ms){ ms.style.display='flex'; ms.style.flexDirection='column'; ms.style.flex='1'; ms.style.overflow='hidden'; }
+}
+
+// Init
+document.getElementById('sb-dashboard').classList.add('active');
+</script>
+</body>
+</html>
