@@ -41,8 +41,10 @@ def can_access_project(user: User, project: Project, db: Session) -> bool:
     if user.role == UserRole.BOSS:
         return project.owner_company_id in company_ids
 
-    # WORKER: solo sus propios proyectos de sus empresas
-    if project.owner_id != user.id:
+    # WORKER: proyectos donde es owner O responsible
+    is_owner = project.owner_id == user.id
+    is_responsible = (user.username or "").lower() == (project.responsible or "").lower()
+    if not is_owner and not is_responsible:
         return False
     return project.owner_company_id in company_ids
 
@@ -62,5 +64,7 @@ def can_modify_project(user: User, project: Project, db: Session) -> bool:
         company_ids = get_user_company_ids(user, db)
         return project.owner_company_id in company_ids
 
-    # WORKER: solo sus propios proyectos
-    return project.owner_id == user.id
+    # WORKER: proyectos donde es owner O responsible
+    is_owner = project.owner_id == user.id
+    is_responsible = (user.username or "").lower() == (project.responsible or "").lower()
+    return is_owner or is_responsible
