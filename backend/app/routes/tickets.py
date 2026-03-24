@@ -1,5 +1,7 @@
 import logging
+import hashlib
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
 import asyncio
@@ -26,7 +28,7 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 
-@router.post("/{project_id}/upload", response_model=schemas.TicketResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{project_id}/upload", response_model=schemas.TicketUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_ticket(
     project_id: int,
     file: UploadFile = File(...),
@@ -42,11 +44,31 @@ async def upload_ticket(
     # VULN-004/005: Usar validate_file_upload en lugar de validación manual de content_type
     await validate_file_upload(file)
 
+    # Leer contenido para hash + guardar temp
+    file_contents = await file.read()
+    file_hash = hashlib.md5(file_contents).hexdigest()
+    await file.seek(0)
+
+    # 1. Detección duplicado por hash — BLOQUEA (antes de IA = ahorra tokens)
+    existing = db.query(Ticket).filter(
+        Ticket.project_id == project_id,
+        Ticket.file_hash == file_hash
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "duplicate_hash",
+                "ticket_id": existing.id,
+                "message": f"Este archivo ya fue subido anteriormente (ticket #{existing.id})"
+            }
+        )
+
     # VULN-004/005: Usar sanitize_filename para el nombre del archivo temporal
     safe_filename = sanitize_filename(file.filename)
     temp_path = UPLOAD_DIR / f"temp_{current_user.id}_{safe_filename}"
     with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(file_contents)
 
     try:
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
@@ -101,7 +123,21 @@ async def upload_ticket(
             foreign_tax_eur = extracted_data.get("iva_amount", 0.0)
             exchange_rate = 1.0
 
-        # 4. Crear ticket
+        # 4. Detección duplicado por invoice_number — WARNING (deja pasar)
+        duplicate_invoice_warning = None
+        invoice_number = extracted_data.get("invoice_number") if "error" not in extracted_data else None
+        if invoice_number:
+            dup_invoice = db.query(Ticket).filter(
+                Ticket.project_id == project_id,
+                Ticket.invoice_number == invoice_number
+            ).first()
+            if dup_invoice:
+                duplicate_invoice_warning = {
+                    "ticket_id": dup_invoice.id,
+                    "invoice_number": invoice_number
+                }
+
+        # 5. Crear ticket
         if "error" in extracted_data:
             ticket = Ticket(
                 project_id=project_id,
@@ -109,6 +145,7 @@ async def upload_ticket(
                 file_name=file.filename,
                 file_pages=json.dumps(cloudinary_result.get("pages", [])),
                 pdf_url=cloudinary_result.get("pdf_url"),
+                file_hash=file_hash,
                 date="", provider="Error en extracción",
                 base_amount=0.0, iva_amount=0.0, iva_percentage=0.0,
                 total_with_iva=0.0, final_total=0.0,
@@ -121,6 +158,7 @@ async def upload_ticket(
                 file_name=file.filename,
                 file_pages=json.dumps(cloudinary_result.get("pages", [])),
                 pdf_url=cloudinary_result.get("pdf_url"),
+                file_hash=file_hash,
                 date=extracted_data.get("date", ""),
                 provider=extracted_data.get("provider", ""),
                 invoice_number=extracted_data.get("invoice_number"),
@@ -166,7 +204,10 @@ async def upload_ticket(
                 pass
             raise
         db.refresh(ticket)
-        return ticket
+        return {
+            "ticket": ticket,
+            "duplicate_invoice_warning": duplicate_invoice_warning
+        }
 
     except HTTPException:
         raise  # Re-raise HTTPExceptions from validators as-is

@@ -111,14 +111,28 @@ const UploadTickets = () => {
 
       try {
         const response = await uploadTicket(id, file);
-        newResults.push({ file: file.name, success: true, data: response.data });
+        const ticketData = response.data.ticket || response.data;
+        const warning = response.data.duplicate_invoice_warning || null;
+        newResults.push({ file: file.name, success: true, data: ticketData, duplicate_invoice_warning: warning });
       } catch (error) {
-        newResults.push({
-          file: file.name,
-          success: false,
-          error: error.response?.data?.detail || 'Error al procesar'
-        });
-        newFailedFiles.push(file); // ← guardar el File object original
+        const detail = error.response?.data?.detail;
+        // Duplicado hash → warning especial (no error fatal, no reintentar)
+        if (error.response?.status === 409 && detail?.code === 'duplicate_hash') {
+          newResults.push({
+            file: file.name,
+            success: false,
+            isDuplicate: true,
+            duplicateTicketId: detail.ticket_id,
+            error: detail.message
+          });
+        } else {
+          newResults.push({
+            file: file.name,
+            success: false,
+            error: typeof detail === 'string' ? detail : detail?.message || 'Error al procesar'
+          });
+          newFailedFiles.push(file); // ← guardar el File object original
+        }
       }
 
       setResults([...newResults]);
@@ -330,13 +344,15 @@ const UploadTickets = () => {
                     className={`p-4 rounded-sm border-2 ${
                       result.success
                         ? 'border-green-500/30 bg-green-500/10'
-                        : 'border-red-500/30 bg-red-500/10'
+                        : result.isDuplicate
+                          ? 'border-amber-500/30 bg-amber-500/10'
+                          : 'border-red-500/30 bg-red-500/10'
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       {result.success
                         ? <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
-                        : <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
+                        : <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${result.isDuplicate ? 'text-amber-400' : 'text-red-400'}`} />
                       }
                       <div className="flex-1">
                         <p className="font-medium text-sm mb-1">{result.file}</p>
@@ -358,10 +374,17 @@ const UploadTickets = () => {
                               <span className="font-medium">Tipo:</span>{' '}
                               {result.data?.type === 'factura' ? 'Factura' : 'Ticket'}
                             </p>
+                            {result.duplicate_invoice_warning && (
+                              <div className="mt-2 pt-2 border-t border-amber-500/30">
+                                <p className="text-amber-400 font-bold text-xs">
+                                  Posible duplicado — ya existe ticket #{result.duplicate_invoice_warning.ticket_id} con factura {result.duplicate_invoice_warning.invoice_number}
+                                </p>
+                              </div>
+                            )}
                             {result.data?.is_foreign && (
                               <div className="mt-2 pt-2 border-t border-blue-500/30">
                                 <p className="text-blue-400 font-bold mb-1">
-                                  🌍 Factura internacional detectada
+                                  Factura internacional detectada
                                 </p>
                                 <p>
                                   <span className="font-medium">Divisa:</span>{' '}
@@ -378,6 +401,10 @@ const UploadTickets = () => {
                               </div>
                             )}
                           </div>
+                        ) : result.isDuplicate ? (
+                          <p className="text-xs text-amber-400">
+                            Archivo duplicado — ya existe como ticket #{result.duplicateTicketId}
+                          </p>
                         ) : (
                           <p className="text-xs text-red-400">
                             {typeof result.error === 'string'

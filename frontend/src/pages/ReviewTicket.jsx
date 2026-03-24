@@ -39,6 +39,7 @@ const ReviewTicket = () => {
   const [allTickets, setAllTickets] = useState([]);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
   const [customPayment, setCustomPayment] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
 
   // UX-L1: Detectar cambios sin guardar
   const initialTicketRef = useRef(null);
@@ -111,10 +112,21 @@ const ReviewTicket = () => {
         }
         
         setAllTickets(ticketsToShow);
-        
+
         // Encontrar el índice del ticket actual en la lista filtrada
         const index = ticketsToShow.findIndex(t => t.id === parseInt(id));
         setCurrentTicketIndex(index);
+
+        // Detectar duplicado por invoice_number
+        if (currentTicket.invoice_number) {
+          const dup = projectTickets.data.find(t =>
+            t.id !== currentTicket.id &&
+            t.invoice_number === currentTicket.invoice_number
+          );
+          setDuplicateWarning(dup ? { ticket_id: dup.id, invoice_number: dup.invoice_number } : null);
+        } else {
+          setDuplicateWarning(null);
+        }
       } catch (error) {
         console.error('Error loading project tickets:', error);
       }
@@ -358,6 +370,20 @@ const ReviewTicket = () => {
           >
             <ChevronRight size={24} />
           </button>
+        )}
+
+        {duplicateWarning && (
+          <div className="mb-4 bg-amber-500/10 border-2 border-amber-500/40 rounded-sm p-4 flex items-center justify-between gap-4">
+            <p className="text-sm text-amber-300">
+              Ya existe un ticket con el n.o de factura <span className="font-bold">{duplicateWarning.invoice_number}</span> (ticket #{duplicateWarning.ticket_id}). Revisa si es un duplicado antes de guardar.
+            </p>
+            <button
+              onClick={() => navigate(`/tickets/${duplicateWarning.ticket_id}`)}
+              className="flex-shrink-0 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 rounded-sm text-xs font-bold transition-colors"
+            >
+              Ver ticket original
+            </button>
+          </div>
         )}
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-6 space-y-6">

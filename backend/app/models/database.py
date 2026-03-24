@@ -153,6 +153,7 @@ class Ticket(Base):
     file_name = Column(String, nullable=False)
     file_pages = Column(Text, nullable=True)
     pdf_url = Column(String, nullable=True)
+    file_hash = Column(String(32), nullable=True, index=True)
     is_reviewed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

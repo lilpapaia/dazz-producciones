@@ -234,6 +234,7 @@ class TicketResponse(TicketBase):
     file_pages: Optional[str] = None
     pdf_url: Optional[str] = None
     notes: Optional[str] = None
+    file_hash: Optional[str] = None
     is_reviewed: bool
     created_at: datetime
     project_id: int
@@ -253,6 +254,14 @@ class TicketResponse(TicketBase):
 
     class Config:
         from_attributes = True
+
+class DuplicateInvoiceWarning(BaseModel):
+    ticket_id: int
+    invoice_number: str
+
+class TicketUploadResponse(BaseModel):
+    ticket: TicketResponse
+    duplicate_invoice_warning: Optional[DuplicateInvoiceWarning] = None
 
 # ============================================
 # AI EXTRACTION RESPONSE

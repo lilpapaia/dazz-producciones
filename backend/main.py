@@ -219,6 +219,13 @@ async def startup_event():
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP"
             ))
+            # Detección duplicados: hash de archivo
+            conn.execute(text(
+                "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS file_hash VARCHAR(32)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_tickets_file_hash ON tickets (file_hash)"
+            ))
             conn.commit()
         except Exception:
             pass  # SQLite u otros motores pueden no soportar IF NOT EXISTS
