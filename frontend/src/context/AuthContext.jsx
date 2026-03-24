@@ -11,6 +11,7 @@ const sanitizeUserData = (userData) => {
     name: userData.name,
     email: userData.email,
     role: userData.role,
+    companies: userData.companies?.map(c => ({ id: c.id, name: c.name })) || [],
   };
 };
 
