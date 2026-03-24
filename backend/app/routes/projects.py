@@ -289,10 +289,15 @@ async def close_project(
         if responsible_email and responsible_email not in recipients:
             recipients.append(responsible_email)
 
+    # Sanitizar creative_code para filenames (email + HTTP response)
+    safe_code = re.sub(r'[^\w\-.]', '_', project.creative_code)
+
+    email_sent = False
+    email_error = None
     if excel_bytes and recipients:
         try:
             from app.services.email import send_project_closed_email_multi
-            filename = f"{project.creative_code}_GASTOS.xlsx"
+            filename = f"{safe_code}_GASTOS.xlsx"
             send_project_closed_email_multi(
                 recipients=recipients,
                 project_name=project.description,
@@ -303,20 +308,26 @@ async def close_project(
                 excel_bytes=excel_bytes,
                 excel_filename=filename
             )
+            email_sent = True
+            logger.info(f"Email cierre proyecto enviado a: {recipients}")
         except Exception as e:
-            logger.warning(f"Email sending failed: {str(e)}")
+            email_error = str(e)
+            logger.error(f"EMAIL CIERRE FALLÓ para {project.creative_code}: {email_error}")
+            logger.error(f"Destinatarios: {recipients}")
 
     project.status = ProjectStatus.CERRADO
     project.closed_at = datetime.now(timezone.utc)
     db.commit()
 
     if excel_bytes:
-        # VULN-010: Sanitizar creative_code para Content-Disposition header
-        safe_code = re.sub(r'[^\w\-.]', '_', project.creative_code)
         return Response(
             content=excel_bytes,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{safe_code}_GASTOS.xlsx"'}
+            headers={
+                "Content-Disposition": f'attachment; filename="{safe_code}_GASTOS.xlsx"',
+                "X-Email-Sent": "true" if email_sent else "false",
+                "X-Email-Error": email_error or "",
+            }
         )
     else:
         raise HTTPException(

@@ -85,7 +85,13 @@ const ProjectCloseReview = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      showSuccess(`Proyecto cerrado. Excel descargado y email enviado a ${emailRecipients.length} destinatario(s).`);
+      const emailSent = response.headers?.['x-email-sent'] === 'true';
+      const emailError = response.headers?.['x-email-error'];
+      if (emailSent) {
+        showSuccess(`Proyecto cerrado. Excel descargado y email enviado a ${emailRecipients.length} destinatario(s).`);
+      } else {
+        showWarning(`Proyecto cerrado y Excel descargado, pero el email NO se pudo enviar${emailError ? `: ${emailError}` : ''}. Envía el Excel manualmente.`);
+      }
       navigate('/dashboard');
     } catch (error) {
       console.error('Error closing project:', error);
