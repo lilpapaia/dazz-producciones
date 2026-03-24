@@ -8,6 +8,7 @@ from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, Ticket, ProjectStatus, Company, UserRole
 from app.services.auth import get_current_active_user
+from app.services.permissions import get_user_company_ids
 from app.services.geographic_classifier import classify_geography, get_country_name
 
 router = APIRouter(prefix="/statistics", tags=["Statistics"])
@@ -194,17 +195,24 @@ async def get_complete_statistics(
     if current_user.role not in [UserRole.ADMIN, UserRole.BOSS]:
         raise HTTPException(status_code=403, detail="Solo ADMIN y BOSS pueden ver estadísticas")
 
-    # ── BOSS: forzar su empresa ────────────────────────────────
+    # ── BOSS: validar company_id o usar todas sus empresas ─────
+    boss_company_ids = None
     if current_user.role == UserRole.BOSS:
-        if not current_user.companies:
+        boss_company_ids = get_user_company_ids(current_user, db)
+        if not boss_company_ids:
             raise HTTPException(status_code=400, detail="Usuario BOSS sin empresas asignadas")
-        # current_user.companies es la relación Company directa
-        company_id = current_user.companies[0].id
+        # Si envía company_id, validar que es suya
+        if company_id and company_id not in boss_company_ids:
+            raise HTTPException(status_code=403, detail="No tienes acceso a esa empresa")
 
     # ── Obtener proyectos del año (+ empresa si aplica) ────────
     projects_query = db.query(Project).filter(Project.year == str(year))
     if company_id:
+        # ADMIN con empresa específica o BOSS con empresa específica
         projects_query = projects_query.filter(Project.owner_company_id == company_id)
+    elif boss_company_ids:
+        # BOSS sin company_id → todas sus empresas
+        projects_query = projects_query.filter(Project.owner_company_id.in_(boss_company_ids))
     projects = projects_query.all()
     project_ids = [p.id for p in projects]
 
@@ -220,10 +228,14 @@ async def get_complete_statistics(
     distribution = _calc_distribution(project_ids, quarter, None, db)
 
     # 4. BREAKDOWN INTERNACIONAL: year + company + quarter
-    is_all_companies = (current_user.role == UserRole.ADMIN and company_id is None)
+    # Modo multi-empresa: ADMIN sin filtro o BOSS sin filtro (ve todas sus empresas)
+    is_multi_company = company_id is None and (
+        current_user.role == UserRole.ADMIN or
+        (current_user.role == UserRole.BOSS and boss_company_ids and len(boss_company_ids) > 1)
+    )
 
-    if is_all_companies:
-        breakdown = _get_breakdown_all_companies(year, quarter, db)
+    if is_multi_company:
+        breakdown = _get_breakdown_all_companies(year, quarter, db, boss_company_ids)
         mode = "all_companies"
     else:
         # Tickets internacionales de los proyectos filtrados
@@ -471,14 +483,14 @@ def _build_breakdown_single(tickets: list, db: Session) -> list:
     return result
 
 
-def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session) -> list:
+def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session, company_ids: Optional[list] = None) -> list:
     """
-    Breakdown para modo ADMIN TODAS.
+    Breakdown para modo multi-empresa (ADMIN todas o BOSS sus empresas).
     Estructura: País → Empresa → Proyectos (con tickets)
-    
+
     Usa joinedload para evitar N+1 queries con ticket.project
     """
-    tickets = (
+    query = (
         db.query(Ticket)
         .join(Project)
         .options(joinedload(Ticket.project))
@@ -486,8 +498,10 @@ def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session)
             Project.year == str(year),
             Ticket.is_foreign == True
         )
-        .all()
     )
+    if company_ids:
+        query = query.filter(Project.owner_company_id.in_(company_ids))
+    tickets = query.all()
 
     if quarter:
         tickets = filter_tickets_by_quarter(tickets, quarter)

@@ -5,17 +5,10 @@ import { ROLES } from '../../../constants/roles';
 export function useStatisticsData(user) {
   const currentYear = new Date().getFullYear();
 
-  const getInitialCompanyId = () => {
-    if (user?.role === ROLES.BOSS && user.companies?.length > 0) {
-      return user.companies[0].id;
-    }
-    return null;
-  };
-
   const [year, setYear] = useState(currentYear);
   const [quarter, setQuarter] = useState('');
   const [geoFilter, setGeoFilter] = useState('');
-  const [companyId, setCompanyId] = useState(getInitialCompanyId);
+  const [companyId, setCompanyId] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -39,18 +32,21 @@ export function useStatisticsData(user) {
     loadYears();
   }, []);
 
-  // Cargar empresas (solo para ADMIN)
+  // Cargar empresas (ADMIN: todas del sistema, BOSS: solo las suyas)
   useEffect(() => {
-    if (user?.role !== ROLES.ADMIN) return;
-    const loadCompanies = async () => {
-      try {
-        const response = await getCompanies();
-        setCompanies(response.data);
-      } catch (error) {
-        console.error('Error loading companies:', error);
-      }
-    };
-    loadCompanies();
+    if (user?.role === ROLES.ADMIN) {
+      const loadCompanies = async () => {
+        try {
+          const response = await getCompanies();
+          setCompanies(response.data);
+        } catch (error) {
+          console.error('Error loading companies:', error);
+        }
+      };
+      loadCompanies();
+    } else if (user?.role === ROLES.BOSS && user.companies?.length > 0) {
+      setCompanies(user.companies);
+    }
   }, [user]);
 
   // Cargar datos cuando cambia cualquier filtro
