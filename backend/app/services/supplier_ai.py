@@ -411,13 +411,51 @@ Return ONLY a JSON object with a single field:
 If no IBAN is found, return: {"iban": null}
 No explanations, no markdown."""
 
+CERT_VALIDATION_PROMPT = """Analyze this PDF document and determine:
+
+1. Is this a BANK CERTIFICATE (certificado de titularidad bancaria)?
+   - A bank certificate proves ownership of a bank account
+   - It is NOT an invoice, payslip, tax form, bank statement, or any other document
+   - It typically contains: bank name/logo, account holder name, IBAN, and a statement of ownership
+
+2. Extract the IBAN number if present
+
+3. Extract the NIF/CIF/VAT number of the account holder if present
+
+Return ONLY a JSON object:
+{
+  "is_bank_certificate": true or false,
+  "iban": "ESXX XXXX XXXX XXXX XXXX XXXX" or null,
+  "nif": "12345678A" or null,
+  "confidence": "high", "medium", or "low"
+}
+
+- confidence "high": clearly a bank certificate with readable data
+- confidence "medium": looks like a bank certificate but some data is hard to read
+- confidence "low": unclear document type or very poor quality
+
+No explanations, no markdown — ONLY the JSON."""
+
 
 def extract_iban_from_cert(file_path: str) -> Optional[str]:
     """
     Extract IBAN from a bank certificate PDF using Claude.
+    Legacy function — kept for backward compatibility.
 
     Returns:
         IBAN string or None if not found/not parseable
+    """
+    result = extract_bank_cert_data(file_path)
+    return result.get("iban") if result else None
+
+
+def extract_bank_cert_data(file_path: str) -> Dict[str, Any]:
+    """
+    Analyze a bank certificate PDF using Claude.
+    Verifies document type, extracts IBAN and NIF.
+
+    Returns:
+        {is_bank_certificate, iban, nif, confidence} or empty dict if parse fails
     """
     with open(file_path, "rb") as f:
         file_data = f.read()
@@ -436,7 +474,7 @@ def extract_iban_from_cert(file_path: str) -> Optional[str]:
                     "type": "document",
                     "source": {"type": "base64", "media_type": "application/pdf", "data": base64_data},
                 },
-                {"type": "text", "text": CERT_IBAN_PROMPT},
+                {"type": "text", "text": CERT_VALIDATION_PROMPT},
             ],
         }],
     )
@@ -449,10 +487,9 @@ def extract_iban_from_cert(file_path: str) -> Optional[str]:
         response_text = response_text.strip()
 
     try:
-        result = json.loads(response_text)
-        return result.get("iban")
+        return json.loads(response_text)
     except json.JSONDecodeError:
-        return None
+        return {}
 
 
 def _normalize_nif(nif: Optional[str]) -> Optional[str]:

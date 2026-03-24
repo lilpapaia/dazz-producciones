@@ -222,8 +222,11 @@ const Register = () => {
                   setIbanMessage('');
                   setValidatingCert(true);
                   try {
-                    const { data } = await validateBankCertIban(form.iban, bankCertFile);
-                    if (data.iban_match === null) {
+                    const { data } = await validateBankCertIban(form.iban, bankCertFile, form.nif_cif);
+                    if (data.warnings?.length > 0) {
+                      setIbanStatus('warning');
+                      setIbanMessage(data.warnings.join(' · '));
+                    } else if (data.iban_match === null) {
                       setIbanStatus('warning');
                       setIbanMessage('Could not verify IBAN automatically — proceeding');
                     } else {

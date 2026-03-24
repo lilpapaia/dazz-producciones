@@ -34,7 +34,7 @@ from app.services.supplier_auth import (
 )
 from app.services.supplier_ai import (
     extract_supplier_invoice, validate_supplier_invoice, resolve_company_from_oc,
-    extract_iban_from_cert, _normalize_iban, _normalize_nif,
+    extract_iban_from_cert, extract_bank_cert_data, _normalize_iban, _normalize_nif,
 )
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url
 from app.services.encryption import encrypt_iban, decrypt_iban
@@ -329,10 +329,11 @@ async def get_my_bank_cert_url(
 async def validate_bank_cert_iban(
     request: Request,
     iban: str = Query(..., min_length=10, max_length=50),
+    nif_cif: Optional[str] = Query(None, max_length=50),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """Validate that IBAN on bank certificate matches the provided IBAN (pre-registration)."""
+    """Validate bank certificate: document type, IBAN match, NIF match. Never blocks registration."""
     import uuid as _uuid
 
     contents = await file.read()
@@ -344,27 +345,76 @@ async def validate_bank_cert_iban(
         f.write(contents)
 
     try:
-        extracted_iban = await asyncio.to_thread(extract_iban_from_cert, temp_path)
+        cert_data = await asyncio.to_thread(extract_bank_cert_data, temp_path)
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    if not extracted_iban:
-        # AI could not read IBAN from cert — notify admin for manual review, but don't block
+    warnings = []
+
+    # IA no pudo leer nada
+    if not cert_data or (not cert_data.get("iban") and not cert_data.get("nif") and cert_data.get("is_bank_certificate") is None):
         _notify(db, NotificationRecipientType.ADMIN, 0,
-                NotificationEventType.IA_REJECTED, "Bank cert IBAN not verified",
-                "New supplier registration: could not extract IBAN from bank certificate — manual review recommended",
+                NotificationEventType.IA_REJECTED, "Bank cert not readable",
+                "New supplier registration: AI could not read the bank certificate — manual review needed",
                 supplier_id=None)
         db.commit()
-        return {"valid": True, "iban_match": None, "message": "Could not extract IBAN from certificate — skipping validation"}
+        return {"valid": True, "iban_match": None, "nif_match": None, "is_bank_certificate": None,
+                "warnings": ["Could not verify certificate automatically"], "message": "Could not read certificate — proceeding"}
 
-    normalized_input = _normalize_iban(iban)
-    normalized_cert = _normalize_iban(extracted_iban)
+    # 1. Verificar tipo de documento
+    is_cert = cert_data.get("is_bank_certificate")
+    if is_cert is False:
+        _notify(db, NotificationRecipientType.ADMIN, 0,
+                NotificationEventType.IA_REJECTED, "Document is not a bank certificate",
+                "New supplier registration: uploaded document does not appear to be a bank certificate",
+                supplier_id=None)
+        warnings.append("Document may not be a bank certificate")
 
-    if normalized_input == normalized_cert:
-        return {"valid": True, "iban_match": True}
-    else:
-        raise HTTPException(422, "IBAN on the bank certificate does not match the IBAN you entered")
+    # 2. Verificar IBAN
+    extracted_iban = cert_data.get("iban")
+    iban_match = None
+    if extracted_iban:
+        normalized_input = _normalize_iban(iban)
+        normalized_cert = _normalize_iban(extracted_iban)
+        if normalized_input == normalized_cert:
+            iban_match = True
+        else:
+            iban_match = False
+            _notify(db, NotificationRecipientType.ADMIN, 0,
+                    NotificationEventType.IA_REJECTED, "IBAN mismatch on bank cert",
+                    f"New supplier registration: IBAN on certificate does not match the one entered by supplier",
+                    supplier_id=None)
+            warnings.append("IBAN on certificate does not match")
+
+    # 3. Verificar NIF
+    extracted_nif = cert_data.get("nif")
+    nif_match = None
+    if extracted_nif and nif_cif:
+        normalized_input_nif = _normalize_nif(nif_cif)
+        normalized_cert_nif = _normalize_nif(extracted_nif)
+        if normalized_input_nif and normalized_cert_nif:
+            if normalized_input_nif == normalized_cert_nif:
+                nif_match = True
+            else:
+                nif_match = False
+                _notify(db, NotificationRecipientType.ADMIN, 0,
+                        NotificationEventType.IA_REJECTED, "NIF mismatch on bank cert",
+                        f"New supplier registration: NIF on certificate does not match the one entered by supplier",
+                        supplier_id=None)
+                warnings.append("NIF on certificate does not match")
+
+    if warnings:
+        db.commit()
+
+    return {
+        "valid": True,
+        "iban_match": iban_match,
+        "nif_match": nif_match,
+        "is_bank_certificate": is_cert,
+        "confidence": cert_data.get("confidence"),
+        "warnings": warnings,
+    }
 
 
 # ============================================
