@@ -202,7 +202,10 @@ R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
 R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
 R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "bank-certs")
+# Construir endpoint desde account_id si no se proporciona explícitamente
 R2_ENDPOINT = os.getenv("R2_ENDPOINT", "")
+if not R2_ENDPOINT and R2_ACCOUNT_ID:
+    R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
 SIGNED_URL_EXPIRY = 900  # 15 minutes (RGPD requirement)
 
@@ -227,24 +230,38 @@ def _get_r2_client():
     )
 
 
-def save_bank_cert(file: UploadFile, supplier_id: int, contents: bytes = None) -> str:
+def _sanitize_nif_for_key(nif_cif: Optional[str]) -> str:
+    """Sanitize NIF/CIF for use in R2 object key — alphanumeric only."""
+    if not nif_cif:
+        return "unknown"
+    import re
+    cleaned = re.sub(r'[^a-zA-Z0-9]', '', nif_cif.strip())
+    return cleaned[:20] if cleaned else "unknown"
+
+
+def save_bank_cert(file: UploadFile, supplier_id: int, contents: bytes = None,
+                   nif_cif: Optional[str] = None, tipo: str = "initial") -> str:
     """
     Upload bank certificate PDF to Cloudflare R2.
 
-    Stored in bank-certs/{supplier_id}/ — never publicly accessible.
-    Access only via signed URLs with 15min expiry.
+    Structure: bank_certs/{supplier_id}/{timestamp}_{tipo}_{nif}.pdf
+    NEVER deletes previous certs — all versions kept for RGPD/Hacienda.
 
     Args:
         file: FastAPI UploadFile (PDF)
         supplier_id: Supplier ID
         contents: Pre-read bytes (avoids consuming file stream twice)
+        nif_cif: NIF/CIF for filename (sanitized)
+        tipo: "initial" for registration, "update" for IBAN changes
 
     Returns:
         R2 object key (NOT a public URL — use get_bank_cert_url to get signed URL)
     """
-    short_id = uuid.uuid4().hex[:8]
-    object_key = f"bank-certs/{supplier_id}/cert_{short_id}.pdf"
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    safe_nif = _sanitize_nif_for_key(nif_cif)
+    object_key = f"bank_certs/{supplier_id}/{timestamp}_{tipo}_{safe_nif}.pdf"
 
+    short_id = uuid.uuid4().hex[:8]
     temp_path = os.path.join(UPLOAD_DIR, f"tmp_bank_{short_id}.pdf")
     try:
         with open(temp_path, "wb") as out:
@@ -253,13 +270,23 @@ def save_bank_cert(file: UploadFile, supplier_id: int, contents: bytes = None) -
             else:
                 shutil.copyfileobj(file.file, out)
 
+        file_size = os.path.getsize(temp_path)
+        logger.info(f"R2 upload attempt: key={object_key}, size={file_size}B, "
+                     f"endpoint={'SET' if R2_ENDPOINT else 'MISSING'}, "
+                     f"bucket={R2_BUCKET_NAME}, "
+                     f"access_key={'SET' if R2_ACCESS_KEY_ID else 'MISSING'}")
+
         client = _get_r2_client()
-        client.upload_file(
-            temp_path,
-            R2_BUCKET_NAME,
-            object_key,
-            ExtraArgs={"ContentType": "application/pdf"},
-        )
+        try:
+            client.upload_file(
+                temp_path,
+                R2_BUCKET_NAME,
+                object_key,
+                ExtraArgs={"ContentType": "application/pdf"},
+            )
+        except Exception as e:
+            logger.error(f"R2 upload FAILED: {type(e).__name__}: {e}")
+            raise
 
         logger.info(f"R2 upload OK: {object_key}")
         return object_key
@@ -294,13 +321,4 @@ def get_bank_cert_url(object_key: str) -> str:
     return url
 
 
-def delete_bank_cert(object_key: str) -> bool:
-    """Delete a bank certificate from R2."""
-    try:
-        client = _get_r2_client()
-        client.delete_object(Bucket=R2_BUCKET_NAME, Key=object_key)
-        logger.info(f"R2 delete OK: {object_key}")
-        return True
-    except Exception as e:
-        logger.error(f"R2 delete error: {e}")
-        return False
+    # delete_bank_cert removed — RGPD requires all bank certificates to be retained

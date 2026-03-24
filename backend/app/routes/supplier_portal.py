@@ -307,7 +307,10 @@ async def upload_bank_cert(
     validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
     # PERF-M1: Offload upload R2 síncrono al thread pool para no bloquear event loop
-    cert_key = await asyncio.to_thread(save_bank_cert, file, supplier.id, contents)
+    cert_key = await asyncio.to_thread(
+        save_bank_cert, file, supplier.id, contents,
+        nif_cif=supplier.nif_cif, tipo="initial"
+    )
     supplier.bank_cert_url = cert_key
     db.commit()
 
@@ -817,10 +820,11 @@ async def request_iban_change(
     # Validate IBAN format
     validate_iban_format(new_iban)
 
-    # Save new cert to R2 (separate key — does not overwrite current)
-    import uuid
-    temp_key = f"bank-certs/{supplier.id}/pending_{uuid.uuid4().hex[:8]}.pdf"
-    cert_key = await asyncio.to_thread(save_bank_cert, file, supplier.id, contents)
+    # Save new cert to R2 (never overwrites — all versions kept for RGPD)
+    cert_key = await asyncio.to_thread(
+        save_bank_cert, file, supplier.id, contents,
+        nif_cif=supplier.nif_cif, tipo="update"
+    )
 
     _notify(db, NotificationRecipientType.ADMIN, 0,
             NotificationEventType.REGISTRATION, "IBAN Change Request",
