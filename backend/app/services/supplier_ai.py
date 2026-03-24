@@ -61,14 +61,22 @@ EXTRACTION_PROMPT = """Analiza esta factura PDF de un proveedor y extrae los dat
 
 IMPORTANTE: Devuelve SOLO el JSON, sin explicaciones ni texto adicional.
 
+CÓMO DISTINGUIR EMISOR DE RECEPTOR:
+- EMISOR = quien EMITE la factura, quien COBRA. Aparece como "De", datos fiscales principales,
+  suele tener el IBAN/cuenta bancaria. Es el proveedor que presta el servicio.
+- RECEPTOR = quien RECIBE la factura, quien PAGA. Aparece como "A", "Cliente", "Facturar a",
+  "Bill to". Es la empresa cliente que contrata el servicio.
+- Si hay duda: el EMISOR es quien tiene el número de cuenta/IBAN en la factura.
+
 CAMPOS A EXTRAER:
 
 - invoice_number: Número de factura (obligatorio)
 - date: Fecha de factura en formato DD/MM/YYYY (obligatorio, convertir desde cualquier idioma)
-- provider: Nombre o razón social del emisor (obligatorio)
-- nif_cif: NIF/CIF/VAT del emisor (obligatorio — puede ser formato español o internacional)
+- provider: Nombre o razón social del EMISOR (obligatorio)
+- nif_cif: NIF/CIF/VAT del EMISOR — quien emite y cobra la factura (NO el receptor/cliente)
+- recipient_nif: NIF/CIF del RECEPTOR/CLIENTE — la empresa que recibe y paga la factura (puede ser null)
 - iban: IBAN del emisor (si aparece en la factura, puede ser null)
-- oc_number: Número de OC / orden de compra / purchase order (buscar en toda la factura, obligatorio)
+- oc_number: Número de OC / orden de compra / purchase order (buscar en toda la factura, puede ser null)
 - base_amount: Base imponible (obligatorio)
 - iva_percentage: Porcentaje IVA como decimal (0.21 para 21%)
 - iva_amount: Importe IVA
@@ -83,6 +91,7 @@ NOTAS IMPORTANTES:
 - El OC puede aparecer como "OC", "Orden de compra", "Purchase Order", "PO", "Pedido", "Referencia" o similar.
 - Formatos de OC conocidos: CRPROD2026XXX, CRREP2026XXX, CRAI2026XXX, CRMKT2026XXX, CRESTUDIOBCN2026XXX, CRESTUDIOMAD2026XXX, HDM2026XXX, HDMKT2026XXX, BR2026XXX, BRMKT2026XXX, OC-MGMTINT2026XXX
 - El NIF/CIF puede ser español (12345678A), europeo (NL003216633B26), o internacional (20-38258898-4).
+- nif_cif es SIEMPRE del EMISOR (quien cobra). recipient_nif es SIEMPRE del RECEPTOR (quien paga).
 - Si no encuentras un campo, usa null para strings y 0.0 para números.
 
 EJEMPLO RESPUESTA:
@@ -91,6 +100,7 @@ EJEMPLO RESPUESTA:
   "date": "15/03/2026",
   "provider": "EVENTS BRANCH, S.L.",
   "nif_cif": "B67515783",
+  "recipient_nif": "B72704653",
   "iban": "ES12 1234 5678 9012 3456 7890",
   "oc_number": "OC-MGMTINT2026037",
   "base_amount": 1500.00,
@@ -295,6 +305,21 @@ def validate_supplier_invoice(
     elif extracted_iban and not supplier_iban:
         warnings.append("Supplier has no IBAN registered — could not validate")
 
+    # --- 3b. Resolver company_id por recipient_nif (más fiable que prefijo OC) ---
+    recipient_nif = extracted_data.get("recipient_nif")
+    company_id_from_nif = None
+    if recipient_nif:
+        normalized_recipient = _normalize_nif(recipient_nif)
+        if normalized_recipient:
+            companies_with_cif = db.query(Company).filter(Company.cif != None).all()
+            for c in companies_with_cif:
+                if _normalize_nif(c.cif) == normalized_recipient:
+                    company_id_from_nif = c.id
+                    company_id = c.id
+                    break
+            if not company_id_from_nif:
+                warnings.append(f"NIF receptor ({recipient_nif}) no coincide con ninguna empresa DAZZ")
+
     # --- 4. OC existe y empresa correcta ---
     oc_number = (extracted_data.get("oc_number") or "").strip()
 
@@ -307,19 +332,22 @@ def validate_supplier_invoice(
         ).first()
 
         if oc_match and oc_match.id == supplier.oc_id:
-            # OC permanente del proveedor — OK
             oc_status = "FOUND"
-            company_id = oc_match.company_id
+            if not company_id_from_nif:
+                company_id = oc_match.company_id
         else:
-            # No es su OC permanente — intentar como proyecto
-            oc_status, company_id, project_id = _resolve_oc_as_project(
+            oc_status, oc_company_id, project_id = _resolve_oc_as_project(
                 oc_number, db, errors
             )
+            if not company_id_from_nif:
+                company_id = oc_company_id
     else:
         # Sin OC permanente — resolver como proyecto
-        oc_status, company_id, project_id = _resolve_oc_as_project(
+        oc_status, oc_company_id, project_id = _resolve_oc_as_project(
             oc_number, db, errors
         )
+        if not company_id_from_nif:
+            company_id = oc_company_id
 
     # --- 4b. Fecha parseable ---
     raw_date = extracted_data.get("date", "")
