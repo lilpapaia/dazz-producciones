@@ -65,6 +65,23 @@ async def create_project(
             detail=f"No tienes permiso para crear proyectos en {company.name}"
         )
 
+    # Validar que el responsable pertenece a la empresa (si se proporcionó)
+    if project.responsible:
+        responsible_user = db.query(User).filter(
+            func.lower(User.name) == project.responsible.lower()
+        ).first()
+        if responsible_user:
+            resp_company_ids = [c.id for c in responsible_user.companies] if responsible_user.companies else []
+            if not resp_company_ids:
+                from sqlalchemy.orm import joinedload as jl
+                ru = db.query(User).options(jl(User.companies)).filter(User.id == responsible_user.id).first()
+                resp_company_ids = [c.id for c in ru.companies] if ru else []
+            if resp_company_ids and project.owner_company_id not in resp_company_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"El responsable '{project.responsible}' no pertenece a la empresa seleccionada"
+                )
+
     # Crear proyecto (company es campo legacy NOT NULL, rellenar con nombre de empresa)
     db_project = Project(**project.dict(exclude={"company"}), owner_id=current_user.id, status=ProjectStatus.EN_CURSO, company=company.name)
     db.add(db_project)

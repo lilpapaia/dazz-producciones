@@ -50,7 +50,13 @@ const ProjectCreate = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'owner_company_id') {
+      // Reset responsable cuando cambia la empresa
+      setFormData(prev => ({ ...prev, owner_company_id: value, responsible: '' }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleResponsibleChange = (name) => {
@@ -216,6 +222,7 @@ const ProjectCreate = () => {
             <UserAutocomplete
               value={formData.responsible}
               onChange={handleResponsibleChange}
+              companyId={formData.owner_company_id || null}
               label="RESPONSABLE"
               required={true}
             />

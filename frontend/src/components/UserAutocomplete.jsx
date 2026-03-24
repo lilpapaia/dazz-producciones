@@ -11,7 +11,7 @@ import useClickOutside from '../hooks/useClickOutside';
  *   - label: etiqueta del campo
  *   - required: si es obligatorio
  */
-const UserAutocomplete = ({ value, onChange, label = "RESPONSABLE", required = false }) => {
+const UserAutocomplete = ({ value, onChange, label = "RESPONSABLE", required = false, companyId = null }) => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [inputValue, setInputValue] = useState(value || '');
@@ -19,10 +19,10 @@ const UserAutocomplete = ({ value, onChange, label = "RESPONSABLE", required = f
   const [loading, setLoading] = useState(true);
   const wrapperRef = useRef(null);
 
-  // Cargar usuarios al montar
+  // Cargar usuarios al montar y cuando cambia companyId
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [companyId]);
 
   // Sincronizar valor externo
   useEffect(() => {
@@ -33,8 +33,11 @@ const UserAutocomplete = ({ value, onChange, label = "RESPONSABLE", required = f
   useClickOutside(wrapperRef, () => setShowDropdown(false));
 
   const loadUsers = async () => {
+    setLoading(true);
     try {
-      const response = await getUsernames();
+      const params = {};
+      if (companyId) params.company_id = companyId;
+      const response = await getUsernames(params);
       setUsers(response.data);
       setFilteredUsers(response.data);
     } catch (error) {

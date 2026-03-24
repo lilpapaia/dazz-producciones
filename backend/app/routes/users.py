@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 
@@ -26,49 +26,56 @@ async def get_users(
 
 @router.get("/usernames", response_model=List[schemas.UserResponse])
 async def get_usernames(
+    company_id: int = Query(None, description="Filter by company ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get users filtered by role for autocomplete
-    
+    Get users filtered by role for autocomplete.
+    Optional company_id filter narrows results to users in that company.
+
     Permisos:
-    - ADMIN: Ve todos los usuarios
-    - BOSS: Ve solo usuarios de sus empresas
-    - WORKER: Ve solo a sí mismo
+    - ADMIN: todos (o filtrados por company_id)
+    - BOSS: WORKERs de sus empresas + él mismo
+    - WORKER: solo él mismo
     """
-    
-    # ADMIN: Retornar todos
-    if current_user.role == UserRole.ADMIN:
-        users = db.query(User).options(joinedload(User.companies)).all()
-        return users
 
     # WORKER: Solo él mismo
     if current_user.role == UserRole.WORKER:
         return [current_user]
 
-    # BOSS: Solo WORKERs de sus empresas (para selector de responsable)
+    # ADMIN: todos, opcionalmente filtrados por empresa
+    if current_user.role == UserRole.ADMIN:
+        if company_id:
+            users = db.query(User).join(
+                UserCompany, User.id == UserCompany.user_id
+            ).filter(UserCompany.company_id == company_id).distinct().all()
+            return users
+        users = db.query(User).options(joinedload(User.companies)).all()
+        return users
+
+    # BOSS: WORKERs de sus empresas (opcionalmente filtrados por company_id)
     if current_user.role == UserRole.BOSS:
         user_company_ids = [uc.id for uc in current_user.companies]
 
         if not user_company_ids:
             return [current_user]
 
+        filter_ids = [company_id] if company_id and company_id in user_company_ids else user_company_ids
+
         workers = db.query(User).join(
             UserCompany, User.id == UserCompany.user_id
         ).filter(
-            UserCompany.company_id.in_(user_company_ids),
+            UserCompany.company_id.in_(filter_ids),
             User.role == UserRole.WORKER,
         ).distinct().all()
 
-        # Incluir al propio BOSS también (puede ser responsable de sus proyectos)
         boss_ids = {u.id for u in workers}
         if current_user.id not in boss_ids:
             workers.append(current_user)
 
         return workers
-    
-    # Fallback: solo el usuario actual
+
     return [current_user]
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)

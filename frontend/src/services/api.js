@@ -187,7 +187,7 @@ export const deleteTicket = (id) =>
 
 export const getUsers = () => api.get('/users');
 
-export const getUsernames = () => api.get('/users/usernames');
+export const getUsernames = (params) => api.get('/users/usernames', { params });
 
 export const getUser = (id) => api.get(`/users/${id}`);
 
