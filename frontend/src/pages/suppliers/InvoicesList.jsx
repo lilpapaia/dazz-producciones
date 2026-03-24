@@ -10,10 +10,9 @@ import useClickOutside from '../../hooks/useClickOutside';
 
 const PILL = {
   PENDING: { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-500' },
-  OC_PENDING: { cls: 'bg-zinc-700/50 text-zinc-400 border-zinc-700', dot: 'bg-zinc-500' },
+  OC_PENDING: { cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20', dot: 'bg-blue-400' },
   APPROVED: { cls: 'bg-green-400/10 text-green-400 border-green-400/20', dot: 'bg-green-400' },
   PAID: { cls: 'bg-green-300/10 text-green-300 border-green-300/20', dot: 'bg-green-300' },
-  REJECTED: { cls: 'bg-red-400/10 text-red-400 border-red-400/20', dot: 'bg-red-400' },
   DELETE_REQUESTED: { cls: 'bg-red-300/10 text-red-300 border-red-300/20', dot: 'bg-red-300' },
 };
 
@@ -84,8 +83,7 @@ const InvoicesList = () => {
     try {
       if (action === 'approve') await updateInvoiceStatus(invoice.id, { status: 'APPROVED' });
       else if (action === 'pay') await updateInvoiceStatus(invoice.id, { status: 'PAID' });
-      else if (action === 'reject') { if (!reason.trim()) return; await updateInvoiceStatus(invoice.id, { status: 'REJECTED', reason }); }
-      else if (action === 'delete') await deleteInvoice(invoice.id);
+      else if (action === 'delete') { if (!reason.trim()) return; await deleteInvoice(invoice.id, reason); }
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setActionModal(null); setReason(''); load();
   };
@@ -177,7 +175,7 @@ const InvoicesList = () => {
           <option value="OC_PENDING">Sin OC</option>
           <option value="APPROVED">Aprobada</option>
           <option value="PAID">Pagada</option>
-          <option value="REJECTED">Rechazada</option>
+          <option value="DELETE_REQUESTED">Borrado solicitado</option>
         </select>
       </div>
 
@@ -228,7 +226,7 @@ const InvoicesList = () => {
                     <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'pay' }); }}
                       className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
                   )}
-                  {(inv.status === 'PENDING' || inv.status === 'REJECTED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
+                  {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
                     <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'delete' }); }}
                       className="w-[30px] h-[30px] flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
                       <Trash2 size={13} strokeWidth={1.5} />
@@ -293,7 +291,7 @@ const InvoicesList = () => {
                         {inv.status === 'PAID' && <span className="text-[13px] text-zinc-600">Cerrada</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        {(inv.status === 'PENDING' || inv.status === 'REJECTED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') ? (
+                        {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') ? (
                           <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'delete' }); }}
                             className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
                             <Trash2 size={12} strokeWidth={1.5} />
@@ -334,13 +332,12 @@ const InvoicesList = () => {
             <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">
               {actionModal.action === 'approve' && 'Aprobar factura'}
               {actionModal.action === 'pay' && 'Marcar como pagada'}
-              {actionModal.action === 'reject' && 'Rechazar factura'}
               {actionModal.action === 'delete' && 'Eliminar factura'}
             </h3>
             <p className="text-xs text-zinc-500 mb-4">
               Factura <span className="font-mono text-zinc-300">{actionModal.invoice.invoice_number}</span> de {actionModal.invoice.supplier_name}
             </p>
-            {(actionModal.action === 'reject' || actionModal.action === 'delete') && (
+            {actionModal.action === 'delete' && (
               <div className="mb-4">
                 <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Motivo <span className="text-amber-500">*</span></label>
                 <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Explica el motivo..." className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2 rounded focus:border-amber-500 outline-none resize-none" />
@@ -348,9 +345,9 @@ const InvoicesList = () => {
             )}
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setActionModal(null); setReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={handleAction} disabled={(actionModal.action === 'reject' || actionModal.action === 'delete') && !reason.trim()}
-                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${(actionModal.action === 'reject' || actionModal.action === 'delete') ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
-                {actionModal.action === 'approve' ? 'Aprobar' : actionModal.action === 'pay' ? 'Confirmar pago' : actionModal.action === 'delete' ? 'Eliminar' : 'Rechazar'}
+              <button onClick={handleAction} disabled={actionModal.action === 'delete' && !reason.trim()}
+                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${actionModal.action === 'delete' ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
+                {actionModal.action === 'approve' ? 'Aprobar' : actionModal.action === 'pay' ? 'Confirmar pago' : 'Eliminar'}
               </button>
             </div>
           </div>

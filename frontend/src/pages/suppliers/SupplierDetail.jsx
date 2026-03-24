@@ -13,12 +13,11 @@ const PILL = {
   OC_PENDING: 'bg-zinc-700/50 text-zinc-400 border-zinc-700',
   APPROVED: 'bg-green-400/10 text-green-400 border-green-400/20',
   PAID: 'bg-green-300/10 text-green-300 border-green-300/20',
-  REJECTED: 'bg-red-400/10 text-red-400 border-red-400/20',
   DELETE_REQUESTED: 'bg-red-300/10 text-red-300 border-red-300/20',
 };
 const PILL_LABEL = {
   PENDING: 'Pendiente', OC_PENDING: 'OC pendiente', APPROVED: 'Aprobada',
-  PAID: 'Pagada', REJECTED: 'Rechazada', DELETE_REQUESTED: 'Borrado solicitado',
+  PAID: 'Pagada', DELETE_REQUESTED: 'Borrado solicitado',
 };
 const STATUS_LABEL = { ACTIVE: 'Activo', NEW: 'Nuevo', DEACTIVATED: 'Desactivado' };
 const HISTORY_DOT = {
@@ -133,7 +132,7 @@ const SupplierDetail = () => {
   const handleDeleteInvoice = async () => {
     if (!deleteModal || !deleteReason.trim()) return;
     try {
-      await deleteInvoice(deleteModal.id);
+      await deleteInvoice(deleteModal.id, deleteReason);
       load();
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setDeleteModal(null);
@@ -466,7 +465,7 @@ const SupplierDetail = () => {
                         }
                         <span className="text-[11px] text-zinc-500">{inv.date}</span>
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
-                          <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                          <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'OC_PENDING' ? 'bg-blue-400' : inv.status === 'DELETE_REQUESTED' ? 'bg-red-300' : 'bg-amber-500'}`} />
                           {PILL_LABEL[inv.status] || inv.status}
                         </span>
                       </div>
@@ -520,7 +519,7 @@ const SupplierDetail = () => {
                     {/* Estado — centrado en su columna 1fr */}
                     <div className="flex justify-center">
                       <span className={`text-[12px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 whitespace-nowrap ${PILL[inv.status] || PILL.PENDING}`}>
-                        <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+                        <span className={`w-1 h-1 rounded-full ${inv.status === 'PAID' ? 'bg-green-300' : inv.status === 'APPROVED' ? 'bg-green-400' : inv.status === 'OC_PENDING' ? 'bg-blue-400' : inv.status === 'DELETE_REQUESTED' ? 'bg-red-300' : 'bg-amber-500'}`} />
                         {PILL_LABEL[inv.status] || inv.status}
                       </span>
                     </div>

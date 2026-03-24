@@ -4,7 +4,7 @@ Prefijo: /suppliers
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Query, Request
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, joinedload
@@ -684,7 +684,7 @@ async def update_invoice_status(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Change invoice status: PENDING → APPROVED → PAID (or REJECTED)."""
+    """Change invoice status: OC_PENDING → PENDING → APPROVED → PAID."""
     invoice = db.query(SupplierInvoice).filter(SupplierInvoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(404, "Invoice not found")
@@ -694,8 +694,8 @@ async def update_invoice_status(
 
     # Validate transitions
     valid_transitions = {
-        "PENDING": ["APPROVED", "REJECTED"],
-        "OC_PENDING": ["PENDING", "REJECTED"],
+        "PENDING": ["APPROVED"],
+        "OC_PENDING": ["PENDING"],
         "APPROVED": ["PAID"],
         "DELETE_REQUESTED": [],  # M-17: Must use DELETE endpoint, not status change
     }
@@ -704,17 +704,12 @@ async def update_invoice_status(
 
     if new_status not in allowed:
         if current == "DELETE_REQUESTED":
-            raise HTTPException(400, "This invoice has a pending deletion request. Use the delete endpoint to confirm or reject it.")
-        if current in ("PAID", "REJECTED"):
+            raise HTTPException(400, "This invoice has a pending deletion request. Use the delete endpoint to confirm it.")
+        if current == "PAID":
             raise HTTPException(400, f"Invoice is {current} — no further status changes allowed.")
         raise HTTPException(400, f"Cannot transition from {current} to {new_status}. Allowed: {allowed}")
 
-    if new_status == "REJECTED" and not body.reason:
-        raise HTTPException(400, "Rejection reason is required")
-
     invoice.status = InvoiceStatus(new_status)
-    if new_status == "REJECTED":
-        invoice.rejection_reason = body.reason
 
     # Auto-create ticket in DAZZ Producciones when APPROVED
     if new_status == "APPROVED" and invoice.project_id:
@@ -769,12 +764,6 @@ async def update_invoice_status(
             except Exception:
                 pass
 
-        elif new_status == "REJECTED":
-            _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
-                    NotificationEventType.REJECTED, "Invoice Rejected",
-                    f"Invoice {invoice.invoice_number}: {body.reason}",
-                    invoice_id=invoice.id, supplier_id=supplier.id)
-
     # Single commit: status change + ticket + notifications
     db.commit()
     return {"message": f"Invoice status changed to {new_status}"}
@@ -783,18 +772,28 @@ async def update_invoice_status(
 @router.delete("/invoices/{invoice_id}")
 async def confirm_invoice_deletion(
     invoice_id: int,
+    reason: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Confirm deletion of an invoice that was requested by the supplier."""
+    """Delete invoice physically. Admin direct delete or confirm DELETE_REQUESTED."""
     invoice = db.query(SupplierInvoice).filter(SupplierInvoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
-    if invoice.status not in (InvoiceStatus.PENDING, InvoiceStatus.REJECTED, InvoiceStatus.OC_PENDING, InvoiceStatus.DELETE_REQUESTED):
-        raise HTTPException(400, "Only PENDING, REJECTED, OC_PENDING or DELETE_REQUESTED invoices can be deleted")
+    if invoice.status not in (InvoiceStatus.PENDING, InvoiceStatus.OC_PENDING, InvoiceStatus.DELETE_REQUESTED):
+        raise HTTPException(400, "Only PENDING, OC_PENDING or DELETE_REQUESTED invoices can be deleted")
 
     supplier = db.query(Supplier).filter(Supplier.id == invoice.supplier_id).first()
+
+    # Notify supplier only on admin direct delete (not when confirming DELETE_REQUESTED)
+    if supplier and invoice.status != InvoiceStatus.DELETE_REQUESTED:
+        msg = f"Invoice {invoice.invoice_number} was deleted"
+        if reason:
+            msg += f": {reason}"
+        _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+                NotificationEventType.DELETED, "Invoice Deleted",
+                msg, invoice_id=invoice.id, supplier_id=supplier.id)
 
     # Cascade: delete or void the linked ticket in DAZZ Producciones
     linked_ticket = db.query(Ticket).filter(

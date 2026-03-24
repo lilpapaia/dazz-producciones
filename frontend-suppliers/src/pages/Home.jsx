@@ -8,14 +8,13 @@ const PILL = {
   PENDING:   { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-500' },
   APPROVED:  { cls: 'bg-green-400/10 text-green-400 border-green-400/20', dot: 'bg-green-400' },
   PAID:      { cls: 'bg-green-300/10 text-green-300 border-green-300/20', dot: 'bg-green-300' },
-  REJECTED:  { cls: 'bg-red-400/10 text-red-400 border-red-400/20',     dot: 'bg-red-400' },
   DELETE_REQUESTED: { cls: 'bg-red-300/10 text-red-300 border-red-300/20', dot: 'bg-red-300' },
   OC_PENDING: { cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20', dot: 'bg-blue-400' },
 };
 
 const STATUS_LABEL = {
   PENDING: 'Pending', APPROVED: 'Approved', PAID: 'Paid',
-  REJECTED: 'Rejected', DELETE_REQUESTED: 'Delete requested', OC_PENDING: 'OC Pending',
+  DELETE_REQUESTED: 'Delete requested', OC_PENDING: 'OC Pending',
 };
 
 const Home = () => {
@@ -119,7 +118,7 @@ const Home = () => {
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
               <option value="PAID">Paid</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="DELETE_REQUESTED">Delete requested</option>
             </select>
           </div>
 
@@ -179,11 +178,6 @@ const Home = () => {
                       )}
                     </div>
                   </div>
-                  {inv.rejection_reason && (
-                    <div className="mt-2 text-[10px] text-red-400 bg-red-400/[.06] border border-red-400/[.12] rounded-lg p-2">
-                      Rejected: {inv.rejection_reason}
-                    </div>
-                  )}
                 </div>
               );
             })}

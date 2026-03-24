@@ -24,7 +24,6 @@ class InvoiceStatus(str, enum.Enum):
     OC_PENDING = "OC_PENDING"
     APPROVED = "APPROVED"
     PAID = "PAID"
-    REJECTED = "REJECTED"
     DELETE_REQUESTED = "DELETE_REQUESTED"
 
 

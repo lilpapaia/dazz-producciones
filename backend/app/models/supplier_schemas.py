@@ -89,8 +89,8 @@ class NoteRequest(BaseModel):
 
 
 class InvoiceStatusUpdate(BaseModel):
-    status: Literal["APPROVED", "PAID", "REJECTED"]
-    reason: Optional[str] = None  # Required for REJECTED
+    status: Literal["APPROVED", "PAID"]
+    reason: Optional[str] = None
 
 
 class InvoiceResponse(BaseModel):

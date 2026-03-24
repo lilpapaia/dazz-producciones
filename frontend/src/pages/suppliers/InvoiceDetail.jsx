@@ -1,21 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download, Search } from 'lucide-react';
-import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions } from '../../services/suppliersApi';
+import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download, Search, Trash2 } from 'lucide-react';
+import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions, deleteInvoice } from '../../services/suppliersApi';
 import { showError, showSuccess } from '../../utils/toast';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
 const PILL = {
   PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  OC_PENDING: 'bg-zinc-700/50 text-zinc-400 border-zinc-700',
+  OC_PENDING: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
   APPROVED: 'bg-green-400/10 text-green-400 border-green-400/20',
   PAID: 'bg-green-300/10 text-green-300 border-green-300/20',
-  REJECTED: 'bg-red-400/10 text-red-400 border-red-400/20',
   DELETE_REQUESTED: 'bg-red-300/10 text-red-300 border-red-300/20',
 };
 const PILL_LABEL = {
   PENDING: 'Pendiente', OC_PENDING: 'OC pendiente', APPROVED: 'Aprobada',
-  PAID: 'Pagada', REJECTED: 'Rechazada', DELETE_REQUESTED: 'Borrado solicitado',
+  PAID: 'Pagada', DELETE_REQUESTED: 'Borrado solicitado',
 };
 
 const InvoiceDetail = () => {
@@ -27,8 +26,8 @@ const InvoiceDetail = () => {
 
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [rejectModal, setRejectModal] = useState(false);
-  const [reason, setReason] = useState('');
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
   const [acting, setActing] = useState(false);
 
   // OC assignment
@@ -49,7 +48,7 @@ const InvoiceDetail = () => {
   const queryString = from === 'supplier' && supplierId ? `?from=supplier&supplierId=${supplierId}` : from === 'list' ? '?from=list' : '';
 
   useEscapeKey(() => setShowLightbox(false), showLightbox);
-  useEscapeKey(() => { setRejectModal(false); setReason(''); }, rejectModal);
+  useEscapeKey(() => { setDeleteModal(false); setDeleteReason(''); }, deleteModal);
 
   const load = () => {
     getInvoice(invoiceId)
@@ -113,16 +112,25 @@ const InvoiceDetail = () => {
     }
   };
 
-  const handleAction = async (status, rejectionReason) => {
+  const handleAction = async (status) => {
     setActing(true);
     try {
-      const body = { status };
-      if (rejectionReason) body.reason = rejectionReason;
-      await updateInvoiceStatus(invoiceId, body);
-      setRejectModal(false);
-      setReason('');
+      await updateInvoiceStatus(invoiceId, { status });
       load();
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
+    setActing(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteReason.trim()) return;
+    setActing(true);
+    try {
+      await deleteInvoice(invoiceId, deleteReason);
+      showSuccess('Factura eliminada');
+      navigate(from === 'supplier' && supplierId ? `/suppliers/${supplierId}` : '/suppliers/invoices');
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
+    setDeleteModal(false);
+    setDeleteReason('');
     setActing(false);
   };
 
@@ -208,7 +216,7 @@ const InvoiceDetail = () => {
             </button>
           )}
           <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'REJECTED' ? 'bg-red-400' : 'bg-amber-500'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'OC_PENDING' ? 'bg-blue-400' : invoice.status === 'DELETE_REQUESTED' ? 'bg-red-300' : 'bg-amber-500'}`} />
             {PILL_LABEL[invoice.status] || invoice.status}
           </span>
         </div>
@@ -369,11 +377,11 @@ const InvoiceDetail = () => {
             </div>
           )}
 
-          {/* Rechazo */}
-          {invoice.status === 'REJECTED' && invoice.rejection_reason && (
+          {/* Borrado solicitado */}
+          {invoice.status === 'DELETE_REQUESTED' && invoice.delete_reason && (
             <div className="bg-red-400/[.06] border border-red-400/[.12] rounded-md p-4">
-              <div className="text-[9px] text-red-400 tracking-widest uppercase mb-2 font-semibold">Motivo del rechazo</div>
-              <p className="text-xs text-red-300">{invoice.rejection_reason}</p>
+              <div className="text-[9px] text-red-400 tracking-widest uppercase mb-2 font-semibold">Motivo de borrado solicitado</div>
+              <p className="text-xs text-red-300">{invoice.delete_reason}</p>
             </div>
           )}
 
@@ -413,23 +421,17 @@ const InvoiceDetail = () => {
                 </div>
                 {ocSearch.length >= 2 && ocSuggestions.length === 0 && (
                   <button onClick={() => handleAssignOC(ocSearch)} disabled={assigning}
-                    className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
+                    className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 mb-2">
                     {assigning ? 'Asignando...' : `Asignar "${ocSearch}" como OC`}
                   </button>
                 )}
               </div>
             )}
             {invoice.status === 'PENDING' && (
-              <div className="flex gap-2">
-                <button onClick={() => handleAction('APPROVED')} disabled={acting}
-                  className="flex-1 text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
-                  {acting ? 'Procesando...' : 'Aprobar'}
-                </button>
-                <button onClick={() => setRejectModal(true)} disabled={acting}
-                  className="flex-1 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
-                  Rechazar
-                </button>
-              </div>
+              <button onClick={() => handleAction('APPROVED')} disabled={acting}
+                className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 mb-2">
+                {acting ? 'Procesando...' : 'Aprobar'}
+              </button>
             )}
             {invoice.status === 'APPROVED' && (
               <button onClick={() => handleAction('PAID')} disabled={acting}
@@ -437,34 +439,37 @@ const InvoiceDetail = () => {
                 {acting ? 'Procesando...' : 'Marcar como pagada'}
               </button>
             )}
+            {(invoice.status === 'PENDING' || invoice.status === 'OC_PENDING' || invoice.status === 'DELETE_REQUESTED') && (
+              <button onClick={() => setDeleteModal(true)} disabled={acting}
+                className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <Trash2 size={13} /> Eliminar factura
+              </button>
+            )}
             {invoice.status === 'PAID' && (
               <p className="text-xs text-zinc-600 text-center py-2">Factura cerrada — no hay acciones disponibles</p>
-            )}
-            {invoice.status === 'REJECTED' && (
-              <p className="text-xs text-zinc-600 text-center py-2">Factura rechazada</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* ═══ MODAL: Rechazar ═══ */}
-      {rejectModal && (
-        <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center" onClick={() => { setRejectModal(false); setReason(''); }}>
+      {/* ═══ MODAL: Eliminar ═══ */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center" onClick={() => { setDeleteModal(false); setDeleteReason(''); }}>
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[420px] max-w-[95vw] p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">Rechazar factura</h3>
+            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">Eliminar factura</h3>
             <p className="text-xs text-zinc-500 mb-4">
               Factura <span className="font-mono text-zinc-300">{invoice.invoice_number}</span> de {invoice.supplier_name || invoice.provider_name}
             </p>
             <div className="mb-4">
               <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Motivo <span className="text-amber-500">*</span></label>
-              <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Explica el motivo del rechazo..."
+              <textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} rows={3} placeholder="Motivo de la eliminación..."
                 className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-xs px-3 py-2 rounded focus:border-amber-500 outline-none resize-none" />
             </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => { setRejectModal(false); setReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={() => handleAction('REJECTED', reason)} disabled={!reason.trim() || acting}
+              <button onClick={() => { setDeleteModal(false); setDeleteReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
+              <button onClick={handleDelete} disabled={!deleteReason.trim() || acting}
                 className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors disabled:opacity-40">
-                {acting ? 'Rechazando...' : 'Rechazar'}
+                {acting ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>
