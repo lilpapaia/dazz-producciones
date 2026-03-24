@@ -20,6 +20,8 @@ const Register = () => {
   const [certFailed, setCertFailed] = useState(false);
   const [certRetrying, setCertRetrying] = useState(false);
   const [validatingCert, setValidatingCert] = useState(false);
+  const [ibanStatus, setIbanStatus] = useState(null); // null | 'success' | 'warning'
+  const [ibanMessage, setIbanMessage] = useState('');
 
   useEffect(() => {
     if (!token) { setTokenValid(false); return; }
@@ -67,7 +69,8 @@ const Register = () => {
 
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed');
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -201,16 +204,35 @@ const Register = () => {
               {error && (
                 <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-md p-2.5 text-xs mb-3">{error}</div>
               )}
+              {ibanStatus === 'success' && (
+                <div className="bg-green-400/[.08] text-green-400 border border-green-400/[.15] rounded-md p-2.5 text-xs mb-3 flex items-center gap-2">
+                  <CheckCircle size={14} /> IBAN verified successfully
+                </div>
+              )}
+              {ibanStatus === 'warning' && (
+                <div className="bg-amber-500/[.08] text-amber-400 border border-amber-500/[.15] rounded-md p-2.5 text-xs mb-3">
+                  {ibanMessage}
+                </div>
+              )}
               <div className="flex gap-2">
-                <button onClick={() => setStep(1)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
+                <button onClick={() => { setStep(1); setIbanStatus(null); setIbanMessage(''); }} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
                 <button onClick={async () => {
                   setError('');
+                  setIbanStatus(null);
+                  setIbanMessage('');
                   setValidatingCert(true);
                   try {
-                    await validateBankCertIban(form.iban, bankCertFile);
-                    setStep(3);
+                    const { data } = await validateBankCertIban(form.iban, bankCertFile);
+                    if (data.iban_match === null) {
+                      setIbanStatus('warning');
+                      setIbanMessage('Could not verify IBAN automatically — proceeding');
+                    } else {
+                      setIbanStatus('success');
+                    }
+                    setTimeout(() => setStep(3), 800);
                   } catch (err) {
-                    setError(err.response?.data?.detail || 'IBAN validation failed');
+                    const detail = err.response?.data?.detail;
+                    setError(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : 'IBAN validation failed');
                   }
                   setValidatingCert(false);
                 }} disabled={!form.iban.trim() || !bankCertFile || validatingCert}
