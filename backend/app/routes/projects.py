@@ -311,9 +311,11 @@ async def close_project(
             email_sent = True
             logger.info(f"Email cierre proyecto enviado a: {recipients}")
         except Exception as e:
-            email_error = str(e)
-            logger.error(f"EMAIL CIERRE FALLÓ para {project.creative_code}: {email_error}")
+            # Log completo para debugging interno
+            logger.error(f"EMAIL CIERRE FALLÓ para {project.creative_code}: {str(e)}")
             logger.error(f"Destinatarios: {recipients}")
+            # Header sanitizado — no exponer detalles internos al cliente
+            email_error = "Email delivery failed"
 
     project.status = ProjectStatus.CERRADO
     project.closed_at = datetime.now(timezone.utc)
