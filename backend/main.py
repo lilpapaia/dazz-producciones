@@ -220,6 +220,13 @@ async def startup_event():
             conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP"
             ))
+            # supplier_type ya no se mapea en ORM — hacer nullable con default
+            conn.execute(text(
+                "ALTER TABLE suppliers ALTER COLUMN supplier_type DROP NOT NULL"
+            ))
+            conn.execute(text(
+                "ALTER TABLE suppliers ALTER COLUMN supplier_type SET DEFAULT 'GENERAL'"
+            ))
             # Detección duplicados: hash de archivo
             conn.execute(text(
                 "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS file_hash VARCHAR(32)"
