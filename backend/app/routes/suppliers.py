@@ -531,6 +531,7 @@ async def add_note(
 async def list_all_invoices(
     status_filter: Optional[str] = Query(None, alias="status"),
     company_id: Optional[int] = None,
+    supplier_id: Optional[int] = None,
     oc_number: Optional[str] = None,
     limit: int = Query(50, le=200),
     offset: int = 0,
@@ -540,6 +541,8 @@ async def list_all_invoices(
     """List all supplier invoices with filters."""
     query = db.query(SupplierInvoice)
 
+    if supplier_id:
+        query = query.filter(SupplierInvoice.supplier_id == supplier_id)
     if status_filter:
         query = query.filter(SupplierInvoice.status == status_filter)
     if company_id:
