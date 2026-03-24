@@ -100,7 +100,7 @@ class InvoiceResponse(BaseModel):
     invoice_number: str
     date: str
     provider_name: str
-    oc_number: str
+    oc_number: Optional[str] = None
     company_id: Optional[int] = None
     base_amount: float
     iva_percentage: float
@@ -230,7 +230,7 @@ class PortalInvoiceResponse(BaseModel):
     invoice_number: str
     date: str
     provider_name: str
-    oc_number: str
+    oc_number: Optional[str] = None
     base_amount: float
     iva_amount: float
     final_total: float

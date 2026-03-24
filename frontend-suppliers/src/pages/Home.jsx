@@ -10,7 +10,12 @@ const PILL = {
   PAID:      { cls: 'bg-green-300/10 text-green-300 border-green-300/20', dot: 'bg-green-300' },
   REJECTED:  { cls: 'bg-red-400/10 text-red-400 border-red-400/20',     dot: 'bg-red-400' },
   DELETE_REQUESTED: { cls: 'bg-red-300/10 text-red-300 border-red-300/20', dot: 'bg-red-300' },
-  OC_PENDING: { cls: 'bg-zinc-700/50 text-zinc-400 border-zinc-700',     dot: 'bg-zinc-500' },
+  OC_PENDING: { cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20', dot: 'bg-blue-400' },
+};
+
+const STATUS_LABEL = {
+  PENDING: 'Pending', APPROVED: 'Approved', PAID: 'Paid',
+  REJECTED: 'Rejected', DELETE_REQUESTED: 'Delete requested', OC_PENDING: 'OC Pending',
 };
 
 const Home = () => {
@@ -154,7 +159,7 @@ const Home = () => {
                         {inv.date}
                       </div>
                       <span className={`text-[10px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 ${pill.cls}`}>
-                        <span className={`w-[5px] h-[5px] rounded-full ${pill.dot}`} />{inv.status}
+                        <span className={`w-[5px] h-[5px] rounded-full ${pill.dot}`} />{STATUS_LABEL[inv.status] || inv.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
