@@ -227,6 +227,10 @@ async def startup_event():
             conn.execute(text(
                 "ALTER TABLE suppliers ALTER COLUMN supplier_type SET DEFAULT 'GENERAL'"
             ))
+            # Facturas sin OC: oc_number nullable para OC_PENDING
+            conn.execute(text(
+                "ALTER TABLE supplier_invoices ALTER COLUMN oc_number DROP NOT NULL"
+            ))
             # Detección duplicados: hash de archivo
             conn.execute(text(
                 "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS file_hash VARCHAR(32)"

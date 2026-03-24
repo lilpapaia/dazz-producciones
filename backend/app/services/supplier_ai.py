@@ -261,7 +261,7 @@ def validate_supplier_invoice(
             f"PDF no legible o datos insuficientes (confianza: {confidence:.0%})"
         )
 
-    required_fields = ["invoice_number", "date", "provider", "nif_cif", "base_amount", "final_total", "oc_number"]
+    required_fields = ["invoice_number", "date", "provider", "nif_cif", "base_amount", "final_total"]
     missing = [f for f in required_fields if not extracted_data.get(f)]
     if missing:
         errors.append(f"Campos obligatorios no detectados en el PDF: {', '.join(missing)}")
@@ -298,27 +298,28 @@ def validate_supplier_invoice(
     # --- 4. OC existe y empresa correcta ---
     oc_number = (extracted_data.get("oc_number") or "").strip()
 
-    if oc_number:
-        if supplier.oc_id:
-            # Proveedor con OC permanente: verificar si coincide
-            oc_match = db.query(SupplierOC).filter(
-                SupplierOC.oc_number.ilike(oc_number)
-            ).first()
+    if not oc_number:
+        oc_status = "NO_OC"
+    elif supplier.oc_id:
+        # Proveedor con OC permanente: verificar si coincide
+        oc_match = db.query(SupplierOC).filter(
+            SupplierOC.oc_number.ilike(oc_number)
+        ).first()
 
-            if oc_match and oc_match.id == supplier.oc_id:
-                # OC permanente del proveedor — OK
-                oc_status = "FOUND"
-                company_id = oc_match.company_id
-            else:
-                # No es su OC permanente — intentar como proyecto
-                oc_status, company_id, project_id = _resolve_oc_as_project(
-                    oc_number, db, errors
-                )
+        if oc_match and oc_match.id == supplier.oc_id:
+            # OC permanente del proveedor — OK
+            oc_status = "FOUND"
+            company_id = oc_match.company_id
         else:
-            # Sin OC permanente — resolver como proyecto
+            # No es su OC permanente — intentar como proyecto
             oc_status, company_id, project_id = _resolve_oc_as_project(
                 oc_number, db, errors
             )
+    else:
+        # Sin OC permanente — resolver como proyecto
+        oc_status, company_id, project_id = _resolve_oc_as_project(
+            oc_number, db, errors
+        )
 
     # --- 4b. Fecha parseable ---
     raw_date = extracted_data.get("date", "")

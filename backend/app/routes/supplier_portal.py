@@ -494,8 +494,11 @@ async def upload_invoice(
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
         upload_result = await asyncio.to_thread(save_invoice_pdf, file, supplier.id, contents)
 
-        # All validated invoices start as PENDING (OC must exist)
-        invoice_status = InvoiceStatus.PENDING
+        # Invoices without OC start as OC_PENDING for admin to assign manually
+        if validation.get("oc_status") == "NO_OC":
+            invoice_status = InvoiceStatus.OC_PENDING
+        else:
+            invoice_status = InvoiceStatus.PENDING
 
         # Create invoice record (file_pages not in ORM — saved via raw SQL after)
         invoice = SupplierInvoice(
@@ -505,7 +508,7 @@ async def upload_invoice(
             provider_name=extracted.get("provider", supplier.name),
             nif_cif=extracted.get("nif_cif"),
             iban=extracted.get("iban"),
-            oc_number=extracted.get("oc_number", ""),
+            oc_number=extracted.get("oc_number") or None,
             project_id=validation["project_id"],
             company_id=validation["company_id"],
             base_amount=extracted.get("base_amount", 0.0),
