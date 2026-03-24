@@ -6,6 +6,7 @@ import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-
 import EmailChipsInput from '../components/EmailChipsInput';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
+import { getCurrencySymbol } from '../utils/currency';
 
 const ProjectCloseReview = () => {
   const { id } = useParams();
@@ -192,9 +193,24 @@ const ProjectCloseReview = () => {
                     <td className="px-4 py-3 font-mono text-xs">{ticket.date || 'N/A'}</td>
                     <td className="px-4 py-3">{ticket.provider}</td>
                     <td className="px-4 py-3 font-mono text-xs">{ticket.invoice_number || '-'}</td>
-                    <td className="px-4 py-3 text-right font-mono">{ticket.base_amount?.toFixed(2)}€</td>
-                    <td className="px-4 py-3 text-right font-mono">{ticket.iva_amount?.toFixed(2)}€</td>
-                    <td className="px-4 py-3 text-right font-bold text-amber-500">{ticket.final_total?.toFixed(2)}€</td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {ticket.is_foreign && ticket.currency !== 'EUR' && ticket.foreign_amount
+                        ? <><span>{ticket.foreign_amount.toFixed(2)}{getCurrencySymbol(ticket.currency)}</span><br/><span className="text-xs text-zinc-500">≈{ticket.base_amount?.toFixed(2)}€</span></>
+                        : `${ticket.base_amount?.toFixed(2)}€`
+                      }
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {ticket.is_foreign && ticket.currency !== 'EUR' && ticket.foreign_tax_amount
+                        ? <><span>{ticket.foreign_tax_amount.toFixed(2)}{getCurrencySymbol(ticket.currency)}</span><br/><span className="text-xs text-zinc-500">≈{ticket.iva_amount?.toFixed(2)}€</span></>
+                        : `${ticket.iva_amount?.toFixed(2)}€`
+                      }
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-amber-500">
+                      {ticket.is_foreign && ticket.currency !== 'EUR' && ticket.foreign_total
+                        ? <><span>{ticket.foreign_total.toFixed(2)}{getCurrencySymbol(ticket.currency)}</span><br/><span className="text-xs text-zinc-500 font-normal">≈{ticket.final_total?.toFixed(2)}€</span></>
+                        : `${ticket.final_total?.toFixed(2)}€`
+                      }
+                    </td>
                     <td className="px-4 py-3 text-xs text-zinc-400">{ticket.invoice_status || '-'}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-sm ${

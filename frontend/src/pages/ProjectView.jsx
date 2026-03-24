@@ -8,6 +8,7 @@ import { ROLES } from '../constants/roles';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
+import { getCurrencySymbol } from '../utils/currency';
 import EmptyState from '../components/common/EmptyState';
 import useVoiceSearch from '../hooks/useVoiceSearch';
 import useClickOutside from '../hooks/useClickOutside';
@@ -368,8 +369,18 @@ const ProjectView = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-amber-500 font-bold text-sm">{ticket.final_total?.toFixed(2)}€</p>
-                            <p className="text-xs text-zinc-500">Base: {ticket.base_amount?.toFixed(2)}€</p>
+                            <p className="text-amber-500 font-bold text-sm">
+                              {ticket.is_foreign && ticket.currency !== 'EUR' && ticket.foreign_total
+                                ? `${ticket.foreign_total.toFixed(2)}${getCurrencySymbol(ticket.currency)}`
+                                : `${ticket.final_total?.toFixed(2)}€`
+                              }
+                            </p>
+                            <p className="text-xs text-zinc-500">
+                              {ticket.is_foreign && ticket.currency !== 'EUR'
+                                ? `≈ ${ticket.final_total?.toFixed(2)}€`
+                                : `Base: ${ticket.base_amount?.toFixed(2)}€`
+                              }
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -463,10 +474,16 @@ const ProjectView = () => {
                       <div className="flex items-start gap-3 flex-shrink-0">
                         <div className="text-right">
                           <p className="text-xl font-bold text-amber-500">
-                            {ticket.final_total?.toFixed(2)}€
+                            {ticket.is_foreign && ticket.currency !== 'EUR' && ticket.foreign_total
+                              ? `${ticket.foreign_total.toFixed(2)}${getCurrencySymbol(ticket.currency)}`
+                              : `${ticket.final_total?.toFixed(2)}€`
+                            }
                           </p>
                           <p className="text-xs text-zinc-500">
-                            Base: {ticket.base_amount?.toFixed(2)}€
+                            {ticket.is_foreign && ticket.currency !== 'EUR'
+                              ? `≈ ${ticket.final_total?.toFixed(2)}€`
+                              : `Base: ${ticket.base_amount?.toFixed(2)}€`
+                            }
                           </p>
                         </div>
 

@@ -4,6 +4,7 @@ import { uploadTicket } from '../services/api';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
 import { showWarning } from '../utils/toast';
 import imageCompression from 'browser-image-compression';
+import { getCurrencySymbol } from '../utils/currency';
 
 const UploadTickets = () => {
   const { id } = useParams();
@@ -347,7 +348,11 @@ const UploadTickets = () => {
                             </p>
                             <p>
                               <span className="font-medium">Total:</span>{' '}
-                              {result.data?.final_total ? `${result.data.final_total}€` : 'N/A'}
+                              {result.data?.final_total
+                                ? result.data.is_foreign && result.data.currency !== 'EUR' && result.data.foreign_total
+                                  ? `${result.data.foreign_total.toFixed(2)}${getCurrencySymbol(result.data.currency)} (≈${result.data.final_total.toFixed(2)}€)`
+                                  : `${result.data.final_total.toFixed(2)}€`
+                                : 'N/A'}
                             </p>
                             <p>
                               <span className="font-medium">Tipo:</span>{' '}

@@ -390,16 +390,24 @@ frontend/
 1. ~~**Fixes CRITICAL proveedores:**~~ ✅ C-1, C-2, C-3 arreglados
 2. ~~**Fixes HIGH proveedores:**~~ ✅ H-1 a H-7 arreglados
 3. ~~**UI Admin proveedores:**~~ ✅ COMPLETADA (2026-03-18) — tamaños estandarizados, kanban eliminado, badge EQUIPO eliminado, responsive móvil completo en todos los componentes
-4. **Portal proveedor UI:** Pendiente revisión completa
-5. **Fixes MEDIUM proveedores:** 8 pendientes (índices, atomicidad, etc.)
-6. **Testing general:** 70%+ coverage backend, E2E críticos frontend
+4. ~~**Portal proveedor UI:**~~ ✅ COMPLETADO (Fase 3 — Layout, Notifications, Profile actions, 4 formularios)
+5. ~~**Fixes MEDIUM proveedores:**~~ ✅ 8/8 completados (M-11 a M-18)
+6. **Testing manual:** 19/100 tests completados, 11 bugs fixeados — en curso
 7. **Quality:** Code review, best practices, documentación actualizada
 8. **Features:** Push notifications, analytics dashboard, búsqueda avanzada
 
 ---
 
-**Última actualización:** 2026-03-18
-**Estado:** Producción activa — CRITICAL+HIGH arreglados, UI admin proveedores COMPLETADA (tamaños + responsive móvil), portal proveedor UI pendiente
+**Última actualización:** 2026-03-24
+**Estado:** Producción activa — Portal Proveedores v2 COMPLETADO (6 fases), Testing manual en curso
+
+### Testing manual en curso (2026-03-24)
+- ✅ Bloque 1 (T-001 a T-012 — Auth y Usuarios): COMPLETADO — 6 bugs fixeados
+- ✅ Bloque 2 (T-013 a T-019 — Empresas y Proyectos): COMPLETADO — 5 bugs fixeados + 5 mejoras
+- ⏳ Bloque 3 (T-020 a T-025 — Tickets): pendiente mañana
+- ⏳ Bloques 4-10 (T-026 a T-100 — Proveedores, Autofactura, E2E, Edge cases): pendiente
+- 📄 Plan de testing: `docs/DAZZ_Testing_Plan_v1.pdf` (100 tests)
+- 🐛 11 bugs encontrados y fixeados en día 1 de testing
 
 ---
 
@@ -463,7 +471,7 @@ frontend/
 - Layout: sidebar desktop + bottom nav móvil
 - 4 secciones: Home, Upload, Notifications, Profile
 - Home: 2 pestañas (My invoices / Received invoices)
-- Mockup aprobado: `docs/DAZZ_Suppliers_Portal_Mockup.html`
+- Mockup aprobado: `docs/DAZZ_Suppliers_Portal_Mockup_v2.html`
 - PWA: pendiente configurar vite-plugin-pwa
 
 **Validación IA IBAN:**

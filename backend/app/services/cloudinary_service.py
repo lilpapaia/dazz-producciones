@@ -71,7 +71,8 @@ def compress_if_needed(image_path: str, max_size_mb: float = 2.0) -> str:
         img = img.convert('RGB')
     
     # Guardar comprimido
-    compressed_path = image_path.replace('.jpg', '_compressed.jpg')
+    base, ext = os.path.splitext(image_path)
+    compressed_path = f"{base}_compressed.jpg"
     quality = 85
     
     while quality > 20:

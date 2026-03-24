@@ -408,7 +408,12 @@ def sanitize_filename(filename: str) -> str:
     
     # Eliminar espacios múltiples
     filename = re.sub(r'\s+', '_', filename)
-    
+
+    # Normalizar extensión a minúsculas (.JPG → .jpg)
+    stem = Path(filename).stem
+    ext = Path(filename).suffix.lower()
+    filename = f"{stem}{ext}"
+
     return filename
 
 

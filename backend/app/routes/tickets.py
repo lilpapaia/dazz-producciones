@@ -82,11 +82,16 @@ async def upload_ticket(
                     exchange_rate = await asyncio.to_thread(get_historical_exchange_rate, currency, "EUR", invoice_date)
                     if exchange_rate:
                         exchange_rate_date = invoice_date
-                        foreign_amount = extracted_data.get("foreign_amount")
-                        foreign_total = extracted_data.get("foreign_total")
-                        foreign_tax_amount = extracted_data.get("foreign_tax_amount")
+                        foreign_amount = extracted_data.get("foreign_amount") or extracted_data.get("base_amount", 0.0)
+                        foreign_total = extracted_data.get("foreign_total") or extracted_data.get("final_total", 0.0)
+                        foreign_tax_amount = extracted_data.get("foreign_tax_amount") or extracted_data.get("iva_amount", 0.0)
                         if foreign_tax_amount:
-                            foreign_tax_eur = foreign_tax_amount * exchange_rate
+                            foreign_tax_eur = round(foreign_tax_amount * exchange_rate, 2)
+                        # Recalcular importes EUR desde divisa original × tasa cambio
+                        extracted_data["base_amount"] = round(foreign_amount * exchange_rate, 2) if foreign_amount else 0.0
+                        extracted_data["iva_amount"] = round(foreign_tax_amount * exchange_rate, 2) if foreign_tax_amount else 0.0
+                        extracted_data["total_with_iva"] = round(extracted_data["base_amount"] + extracted_data["iva_amount"], 2)
+                        extracted_data["final_total"] = round(foreign_total * exchange_rate, 2) if foreign_total else 0.0
             except Exception as e:
                 logger.warning(f"Error tasa cambio: {str(e)}")
         elif is_foreign and currency == "EUR":

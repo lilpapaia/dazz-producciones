@@ -316,6 +316,66 @@ Statistics/
 
 ---
 
+## 2026-03-24: [Security] - HTTPBearer devuelve 403, no 401, sin token
+
+**Error:** El interceptor frontend solo capturaba 401. Sin token, HTTPBearer de FastAPI devolvía 403 → interceptor no lo capturaba → no hacía refresh → redirigía a login
+**Causa raíz:** FastAPI `HTTPBearer()` devuelve 403 Forbidden cuando falta el header Authorization, no 401 Unauthorized
+**Solución:** `HTTPBearer(auto_error=False)` + check manual `if credentials is None: raise 401`. Interceptor solo captura 401 — 403 de permisos se propagan normalmente
+**Regla:** NUNCA interceptar 403 para refresh token — los 403 son errores de permisos reales (non-admin en endpoint admin)
+**Prevención:** Si HTTPBearer devuelve un status inesperado, usar `auto_error=False` y manejar manualmente
+
+---
+
+## 2026-03-24: [Frontend] - useEffect con searchParams + replaceState causa re-ejecución
+
+**Error:** SetPassword.jsx leía token con `searchParams.get('token')` en useEffect con `[searchParams]` como deps. `replaceState` limpiaba la URL → searchParams cambiaba → effect se re-ejecutaba → token era null
+**Causa raíz:** `window.history.replaceState` modifica la URL → React Router detecta cambio → `useSearchParams()` se actualiza → useEffect se re-ejecuta con searchParams vacío
+**Solución:** Leer token con `new URLSearchParams(window.location.search).get('token')` y usar `[]` como deps (una sola ejecución)
+**Regla:** Para leer query params una sola vez y luego limpiar la URL, usar `window.location.search` directamente en vez del hook de React Router
+**Prevención:** Si usas `replaceState` para limpiar URLs, nunca dependas de `searchParams` en el mismo effect
+
+---
+
+## 2026-03-24: [Frontend] - Validación password debe estar sincronizada frontend ↔ backend
+
+**Error:** Frontend validaba min 6 chars sin complejidad. Backend exigía min 8 + mayúscula + número + símbolo. Password pasaba frontend → backend rechazaba con 422 → error `[object Object]`
+**Causa raíz:** Requisitos de password cambiaron en el backend (auditoría SEC-C4) pero frontend no se actualizó
+**Solución:** Frontend alineado con backend. Parse de errores Pydantic: `Array.isArray(detail) ? detail.map(d => d.msg).join(', ')`
+**Regla:** SIEMPRE sincronizar validaciones de formularios entre frontend y backend. Si el backend cambia, el frontend DEBE actualizarse
+**Prevención:** Checklist de cambios backend: ¿Hay validaciones Pydantic nuevas? → Actualizar frontend correspondiente
+
+---
+
+## 2026-03-24: [Frontend] - Campos opcionales deben excluirse del request body si vacíos
+
+**Error:** Modal editar usuario enviaba `password: ''` al backend → Pydantic rechazaba con min_length=8. Además, browser autorrellena campo password con credenciales guardadas
+**Causa raíz:** El payload incluía todos los campos del form state, incluyendo password vacío
+**Solución:** `if (!payload.password?.trim()) delete payload.password` + `autoComplete="new-password"` en el input
+**Regla:** Campos opcionales con validación deben eliminarse del body si están vacíos, no enviarse como string vacío
+**Prevención:** Antes de enviar form data, filtrar campos vacíos que el backend valida con restricciones
+
+---
+
+## 2026-03-24: [Backend] - Query WORKER debe incluir responsible además de owner_id
+
+**Error:** WORKER veía 0 proyectos aunque era responsable. La query filtraba solo por `owner_id` (quien creó el proyecto), no por `responsible` (quien trabaja en él)
+**Causa raíz:** `responsible` es un string con el nombre del responsable, no un FK. La query y `can_access_project`/`can_modify_project` solo verificaban `owner_id`
+**Solución:** `or_(owner_id == user.id, func.lower(responsible) == username.lower())` en la query del listado + misma lógica en permissions.py
+**Regla:** SIEMPRE mantener consistency entre la query del listado y las funciones de permisos (can_access/can_modify). Si el listado muestra un recurso, el usuario debe poder abrirlo
+**Prevención:** Al cambiar la lógica de filtrado de un listado, verificar TODAS las funciones de permisos que controlan acceso individual al mismo recurso
+
+---
+
+## 2026-03-24: [Frontend] - Selector de responsable debe filtrarse por empresa del proyecto
+
+**Error:** El selector de responsable en crear/editar proyecto mostraba todos los usuarios del sistema, permitiendo asignar un WORKER de empresa X a un proyecto de empresa Y
+**Causa raíz:** GET /users/usernames no tenía parámetro de filtrado por empresa. El frontend no pasaba company_id al cargar el selector
+**Solución:** Añadir company_id opcional a GET /users/usernames + UserAutocomplete recibe prop companyId y recarga cuando cambia + ProjectCreate resetea responsable al cambiar empresa + backend valida que responsable pertenece a la empresa del proyecto
+**Regla:** El selector de responsable SIEMPRE debe filtrarse por la empresa del proyecto seleccionada. Cambiar empresa = resetear responsable
+**Prevención:** Checklist crear proyecto: ¿El selector de responsable está vinculado a la empresa seleccionada?
+
+---
+
 ## Template para futuras lecciones
 
 ```
