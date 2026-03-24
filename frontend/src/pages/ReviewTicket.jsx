@@ -460,7 +460,7 @@ const ReviewTicket = () => {
           {/* LIGHTBOX */}
           {showLightbox && pages.length > 0 && (
             <div
-              className="fixed inset-0 m-0 bg-black z-50 flex items-center justify-center"
+              className="fixed inset-0 !m-0 bg-black z-50 flex items-center justify-center"
               style={{
                 minHeight: '100dvh',
                 paddingTop: 'env(safe-area-inset-top, 0px)',
