@@ -168,7 +168,7 @@ const Home = () => {
                           <ExternalLink size={15} strokeWidth={1.5} />
                         </button>
                       )}
-                      {inv.status === 'PENDING' ? (
+                      {(inv.status === 'PENDING' || inv.status === 'OC_PENDING') ? (
                         <button onClick={() => setDeleteModal(inv)} className="w-7 h-7 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors">
                           <Trash2 size={13} strokeWidth={1.5} />
                         </button>

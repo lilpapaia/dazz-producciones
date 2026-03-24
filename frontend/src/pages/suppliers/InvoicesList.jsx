@@ -228,7 +228,7 @@ const InvoicesList = () => {
                     <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'pay' }); }}
                       className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
                   )}
-                  {(inv.status === 'PENDING' || inv.status === 'REJECTED') && (
+                  {(inv.status === 'PENDING' || inv.status === 'REJECTED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
                     <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'delete' }); }}
                       className="w-[30px] h-[30px] flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
                       <Trash2 size={13} strokeWidth={1.5} />
@@ -293,7 +293,7 @@ const InvoicesList = () => {
                         {inv.status === 'PAID' && <span className="text-[13px] text-zinc-600">Cerrada</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        {(inv.status === 'PENDING' || inv.status === 'REJECTED') ? (
+                        {(inv.status === 'PENDING' || inv.status === 'REJECTED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') ? (
                           <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'delete' }); }}
                             className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
                             <Trash2 size={12} strokeWidth={1.5} />

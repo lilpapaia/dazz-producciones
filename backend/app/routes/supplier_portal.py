@@ -560,6 +560,11 @@ async def upload_invoice(
                 NotificationEventType.NEW_INVOICE, "Invoice Received",
                 f"Invoice {invoice.invoice_number} submitted successfully",
                 invoice_id=invoice.id, supplier_id=supplier.id)
+        if invoice_status == InvoiceStatus.OC_PENDING:
+            _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+                    NotificationEventType.NEW_INVOICE, "Invoice received — OC pending",
+                    f"Your invoice {invoice.invoice_number} was received but no OC was detected. DAZZ will assign the OC manually.",
+                    invoice_id=invoice.id, supplier_id=supplier.id)
 
         db.commit()  # Atomic: file_pages + date_parsed + notifications
 
