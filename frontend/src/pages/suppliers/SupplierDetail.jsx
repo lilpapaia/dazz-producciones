@@ -470,6 +470,10 @@ const SupplierDetail = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 justify-end" onClick={e => e.stopPropagation()}>
+                        {inv.status === 'OC_PENDING' && (
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`); }}
+                            className="text-[12px] text-blue-400 border border-blue-400/30 px-2.5 py-1 rounded hover:bg-blue-400/10">Asignar OC →</button>
+                        )}
                         {inv.status === 'PENDING' && (
                           <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400">Aprobar</button>
                         )}
@@ -525,6 +529,10 @@ const SupplierDetail = () => {
                     </div>
                     {/* Acciones — pegadas a la derecha, misma altura */}
                     <div className="flex items-center gap-1 justify-end">
+                      {inv.status === 'OC_PENDING' && (
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`); }}
+                          className="text-[13px] text-blue-400 border border-blue-400/30 px-2.5 py-1 rounded hover:bg-blue-400/10 transition-colors">Asignar OC →</button>
+                      )}
                       {inv.status === 'PENDING' && (
                         <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[13px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                       )}

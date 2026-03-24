@@ -552,18 +552,23 @@ async def upload_invoice(
             invoice.date_parsed = date_parsed
 
         # Notifications (same transaction as file_pages + date_parsed)
-        _notify(db, NotificationRecipientType.ADMIN, 0,
-                NotificationEventType.NEW_INVOICE, "New Invoice Submitted",
-                f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR)",
-                invoice_id=invoice.id, supplier_id=supplier.id)
-        _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
-                NotificationEventType.NEW_INVOICE, "Invoice Received",
-                f"Invoice {invoice.invoice_number} submitted successfully",
-                invoice_id=invoice.id, supplier_id=supplier.id)
         if invoice_status == InvoiceStatus.OC_PENDING:
+            _notify(db, NotificationRecipientType.ADMIN, 0,
+                    NotificationEventType.NEW_INVOICE, "New Invoice — OC Required",
+                    f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR) — no OC detected, manual assignment needed",
+                    invoice_id=invoice.id, supplier_id=supplier.id)
             _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
                     NotificationEventType.NEW_INVOICE, "Invoice received — OC pending",
                     f"Your invoice {invoice.invoice_number} was received but no OC was detected. DAZZ will assign the OC manually.",
+                    invoice_id=invoice.id, supplier_id=supplier.id)
+        else:
+            _notify(db, NotificationRecipientType.ADMIN, 0,
+                    NotificationEventType.NEW_INVOICE, "New Invoice Submitted",
+                    f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR)",
+                    invoice_id=invoice.id, supplier_id=supplier.id)
+            _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+                    NotificationEventType.NEW_INVOICE, "Invoice Received",
+                    f"Invoice {invoice.invoice_number} submitted successfully",
                     invoice_id=invoice.id, supplier_id=supplier.id)
 
         db.commit()  # Atomic: file_pages + date_parsed + notifications

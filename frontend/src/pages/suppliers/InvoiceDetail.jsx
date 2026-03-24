@@ -121,11 +121,10 @@ const InvoiceDetail = () => {
     setActing(false);
   };
 
-  const handleDelete = async () => {
-    if (!deleteReason.trim()) return;
+  const handleDelete = async (reason) => {
     setActing(true);
     try {
-      await deleteInvoice(invoiceId, deleteReason);
+      await deleteInvoice(invoiceId, reason || null);
       showSuccess('Factura eliminada');
       navigate(from === 'supplier' && supplierId ? `/suppliers/${supplierId}` : '/suppliers/invoices');
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
@@ -439,10 +438,16 @@ const InvoiceDetail = () => {
                 {acting ? 'Procesando...' : 'Marcar como pagada'}
               </button>
             )}
-            {(invoice.status === 'PENDING' || invoice.status === 'OC_PENDING' || invoice.status === 'DELETE_REQUESTED') && (
+            {(invoice.status === 'PENDING' || invoice.status === 'OC_PENDING') && (
               <button onClick={() => setDeleteModal(true)} disabled={acting}
                 className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 <Trash2 size={13} /> Eliminar factura
+              </button>
+            )}
+            {invoice.status === 'DELETE_REQUESTED' && (
+              <button onClick={() => { if (window.confirm('¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.')) handleDelete(null); }} disabled={acting}
+                className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <Trash2 size={13} /> Confirmar borrado
               </button>
             )}
             {invoice.status === 'PAID' && (
@@ -467,7 +472,7 @@ const InvoiceDetail = () => {
             </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setDeleteModal(false); setDeleteReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={handleDelete} disabled={!deleteReason.trim() || acting}
+              <button onClick={() => handleDelete(deleteReason)} disabled={!deleteReason.trim() || acting}
                 className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors disabled:opacity-40">
                 {acting ? 'Eliminando...' : 'Eliminar'}
               </button>
