@@ -1010,16 +1010,6 @@ async def get_pending_actions(
     admin: User = Depends(get_current_admin_user),
 ):
     """List pending actions for a supplier (unread admin notifications)."""
-    # DEBUG: log all unread admin notifs for this supplier (no title/event filter)
-    all_unread = db.query(SupplierNotification).filter(
-        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
-        SupplierNotification.related_supplier_id == supplier_id,
-        SupplierNotification.is_read == False,
-    ).all()
-    logger.info(f"[pending-actions] supplier_id={supplier_id}, unread admin notifs={len(all_unread)}")
-    for n in all_unread:
-        logger.info(f"  notif id={n.id} title='{n.title}' event_type={n.event_type.value} is_read={n.is_read}")
-
     notifs = db.query(SupplierNotification).filter(
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.related_supplier_id == supplier_id,
@@ -1029,7 +1019,6 @@ async def get_pending_actions(
             SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
         )
     ).order_by(desc(SupplierNotification.created_at)).all()
-    logger.info(f"[pending-actions] after title/event filter: {len(notifs)} matches")
 
     return [{
         "id": n.id, "title": n.title, "message": n.message,
