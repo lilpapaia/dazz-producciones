@@ -620,7 +620,7 @@ const SupplierDetail = () => {
             </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setDeleteModal(null); setDeleteReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={handleDeleteInvoice} disabled={!deleteReason.trim()}
+              <button onClick={() => handleDeleteInvoice()} disabled={!deleteReason.trim()}
                 className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors disabled:opacity-40">Eliminar</button>
             </div>
           </div>

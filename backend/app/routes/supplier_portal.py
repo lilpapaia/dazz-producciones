@@ -483,14 +483,6 @@ async def upload_invoice(
                 },
             )
 
-        # Ensure file_pages column exists (ALTER TABLE before any ORM query)
-        from sqlalchemy import text as sa_text
-        try:
-            db.execute(sa_text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS file_pages TEXT"))
-            db.commit()
-        except Exception:
-            db.rollback()
-
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
         upload_result = await asyncio.to_thread(save_invoice_pdf, file, supplier.id, contents)
 
@@ -538,13 +530,8 @@ async def upload_invoice(
         db.refresh(invoice)
 
         # M-16: Atomic commit — file_pages + date_parsed + notifications together
-        # Save file_pages via raw SQL (column not in ORM)
         if upload_result.get("pages"):
-            try:
-                db.execute(sa_text("UPDATE supplier_invoices SET file_pages = :fp WHERE id = :id"),
-                    {"fp": json.dumps(upload_result["pages"]), "id": invoice.id})
-            except Exception:
-                pass
+            invoice.file_pages = json.dumps(upload_result["pages"])
 
         # LOGIC-M2: Store parsed date via ORM (column now mapped)
         date_parsed = validation.get("date_parsed")

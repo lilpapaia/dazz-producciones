@@ -570,6 +570,7 @@ async def list_all_invoices(
             irpf_amount=inv.irpf_amount or 0, final_total=inv.final_total,
             currency=inv.currency or "EUR", is_foreign=inv.is_foreign or False,
             file_url=inv.file_url if (inv.file_url and inv.file_url.startswith("http")) else get_invoice_pdf_url(inv.file_url) if inv.file_url else "",
+            file_pages=inv.file_pages,
             status=inv.status.value if inv.status else "PENDING",
             rejection_reason=inv.rejection_reason, delete_reason=inv.delete_reason,
             created_at=inv.created_at,
@@ -644,16 +645,6 @@ async def get_invoice(
     if not invoice:
         raise HTTPException(404, "Invoice not found")
 
-    # file_pages not in ORM — fetch via raw SQL
-    from sqlalchemy import text as sa_text
-    file_pages = None
-    try:
-        row = db.execute(sa_text("SELECT file_pages FROM supplier_invoices WHERE id = :id"), {"id": invoice_id}).first()
-        if row:
-            file_pages = row[0]
-    except Exception:
-        pass
-
     return InvoiceDetailResponse(
         id=invoice.id, supplier_id=invoice.supplier_id,
         supplier_name=invoice.supplier.name if invoice.supplier else None,
@@ -668,7 +659,7 @@ async def get_invoice(
         final_total=invoice.final_total,
         currency=invoice.currency or "EUR", is_foreign=invoice.is_foreign or False,
         file_url=invoice.file_url if (invoice.file_url and invoice.file_url.startswith("http")) else get_invoice_pdf_url(invoice.file_url) if invoice.file_url else "",
-        file_pages=file_pages,
+        file_pages=invoice.file_pages,
         status=invoice.status.value if invoice.status else "PENDING",
         rejection_reason=invoice.rejection_reason, delete_reason=invoice.delete_reason,
         nif_cif=invoice.nif_cif, iban=invoice.iban,
@@ -816,22 +807,20 @@ async def confirm_invoice_deletion(
         except Exception as e:
             logger.error(f"Failed to delete Cloudinary PDF for invoice {invoice.id}: {e}")
 
-    # Delete page images if they exist (file_pages not in ORM)
-    from sqlalchemy import text as sa_text
-    try:
-        row = db.execute(sa_text("SELECT file_pages FROM supplier_invoices WHERE id = :id"), {"id": invoice.id}).first()
-        if row and row[0]:
+    # Delete page images if they exist
+    if invoice.file_pages:
+        try:
             import json
-            for page_url in json.loads(row[0]):
+            import cloudinary.uploader
+            for page_url in json.loads(invoice.file_pages):
                 try:
                     pid = extract_public_id_from_url(page_url)
                     if pid:
-                        import cloudinary.uploader
                         cloudinary.uploader.destroy(pid, resource_type="image")
                 except Exception as e:
                     logger.error(f"Failed to delete Cloudinary page image for invoice {invoice.id}, url={page_url}: {e}")
-    except Exception as e:
-        logger.error(f"Failed to process file_pages for invoice {invoice.id}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to process file_pages for invoice {invoice.id}: {e}")
 
     db.delete(invoice)
     db.commit()
