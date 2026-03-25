@@ -129,14 +129,24 @@ const SupplierDetail = () => {
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
   };
 
-  const handleDeleteInvoice = async () => {
-    if (!deleteModal || !deleteReason.trim()) return;
+  const handleDeleteInvoice = async (invoiceOverride, reasonOverride) => {
+    const inv = invoiceOverride || deleteModal;
+    const rsn = reasonOverride !== undefined ? reasonOverride : deleteReason;
+    if (!inv || (rsn !== null && !rsn?.trim())) return;
     try {
-      await deleteInvoice(deleteModal.id, deleteReason);
+      await deleteInvoice(inv.id, rsn);
       load();
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setDeleteModal(null);
     setDeleteReason('');
+  };
+
+  const handleTrashClick = (inv) => {
+    if (inv.status === 'DELETE_REQUESTED') {
+      if (window.confirm('¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.')) handleDeleteInvoice(inv, null);
+    } else {
+      setDeleteModal(inv);
+    }
   };
 
   const handleExportExcel = async () => {
@@ -482,7 +492,7 @@ const SupplierDetail = () => {
                         )}
                         {inv.status === 'PAID' && <span className="text-[12px] text-zinc-600">Cerrada</span>}
                         {(inv.status === 'PENDING' || inv.status === 'APPROVED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
-                          <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
+                          <button onClick={(e) => { e.stopPropagation(); handleTrashClick(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
                             <Trash2 size={14} strokeWidth={1.5} />
                           </button>
                         )}
@@ -543,7 +553,7 @@ const SupplierDetail = () => {
                         <span className="text-[13px] text-zinc-600 px-2.5 py-1">Cerrada</span>
                       )}
                       {(inv.status === 'PENDING' || inv.status === 'APPROVED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors flex-shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); handleTrashClick(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors flex-shrink-0">
                           <Trash2 size={15} strokeWidth={1.5} />
                         </button>
                       )}
