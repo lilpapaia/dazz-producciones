@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, Mic } from 'lucide-react';
 import { getSuppliers } from '../../services/suppliersApi';
-import { getCompanies } from '../../services/api';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
 
@@ -27,10 +26,9 @@ const timeAgo = (dateStr) => {
 const SuppliersList = () => {
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
-  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [companyFilter, setCompanyFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const searchRef = useRef(null);
@@ -52,14 +50,14 @@ const SuppliersList = () => {
 
   const load = () => {
     const params = {};
-    if (companyFilter) params.company_id = companyFilter;
-    Promise.all([getSuppliers(params), getCompanies()])
-      .then(([s, c]) => { setSuppliers(s.data); setCompanies(c.data); })
+    if (statusFilter) params.status = statusFilter;
+    getSuppliers(params)
+      .then((s) => { setSuppliers(s.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { setLoading(true); load(); }, [companyFilter]);
+  useEffect(() => { setLoading(true); load(); }, [statusFilter]);
   useEffect(() => {
     const saved = localStorage.getItem('recentSearches_suppliers');
     if (saved) setRecentSearches(JSON.parse(saved));
@@ -147,27 +145,39 @@ const SuppliersList = () => {
             </div>
           )}
         </div>
-        {/* Chips empresa — desktop inline, móvil fila propia abajo */}
+        {/* Chips estado — desktop inline */}
         <div className="hidden sm:flex gap-2 flex-wrap items-center">
-          <span className="text-[12px] text-zinc-500 tracking-widest uppercase flex-shrink-0">Empresa:</span>
-          <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>Todas</button>
-          {companies.map(c => (
-            <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
-              {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
-            </button>
+          {[
+            { key: '', label: 'Todos' },
+            { key: 'ACTIVE', label: 'Activo' },
+            { key: 'NEW', label: 'Nuevo' },
+            { key: 'DEACTIVATED', label: 'Desactivado' },
+          ].map(f => (
+            <button key={f.key} onClick={() => setStatusFilter(f.key)}
+              className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${
+                statusFilter === f.key
+                  ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
+                  : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+              }`}>{f.label}</button>
           ))}
         </div>
       </div>
 
-      {/* Chips empresa — solo móvil, fila scrollable pegada a los bordes */}
+      {/* Chips estado — solo móvil, scrollable pegada a bordes */}
       <div className="sm:hidden flex gap-2 overflow-x-auto mb-3.5 -mx-4 px-4"
         style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
-        <span className="text-[12px] text-zinc-500 tracking-widest uppercase flex-shrink-0 self-center">Empresa:</span>
-        <button onClick={() => setCompanyFilter(null)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${!companyFilter ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>Todas</button>
-        {companies.map(c => (
-          <button key={c.id} onClick={() => setCompanyFilter(c.id)} className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${companyFilter === c.id ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>
-            {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
-          </button>
+        {[
+          { key: '', label: 'Todos' },
+          { key: 'ACTIVE', label: 'Activo' },
+          { key: 'NEW', label: 'Nuevo' },
+          { key: 'DEACTIVATED', label: 'Desactivado' },
+        ].map(f => (
+          <button key={f.key} onClick={() => setStatusFilter(f.key)}
+            className={`text-[13px] px-3 py-1 rounded-full border transition-all flex-shrink-0 ${
+              statusFilter === f.key
+                ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
+                : 'border-zinc-700 text-zinc-400'
+            }`}>{f.label}</button>
         ))}
       </div>
 
@@ -207,9 +217,8 @@ const SuppliersList = () => {
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium w-5"></th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Proveedor</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">NIF/CIF</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Empresa</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Estado</th>
-              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">OC</th>
+              <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">OC Permanente</th>
               <th className="bg-zinc-800 px-3 py-2.5 text-left text-[11px] text-zinc-400 tracking-widest uppercase font-medium">Últ. actividad</th>
             </tr>
           </thead>
@@ -224,7 +233,6 @@ const SuppliersList = () => {
                   <div className="text-[11px] text-zinc-500">{s.email}</div>
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400 font-mono">{s.nif_cif || '—'}</td>
-                <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400">{s.company_name || 'All'}</td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
                 </td>
@@ -237,7 +245,7 @@ const SuppliersList = () => {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan="7" className="text-center py-8 text-xs text-zinc-600">No se encontraron proveedores</td></tr>
+              <tr><td colSpan="6" className="text-center py-8 text-xs text-zinc-600">No se encontraron proveedores</td></tr>
             )}
           </tbody>
         </table>

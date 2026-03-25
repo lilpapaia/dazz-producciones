@@ -275,7 +275,6 @@ const SupplierDetail = () => {
 
           {/* Data rows */}
           {[
-            ['Empresa', supplier.company_name || 'Todas'],
             ['Email', supplier.email, false, true],
             ['NIF/CIF', supplier.nif_cif, true],
             ['Teléfono', supplier.phone],
