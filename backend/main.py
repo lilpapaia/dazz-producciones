@@ -231,6 +231,13 @@ async def startup_event():
             conn.execute(text(
                 "ALTER TABLE supplier_invoices ALTER COLUMN oc_number DROP NOT NULL"
             ))
+            # Pending actions: IBAN change + cert verification
+            conn.execute(text(
+                "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS pending_iban_encrypted BYTEA"
+            ))
+            conn.execute(text(
+                "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS ia_cert_verified BOOLEAN DEFAULT TRUE"
+            ))
             # Detección duplicados: hash de archivo
             conn.execute(text(
                 "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS file_hash VARCHAR(32)"
