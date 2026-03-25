@@ -304,9 +304,9 @@ const InvoiceDetail = () => {
             <div className={rowCls}><span className={labelCls}>IBAN</span><span className={ibanCls}>{invoice.iban || '—'}</span></div>
             <div className={rowCls}>
               <span className={labelCls}>OC</span>
-              {invoice.status === 'OC_PENDING'
-                ? <span className="text-[12px] px-1.5 py-[1px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15">Sin OC</span>
-                : <span className="text-[12px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{invoice.oc_number}</span>
+              {invoice.oc_number
+                ? <span className="text-[12px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{invoice.oc_number}</span>
+                : <span className="text-[12px] px-1.5 py-[1px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
               }
             </div>
           </div>

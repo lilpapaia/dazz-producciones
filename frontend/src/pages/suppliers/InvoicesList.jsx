@@ -205,9 +205,9 @@ const InvoicesList = () => {
               <div className="text-[12px] text-zinc-400 mb-2">{inv.supplier_name}</div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {inv.status === 'OC_PENDING'
-                    ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
-                    : <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                  {inv.oc_number
+                    ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                    : <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
                   }
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${pill.cls}`}>
                     <span className={`w-1 h-1 rounded-full ${pill.dot}`} />{inv.status === 'OC_PENDING' ? 'Sin OC' : inv.status}
@@ -266,9 +266,9 @@ const InvoicesList = () => {
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-200">{inv.supplier_name}</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        {inv.status === 'OC_PENDING'
-                          ? <span className="text-[11px] px-1.5 py-[1px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
-                          : <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                        {inv.oc_number
+                          ? <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
+                          : <span className="text-[11px] px-1.5 py-[1px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
                         }
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[13px] text-zinc-200">{inv.final_total?.toFixed(2)} EUR</td>

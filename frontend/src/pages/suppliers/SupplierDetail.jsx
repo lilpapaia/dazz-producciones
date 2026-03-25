@@ -471,7 +471,7 @@ const SupplierDetail = () => {
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         {inv.oc_number
                           ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
-                          : <span className="text-[11px] text-zinc-600">Sin OC</span>
+                          : <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
                         }
                         <span className="text-[11px] text-zinc-500">{inv.date}</span>
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${PILL[inv.status] || PILL.PENDING}`}>
@@ -523,7 +523,7 @@ const SupplierDetail = () => {
                     <div>
                       {inv.oc_number
                         ? <span className="text-[12px] px-[7px] py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{inv.oc_number}</span>
-                        : <span className="text-[12px] text-zinc-600">—</span>
+                        : <span className="text-[12px] px-[7px] py-[2px] rounded bg-blue-400/[.08] text-blue-400 border border-blue-400/15 font-semibold">Sin OC</span>
                       }
                     </div>
                     {/* Fecha */}
