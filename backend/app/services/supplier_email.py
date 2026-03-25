@@ -113,3 +113,13 @@ def send_supplier_invoice_paid(name: str, email: str, invoice_number: str, amoun
         "Payment Confirmed", "PAYMENT UPDATE", body))
 
 
+def send_supplier_deactivation_confirmed(email: str, name: str):
+    safe_name = html_mod.escape(name)
+    body = (
+        _text(f"Hello <strong>{safe_name}</strong>,")
+        + _text("Your account deactivation request has been confirmed.")
+        + _text("Your data will be retained for the legally required period (6 years) as per Spanish regulations.")
+        + _text("If you have any questions, please contact the DAZZ Group team.")
+    )
+    return send_email(email, "DAZZ Group — Account Deactivated", _base_template(
+        "Account Deactivated", "ACCOUNT UPDATE", body))

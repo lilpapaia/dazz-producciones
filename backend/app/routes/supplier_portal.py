@@ -148,6 +148,7 @@ async def register_supplier(
         gdpr_consent=True,
         gdpr_consent_at=datetime.now(timezone.utc),
         is_active=True,
+        ia_cert_verified=not body.has_cert_warnings,
     )
     db.add(supplier)
     db.commit()
@@ -826,6 +827,8 @@ async def request_iban_change(
         nif_cif=supplier.nif_cif, tipo="update"
     )
 
+    # Store pending IBAN encrypted (admin will approve/reject)
+    supplier.pending_iban_encrypted = encrypt_iban(new_iban)
     _notify(db, NotificationRecipientType.ADMIN, 0,
             NotificationEventType.REGISTRATION, "IBAN Change Request",
             f"{supplier.name} requests IBAN change to {new_iban[:4]}****{new_iban[-4:]} — cert: {cert_key}",

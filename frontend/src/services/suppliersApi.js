@@ -33,6 +33,16 @@ export const searchSuppliersForAutoinvoice = (q) => api.get('/suppliers/autoinvo
 export const generateAutoinvoice = (data) => api.post('/suppliers/autoinvoice/generate', data);
 export const previewAutoinvoice = (data) => api.post('/suppliers/autoinvoice/preview', data, { responseType: 'blob' });
 
+// Pending Actions
+export const getPendingActions = (id) => api.get(`/suppliers/${id}/pending-actions`);
+export const approveDataChange = (id, notifId) => api.post(`/suppliers/${id}/approve-data-change`, { notification_id: notifId });
+export const rejectDataChange = (id, notifId, reason) => api.post(`/suppliers/${id}/reject-data-change`, { notification_id: notifId, reason });
+export const approveIbanChange = (id, notifId) => api.post(`/suppliers/${id}/approve-iban-change`, { notification_id: notifId });
+export const rejectIbanChange = (id, notifId, reason) => api.post(`/suppliers/${id}/reject-iban-change`, { notification_id: notifId, reason });
+export const confirmDeactivation = (id, notifId) => api.post(`/suppliers/${id}/confirm-deactivation`, { notification_id: notifId });
+export const rejectDeactivation = (id, notifId, reason) => api.post(`/suppliers/${id}/reject-deactivation`, { notification_id: notifId, reason });
+export const verifyCert = (id) => api.post(`/suppliers/${id}/verify-cert`);
+
 // Notifications
 export const getNotifications = (params) => api.get('/suppliers/notifications/all', { params });
 export const markNotificationRead = (id) => api.put(`/suppliers/notifications/${id}/read`);

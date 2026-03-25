@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status, Query, Requ
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc, case
+from sqlalchemy import func, desc, case, or_
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import secrets
@@ -266,6 +266,21 @@ async def list_suppliers(
         SupplierNotification.related_supplier_id.in_(supplier_ids)
     ).group_by(SupplierNotification.related_supplier_id).all())
 
+    # Batch pre-fetch: pending actions per supplier
+    pending_actions_q = db.query(
+        SupplierNotification.related_supplier_id,
+        func.count(SupplierNotification.id),
+    ).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.is_read == False,
+        SupplierNotification.related_supplier_id.in_(supplier_ids),
+        or_(
+            SupplierNotification.title.in_(["Data Change Request", "IBAN Change Request", "Deactivation Request"]),
+            SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
+        )
+    ).group_by(SupplierNotification.related_supplier_id).all()
+    pending_actions_map = {sid: cnt for sid, cnt in pending_actions_q}
+
     # Build responses using pre-loaded data (no per-supplier queries)
     result = []
     for s in suppliers:
@@ -275,6 +290,7 @@ async def list_suppliers(
         last_activity = max(filter(None, [
             last_notif_map.get(s.id), last_inv_map.get(s.id), s.created_at
         ]))
+        has_actions = pending_actions_map.get(s.id, 0) > 0 or not s.ia_cert_verified
 
         result.append(SupplierResponse(
             id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
@@ -288,6 +304,7 @@ async def list_suppliers(
             created_at=s.created_at, updated_at=s.updated_at,
             last_activity=last_activity,
             invoices_count=inv_total, pending_invoices=inv_pending,
+            has_pending_actions=has_actions, ia_cert_verified=s.ia_cert_verified,
         ))
     return result
 
@@ -318,6 +335,17 @@ def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
         SupplierInvoice.supplier_id == s.id).scalar()
     last_activity = max(filter(None, [last_notif, last_inv, s.created_at]))
 
+    # Pending actions count
+    pa_count = db.query(func.count(SupplierNotification.id)).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.is_read == False,
+        SupplierNotification.related_supplier_id == s.id,
+        or_(
+            SupplierNotification.title.in_(["Data Change Request", "IBAN Change Request", "Deactivation Request"]),
+            SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
+        )
+    ).scalar() or 0
+
     return SupplierResponse(
         id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
         phone=s.phone, address=s.address, iban=_decode_iban(s),
@@ -330,6 +358,8 @@ def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
         created_at=s.created_at, updated_at=s.updated_at,
         last_activity=last_activity,
         invoices_count=inv_count, pending_invoices=pending,
+        has_pending_actions=pa_count > 0 or not s.ia_cert_verified,
+        ia_cert_verified=s.ia_cert_verified,
     )
 
 
@@ -951,3 +981,230 @@ async def dashboard_stats(
         total_paid_this_month=float(paid_month),
         unread_notifications=unread,
     )
+
+
+# ============================================
+# PENDING ACTIONS (A-7 to A-11)
+# ============================================
+
+PENDING_TITLES = ["Data Change Request", "IBAN Change Request", "Deactivation Request"]
+
+
+def _get_pending_notification(db: Session, supplier_id: int, notification_id: int) -> SupplierNotification:
+    """Get a pending admin notification for a supplier, or raise 404."""
+    notif = db.query(SupplierNotification).filter(
+        SupplierNotification.id == notification_id,
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.related_supplier_id == supplier_id,
+        SupplierNotification.is_read == False,
+    ).first()
+    if not notif:
+        raise HTTPException(404, "Pending notification not found")
+    return notif
+
+
+@router.get("/{supplier_id}/pending-actions")
+async def get_pending_actions(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """List pending actions for a supplier (unread admin notifications)."""
+    notifs = db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.related_supplier_id == supplier_id,
+        SupplierNotification.is_read == False,
+        or_(
+            SupplierNotification.title.in_(PENDING_TITLES),
+            SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
+        )
+    ).order_by(desc(SupplierNotification.created_at)).all()
+
+    return [{
+        "id": n.id, "title": n.title, "message": n.message,
+        "event_type": n.event_type.value, "created_at": n.created_at.isoformat(),
+        "related_invoice_id": n.related_invoice_id,
+    } for n in notifs]
+
+
+# --- A-7: Data Change ---
+
+@router.post("/{supplier_id}/approve-data-change")
+async def approve_data_change(
+    supplier_id: int,
+    notification_id: int = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    import json
+    notif = _get_pending_notification(db, supplier_id, notification_id)
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+
+    # Parse changes from message: "... requests data change: {json}"
+    try:
+        json_str = notif.message.split(": ", 1)[1]
+        changes = json.loads(json_str)
+    except (IndexError, json.JSONDecodeError):
+        raise HTTPException(400, "Could not parse data change request")
+
+    for field in ["name", "phone", "address"]:
+        if field in changes and changes[field] is not None:
+            setattr(supplier, field, changes[field])
+
+    notif.is_read = True
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier_id,
+            NotificationEventType.APPROVED, "Data change approved",
+            "Your data change request has been approved.",
+            supplier_id=supplier_id)
+    db.commit()
+    return {"message": "Data change approved"}
+
+
+@router.post("/{supplier_id}/reject-data-change")
+async def reject_data_change(
+    supplier_id: int,
+    notification_id: int = Body(...),
+    reason: Optional[str] = Body(None),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    notif = _get_pending_notification(db, supplier_id, notification_id)
+    notif.is_read = True
+    msg = "Your data change request was rejected."
+    if reason:
+        msg += f" Reason: {reason}"
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier_id,
+            NotificationEventType.REJECTED, "Data change rejected", msg,
+            supplier_id=supplier_id)
+    db.commit()
+    return {"message": "Data change rejected"}
+
+
+# --- A-8: IBAN Change ---
+
+@router.post("/{supplier_id}/approve-iban-change")
+async def approve_iban_change(
+    supplier_id: int,
+    notification_id: int = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    notif = _get_pending_notification(db, supplier_id, notification_id)
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+    if not supplier.pending_iban_encrypted:
+        raise HTTPException(400, "No pending IBAN change found")
+
+    # Extract cert_key from message to update bank_cert_url
+    cert_key = None
+    if "cert: " in notif.message:
+        cert_key = notif.message.split("cert: ")[-1].strip()
+
+    supplier.iban_encrypted = supplier.pending_iban_encrypted
+    supplier.pending_iban_encrypted = None
+    if cert_key:
+        supplier.bank_cert_url = cert_key
+    notif.is_read = True
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier_id,
+            NotificationEventType.APPROVED, "IBAN updated",
+            "Your IBAN has been updated successfully.",
+            supplier_id=supplier_id)
+    db.commit()
+    return {"message": "IBAN change approved"}
+
+
+@router.post("/{supplier_id}/reject-iban-change")
+async def reject_iban_change(
+    supplier_id: int,
+    notification_id: int = Body(...),
+    reason: Optional[str] = Body(None),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    notif = _get_pending_notification(db, supplier_id, notification_id)
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if supplier:
+        supplier.pending_iban_encrypted = None
+    notif.is_read = True
+    msg = "Your IBAN change request was rejected."
+    if reason:
+        msg += f" Reason: {reason}"
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier_id,
+            NotificationEventType.REJECTED, "IBAN change rejected", msg,
+            supplier_id=supplier_id)
+    db.commit()
+    return {"message": "IBAN change rejected"}
+
+
+# --- A-9: IA alerts (view only — mark read on navigate) ---
+# No approve/reject endpoints needed — handled by markNotificationRead
+
+
+# --- A-9b: Cert verification ---
+
+@router.post("/{supplier_id}/verify-cert")
+async def verify_cert(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Mark bank certificate as manually verified by admin."""
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+    supplier.ia_cert_verified = True
+    db.commit()
+    return {"message": "Certificate marked as verified"}
+
+
+# --- A-10: Deactivation ---
+
+@router.post("/{supplier_id}/confirm-deactivation")
+async def confirm_deactivation(
+    supplier_id: int,
+    notification_id: int = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    notif = _get_pending_notification(db, supplier_id, notification_id)
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(404, "Supplier not found")
+
+    supplier.is_active = False
+    supplier.status = SupplierStatus.DEACTIVATED
+    invalidate_all_supplier_tokens(db, supplier_id)
+    notif.is_read = True
+
+    # Send email (not app notification — supplier can't see it after deactivation)
+    try:
+        from app.services.supplier_email import send_supplier_deactivation_confirmed
+        send_supplier_deactivation_confirmed(supplier.email, supplier.name)
+    except Exception as e:
+        logger.warning(f"Failed to send deactivation email to {supplier.email}: {e}")
+
+    db.commit()
+    return {"message": f"Supplier {supplier.name} deactivated"}
+
+
+@router.post("/{supplier_id}/reject-deactivation")
+async def reject_deactivation(
+    supplier_id: int,
+    notification_id: int = Body(...),
+    reason: Optional[str] = Body(None),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    notif = _get_pending_notification(db, supplier_id, notification_id)
+    notif.is_read = True
+    msg = "Your deactivation request was rejected."
+    if reason:
+        msg += f" Reason: {reason}"
+    _notify(db, NotificationRecipientType.SUPPLIER, supplier_id,
+            NotificationEventType.REJECTED, "Deactivation rejected", msg,
+            supplier_id=supplier_id)
+    db.commit()
+    return {"message": "Deactivation request rejected"}

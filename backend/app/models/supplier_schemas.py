@@ -63,6 +63,8 @@ class SupplierResponse(BaseModel):
     last_activity: Optional[datetime] = None
     invoices_count: int = 0
     pending_invoices: int = 0
+    has_pending_actions: bool = False
+    ia_cert_verified: bool = True
 
     class Config:
         from_attributes = True
@@ -169,6 +171,7 @@ class RegisterRequest(BaseModel):
     iban: Optional[str] = Field(default=None, max_length=50)
     password: str = Field(min_length=8)
     gdpr_consent: bool
+    has_cert_warnings: bool = False
 
     @field_validator("password")
     @classmethod

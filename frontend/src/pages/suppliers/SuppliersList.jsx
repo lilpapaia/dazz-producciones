@@ -194,7 +194,7 @@ const SuppliersList = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-[13px] font-medium text-zinc-200 truncate">{s.name}</span>
-                {s.pending_invoices > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+                {(s.pending_invoices > 0 || s.has_pending_actions) && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] text-zinc-500 font-mono">{s.nif_cif || '—'}</span>
@@ -226,7 +226,7 @@ const SuppliersList = () => {
             {filtered.map(s => (
               <tr key={s.id} onClick={() => navigate(`/suppliers/${s.id}`)} className="cursor-pointer hover:bg-white/[.02] transition-colors">
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  {s.pending_invoices > 0 && <div className="w-2 h-2 rounded-full bg-amber-500" />}
+                  {(s.pending_invoices > 0 || s.has_pending_actions) && <div className="w-2 h-2 rounded-full bg-amber-500" />}
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
                   <div className="text-[13px] font-medium text-zinc-200">{s.name}</div>
