@@ -13,6 +13,9 @@ const EVENT_ICON = {
   REGISTRATION: { icon: Bell, cls: 'bg-amber-500/10', stroke: 'text-amber-500' },
 };
 
+const INVOICE_TYPES = ['NEW_INVOICE', 'APPROVED', 'PAID', 'DELETED', 'OC_LINKED'];
+const ACCOUNT_RE = /Data Change|IBAN Change|Deactivation/i;
+
 const timeAgo = (dateStr) => {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -29,7 +32,8 @@ const timeAgo = (dateStr) => {
 const Notifications = () => {
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [readFilter, setReadFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   const load = () => {
     getNotifications({ limit: 100 })
@@ -41,7 +45,13 @@ const Notifications = () => {
   useEffect(() => { load(); }, []);
 
   const unreadCount = notifs.filter(n => !n.is_read).length;
-  const displayed = filter === 'unread' ? notifs.filter(n => !n.is_read) : notifs;
+  const displayed = notifs.filter(n => {
+    if (readFilter === 'unread' && n.is_read) return false;
+    if (typeFilter === 'all') return true;
+    if (typeFilter === 'invoices') return INVOICE_TYPES.includes(n.event_type);
+    if (typeFilter === 'account') return n.event_type === 'REGISTRATION' || ACCOUNT_RE.test(n.title);
+    return true;
+  });
 
   const handleMarkRead = async (id) => {
     await markNotificationRead(id);
@@ -52,6 +62,8 @@ const Notifications = () => {
     await markAllNotificationsRead();
     setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
   };
+
+  const chipCls = (active) => `text-[11px] px-2.5 py-1 rounded-full transition-colors ${active ? 'bg-amber-500 text-zinc-950 font-semibold' : 'border border-zinc-700 text-zinc-400'}`;
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -72,16 +84,17 @@ const Notifications = () => {
         )}
       </div>
 
-      {/* Filter chips */}
+      {/* Read filter */}
+      <div className="flex gap-1.5 mb-2">
+        <button onClick={() => setReadFilter('all')} className={chipCls(readFilter === 'all')}>All</button>
+        <button onClick={() => setReadFilter('unread')} className={chipCls(readFilter === 'unread')}>Unread ({unreadCount})</button>
+      </div>
+
+      {/* Type filter */}
       <div className="flex gap-1.5 mb-3">
-        <button onClick={() => setFilter('all')}
-          className={`text-[11px] px-2.5 py-1 rounded-full transition-colors ${filter === 'all' ? 'bg-amber-500 text-zinc-950 font-semibold' : 'border border-zinc-700 text-zinc-400'}`}>
-          All
-        </button>
-        <button onClick={() => setFilter('unread')}
-          className={`text-[11px] px-2.5 py-1 rounded-full transition-colors ${filter === 'unread' ? 'bg-amber-500 text-zinc-950 font-semibold' : 'border border-zinc-700 text-zinc-400'}`}>
-          Unread ({unreadCount})
-        </button>
+        <button onClick={() => setTypeFilter('all')} className={chipCls(typeFilter === 'all')}>All</button>
+        <button onClick={() => setTypeFilter('invoices')} className={chipCls(typeFilter === 'invoices')}>Invoices</button>
+        <button onClick={() => setTypeFilter('account')} className={chipCls(typeFilter === 'account')}>Account</button>
       </div>
 
       {/* Info */}

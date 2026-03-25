@@ -14,16 +14,20 @@ const EVENT_CONFIG = {
   IA_REJECTED: { icon: AlertTriangle, bg: 'bg-amber-500/10', color: 'text-amber-500' },
 };
 
+const INVOICE_TYPES = ['NEW_INVOICE', 'APPROVED', 'PAID', 'DELETED', 'OC_LINKED'];
+const ACCOUNT_RE = /Data Change|IBAN Change|Deactivation/i;
+
 const SupplierNotifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [readFilter, setReadFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [visibleCount, setVisibleCount] = useState(50);
 
   useEffect(() => {
     const doLoad = () => {
-      getNotifications({ unread_only: filter === 'unread', limit: 200 })
+      getNotifications({ limit: 200 })
         .then(r => setNotifications(r.data))
         .catch(() => {})
         .finally(() => setLoading(false));
@@ -32,7 +36,7 @@ const SupplierNotifications = () => {
     doLoad();
     const interval = setInterval(doLoad, 30000);
     return () => clearInterval(interval);
-  }, [filter]);
+  }, []);
 
   const handleMarkRead = async (id) => {
     await markNotificationRead(id).catch(() => {});
@@ -55,7 +59,17 @@ const SupplierNotifications = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
-  const visible = notifications.slice(0, visibleCount);
+  const displayed = notifications.filter(n => {
+    if (readFilter === 'unread' && n.is_read) return false;
+    if (typeFilter === 'all') return true;
+    if (typeFilter === 'invoices') return INVOICE_TYPES.includes(n.event_type);
+    if (typeFilter === 'ia') return n.event_type === 'IA_REJECTED';
+    if (typeFilter === 'account') return n.event_type === 'REGISTRATION' || ACCOUNT_RE.test(n.title);
+    return true;
+  });
+  const visible = displayed.slice(0, visibleCount);
+
+  const chipCls = (active) => `text-[11px] px-3 py-1 rounded-full border transition-all ${active ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`;
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -65,7 +79,7 @@ const SupplierNotifications = () => {
 
   return (
     <div>
-      {/* Header with actions (N1, N2) */}
+      {/* Header with actions */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Notificaciones</h1>
         <div className="flex gap-2">
@@ -77,22 +91,30 @@ const SupplierNotifications = () => {
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-3.5 items-center">
-        <button onClick={() => setFilter('all')} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${filter === 'all' ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>Todas</button>
-        <button onClick={() => setFilter('unread')} className={`text-[11px] px-3 py-1 rounded-full border transition-all ${filter === 'unread' ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>
+      {/* Read filter */}
+      <div className="flex gap-2 mb-2 items-center">
+        <button onClick={() => setReadFilter('all')} className={chipCls(readFilter === 'all')}>Todas</button>
+        <button onClick={() => setReadFilter('unread')} className={chipCls(readFilter === 'unread')}>
           Sin leer {unreadCount > 0 && `(${unreadCount})`}
         </button>
       </div>
 
+      {/* Type filter */}
+      <div className="flex gap-2 mb-3.5 items-center">
+        <button onClick={() => setTypeFilter('all')} className={chipCls(typeFilter === 'all')}>Todas</button>
+        <button onClick={() => setTypeFilter('invoices')} className={chipCls(typeFilter === 'invoices')}>Facturas</button>
+        <button onClick={() => setTypeFilter('ia')} className={chipCls(typeFilter === 'ia')}>IA</button>
+        <button onClick={() => setTypeFilter('account')} className={chipCls(typeFilter === 'account')}>Cuenta</button>
+      </div>
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden">
-        {/* Count bar (N4) */}
+        {/* Count bar */}
         <div className="flex items-center justify-between px-3.5 py-2 bg-zinc-800 text-[11px] text-zinc-400 border-b border-white/[.04]">
-          <span><b className="text-amber-400">{unreadCount} sin leer</b> de {notifications.length} notificaciones recientes</span>
+          <span><b className="text-amber-400">{unreadCount} sin leer</b> de {displayed.length} notificaciones</span>
           <span className="text-zinc-400">Se archivan a los 30 días</span>
         </div>
 
-        {notifications.length === 0 ? (
+        {displayed.length === 0 ? (
           <div className="text-center py-12 text-xs text-zinc-600">
             <Bell size={24} className="mx-auto mb-2 text-zinc-700" />
             Sin notificaciones
@@ -101,7 +123,6 @@ const SupplierNotifications = () => {
           visible.map(n => {
             const cfg = EVENT_CONFIG[n.event_type] || { icon: Bell, bg: 'bg-zinc-800', color: 'text-zinc-400' };
             const Icon = cfg.icon;
-            // Determine link target (N3)
             const hasSupplier = n.related_supplier_id && n.related_supplier_id > 0;
             return (
               <div
@@ -128,7 +149,6 @@ const SupplierNotifications = () => {
                     {!n.is_read && <b className="text-amber-400 ml-2">sin leer</b>}
                   </div>
                 </div>
-                {/* View button (N3) */}
                 {hasSupplier && (
                   <button
                     onClick={() => { if (!n.is_read) handleMarkRead(n.id); navigate(`/suppliers/${n.related_supplier_id}`); }}
@@ -143,8 +163,8 @@ const SupplierNotifications = () => {
         )}
       </div>
 
-      {/* Load more (N2) */}
-      {visibleCount < notifications.length && (
+      {/* Load more */}
+      {visibleCount < displayed.length && (
         <div className="text-center mt-3">
           <button onClick={() => setVisibleCount(v => v + 50)} className="text-[11px] text-amber-500 hover:text-amber-400">
             Ver historial completo →
