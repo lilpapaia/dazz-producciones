@@ -60,7 +60,7 @@ const SuppliersList = () => {
   useEffect(() => { setLoading(true); load(); }, [statusFilter]);
   useEffect(() => {
     const saved = localStorage.getItem('recentSearches_suppliers');
-    if (saved) setRecentSearches(JSON.parse(saved));
+    if (saved) try { setRecentSearches(JSON.parse(saved)); } catch { /* corrupted */ }
   }, []);
 
   const filtered = suppliers.filter(s => {

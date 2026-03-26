@@ -57,7 +57,7 @@ const InvoiceDetail = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [invoiceId]);
+  useEffect(() => { setCurrentPage(0); load(); }, [invoiceId]);
 
   // Load sibling invoice IDs for navigation
   useEffect(() => {
@@ -317,9 +317,9 @@ const InvoiceDetail = () => {
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Importes</div>
             <div className={rowCls}><span className={labelCls}>Base imponible</span><span className={`${valCls} ${monoCls}`}>{invoice.base_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
-            <div className={rowCls}><span className={labelCls}>IVA ({(invoice.iva_percentage * 100).toFixed(0)}%)</span><span className={`${valCls} ${monoCls}`}>{invoice.iva_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
+            <div className={rowCls}><span className={labelCls}>IVA ({((invoice.iva_percentage ?? 0) * 100).toFixed(0)}%)</span><span className={`${valCls} ${monoCls}`}>{invoice.iva_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
             {(invoice.irpf_amount > 0) && (
-              <div className={rowCls}><span className={labelCls}>IRPF ({(invoice.irpf_percentage * 100).toFixed(0)}%)</span><span className={`${valCls} ${monoCls} text-red-400`}>-{invoice.irpf_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
+              <div className={rowCls}><span className={labelCls}>IRPF ({((invoice.irpf_percentage ?? 0) * 100).toFixed(0)}%)</span><span className={`${valCls} ${monoCls} text-red-400`}>-{invoice.irpf_amount?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span></div>
             )}
             <div className="flex justify-between pt-3 mt-1 border-t border-zinc-700">
               <span className="text-xs font-semibold text-zinc-300">Total</span>

@@ -260,7 +260,7 @@ const SupplierDetail = () => {
 
   if (!supplier) return null;
 
-  const initials = supplier.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = supplier.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   // Filter invoices
   const filtered = invoices.filter(inv => {

@@ -116,6 +116,7 @@ const Home = () => {
             >
               <option value="">All</option>
               <option value="PENDING">Pending</option>
+              <option value="OC_PENDING">OC Pending</option>
               <option value="APPROVED">Approved</option>
               <option value="PAID">Paid</option>
               <option value="DELETE_REQUESTED">Delete requested</option>
