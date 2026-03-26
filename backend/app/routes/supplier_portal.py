@@ -48,7 +48,7 @@ router = APIRouter(prefix="/portal", tags=["Supplier Portal"])
 
 
 def _notify(db: Session, recipient_type, recipient_id: int, event_type,
-            title: str, message: str, invoice_id=None, supplier_id=None):
+            title: str, message: str, invoice_id=None, supplier_id=None, extra_data=None):
     notif = SupplierNotification(
         recipient_type=recipient_type,
         recipient_id=recipient_id,
@@ -57,6 +57,7 @@ def _notify(db: Session, recipient_type, recipient_id: int, event_type,
         message=message,
         related_invoice_id=invoice_id,
         related_supplier_id=supplier_id,
+        extra_data=extra_data,
     )
     db.add(notif)
 
@@ -812,8 +813,9 @@ async def request_data_change(
 
     _notify(db, NotificationRecipientType.ADMIN, 0,
             NotificationEventType.REGISTRATION, "Data Change Request",
-            f"{supplier.name} requests data change: {json.dumps(changes)}",
-            supplier_id=supplier.id)
+            f"{supplier.name} requests data change",
+            supplier_id=supplier.id,
+            extra_data=json.dumps(changes))
     _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
             NotificationEventType.REGISTRATION, "Data change submitted",
             "Your data change request has been sent. The admin will review it.",
@@ -842,11 +844,12 @@ async def request_iban_change(
         nif_cif=supplier.nif_cif, tipo="update"
     )
 
-    # Store pending IBAN encrypted (admin will approve/reject)
+    # Store pending IBAN + cert key on supplier (admin will approve/reject)
     supplier.pending_iban_encrypted = encrypt_iban(new_iban)
+    supplier.pending_bank_cert_url = cert_key
     _notify(db, NotificationRecipientType.ADMIN, 0,
             NotificationEventType.REGISTRATION, "IBAN Change Request",
-            f"{supplier.name} requests IBAN change to {new_iban[:4]}****{new_iban[-4:]} — cert: {cert_key}",
+            f"{supplier.name} requests IBAN change to {new_iban[:4]}****{new_iban[-4:]}",
             supplier_id=supplier.id)
     _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
             NotificationEventType.REGISTRATION, "IBAN change submitted",

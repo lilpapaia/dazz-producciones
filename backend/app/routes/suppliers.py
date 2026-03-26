@@ -29,7 +29,7 @@ from app.models.supplier_schemas import (
     NotificationResponse, DashboardResponse, CreateOCRequest, CreateOCResponse,
 )
 from app.services.supplier_auth import invalidate_all_supplier_tokens
-from app.services.supplier_storage import get_invoice_pdf_url, get_bank_cert_url, delete_invoice_pdf
+from app.services.supplier_storage import get_invoice_pdf_url, get_bank_cert_url, delete_invoice_pdf, delete_bank_cert
 from app.services.cloudinary_service import extract_public_id_from_url
 from app.services.encryption import decrypt_iban, encrypt_iban, is_encryption_available
 from app.services.supplier_ai import format_date_for_response, parse_invoice_date
@@ -1054,10 +1054,13 @@ async def approve_data_change(
     if not supplier:
         raise HTTPException(404, "Supplier not found")
 
-    # Parse changes from message: "... requests data change: {json}"
+    # BUG-5: Read structured data from metadata field, fallback to legacy message parsing
     try:
-        json_str = notif.message.split(": ", 1)[1]
-        changes = json.loads(json_str)
+        if notif.extra_data:
+            changes = json.loads(notif.extra_data)
+        else:
+            json_str = notif.message.split(": ", 1)[1]
+            changes = json.loads(json_str)
     except (IndexError, json.JSONDecodeError):
         raise HTTPException(400, "Could not parse data change request")
 
@@ -1110,15 +1113,12 @@ async def approve_iban_change(
     if not supplier.pending_iban_encrypted:
         raise HTTPException(400, "No pending IBAN change found")
 
-    # Extract cert_key from message to update bank_cert_url
-    cert_key = None
-    if "cert: " in notif.message:
-        cert_key = notif.message.split("cert: ")[-1].strip()
-
+    # BUG-6: Read cert_key from dedicated field instead of parsing message
     supplier.iban_encrypted = supplier.pending_iban_encrypted
+    if supplier.pending_bank_cert_url:
+        supplier.bank_cert_url = supplier.pending_bank_cert_url
     supplier.pending_iban_encrypted = None
-    if cert_key:
-        supplier.bank_cert_url = cert_key
+    supplier.pending_bank_cert_url = None
     notif.is_read = True
     _notify(db, NotificationRecipientType.SUPPLIER, supplier_id,
             NotificationEventType.APPROVED, "IBAN updated",
@@ -1139,7 +1139,11 @@ async def reject_iban_change(
     notif = _get_pending_notification(db, supplier_id, notification_id)
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if supplier:
+        # BUG-7: Delete rejected cert from R2
+        if supplier.pending_bank_cert_url:
+            delete_bank_cert(supplier.pending_bank_cert_url)
         supplier.pending_iban_encrypted = None
+        supplier.pending_bank_cert_url = None
     notif.is_read = True
     msg = "Your IBAN change request was rejected."
     if reason:

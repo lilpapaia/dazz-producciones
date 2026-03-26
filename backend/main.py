@@ -230,6 +230,14 @@ async def startup_event():
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_suppliers_nif_cif "
                 "ON suppliers (UPPER(nif_cif)) WHERE nif_cif IS NOT NULL"
             ))
+            # BUG-5: Notification metadata for structured data
+            conn.execute(text(
+                "ALTER TABLE supplier_notifications ADD COLUMN IF NOT EXISTS extra_data TEXT"
+            ))
+            # BUG-6: Pending bank cert URL on supplier
+            conn.execute(text(
+                "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS pending_bank_cert_url VARCHAR"
+            ))
             # Detección duplicados: hash de archivo
             conn.execute(text(
                 "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS file_hash VARCHAR(32)"

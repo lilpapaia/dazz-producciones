@@ -321,4 +321,25 @@ def get_bank_cert_url(object_key: str) -> str:
     return url
 
 
-    # delete_bank_cert removed — RGPD requires all bank certificates to be retained
+def delete_bank_cert(object_key: str) -> bool:
+    """
+    Delete a bank certificate from R2. Used when admin rejects an IBAN change.
+    Approved certs are retained; rejected ones are cleaned up.
+
+    Args:
+        object_key: R2 object key returned by save_bank_cert()
+
+    Returns:
+        True if deleted, False on error
+    """
+    if not object_key:
+        return False
+
+    try:
+        client = _get_r2_client()
+        client.delete_object(Bucket=R2_BUCKET_NAME, Key=object_key)
+        logger.info(f"R2 delete OK: {object_key}")
+        return True
+    except Exception as e:
+        logger.error(f"R2 delete error: {e}")
+        return False

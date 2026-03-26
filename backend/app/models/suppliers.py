@@ -80,6 +80,7 @@ class Supplier(Base):
     address = Column(Text, nullable=True)
     iban_encrypted = Column(LargeBinary, nullable=True)
     pending_iban_encrypted = Column(LargeBinary, nullable=True)
+    pending_bank_cert_url = Column(String, nullable=True)
     bank_cert_url = Column(String, nullable=True)
     ia_cert_verified = Column(Boolean, default=True, nullable=False)
     # supplier_type column still exists in BD but removed from ORM (no DROP COLUMN needed)
@@ -166,6 +167,7 @@ class SupplierNotification(Base):
     message = Column(Text, nullable=False)
     related_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id", ondelete="SET NULL"), nullable=True)
     related_supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True)
+    extra_data = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
