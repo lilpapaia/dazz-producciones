@@ -226,6 +226,49 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
   - storage_uri="memory://" no se comparte entre workers
   - Fix: Usar Redis como backend de rate limiting
 
+## 🔧 Bugs encontrados durante testing manual (2026-03-24)
+
+### Auditoría seguridad v2 — ✅ COMPLETADO 2026-03-23
+- 24 issues encontrados: 4 CRITICAL, 7 HIGH, 8 MEDIUM, 5 LOW
+- Plan de testing manual generado: `docs/DAZZ_Testing_Plan_v1.pdf` (100 tests)
+
+### Testing manual bloque 1 (T-001 a T-012) — ✅ COMPLETADO 2026-03-24
+- 11 bugs encontrados y fixeados durante ejecución:
+
+- [x] **BUG-T1:** Interceptor api.js solo capturaba 401, no 403 — HTTPBearer devolvía 403 sin token
+  - Fix: `HTTPBearer(auto_error=False)` → 401 consistente + interceptor solo captura 401
+- [x] **BUG-T2:** SetPassword.jsx — token se perdía por re-ejecución de useEffect con `[searchParams]`
+  - Fix: `[]` como deps, leer con `new URLSearchParams(window.location.search)`
+- [x] **BUG-T3:** Validación password frontend (min 6) desalineada con backend (min 8 + complejidad)
+  - Fix: Frontend alineado: 8 chars + mayúscula + número + símbolo
+- [x] **BUG-T4:** Password temporal crear usuario `temporal123` → no cumplía validación backend
+  - Fix: `Temporal123!`
+- [x] **BUG-T5:** Parse errores Pydantic: `detail` es array de objetos → se mostraba `[object Object]`
+  - Fix: `Array.isArray(detail) ? detail.map(d => d.msg).join(', ')`
+- [x] **BUG-T6:** Interceptor 403 capturaba errores de permisos (non-admin) → loop refresh token
+  - Fix: Interceptor solo captura 401. 403 de permisos se propagan normalmente
+
+### Testing manual bloque 2 (T-013 a T-019) — ✅ COMPLETADO 2026-03-24
+
+- [x] **BUG-T7:** WORKER no veía proyectos donde era responsable (query solo usaba owner_id)
+  - Fix: `or_(owner_id == user.id, lower(responsible) == username.lower())` en projects.py
+- [x] **BUG-T8:** WORKER no podía abrir proyecto donde era responsable (permissions.py solo verificaba owner_id)
+  - Fix: `can_access_project` y `can_modify_project` ahora verifican owner_id OR responsible
+- [x] **BUG-T9:** Dashboard no cargaba empresas para BOSS/WORKER + empresa no visible en cards
+  - Fix: `loadCompanies()` para todos los roles + empresa visible cuando `companies.length > 1`
+- [x] **BUG-T10:** Editar usuario enviaba password vacío al backend → 422 Pydantic
+  - Fix: Backend `password: Optional[str]` + frontend excluye password vacío del payload
+- [x] **BUG-T11:** Autorellenado password browser en modal editar usuario
+  - Fix: `autoComplete="new-password"` + `name="new-password"`
+
+### Mejoras implementadas durante testing (2026-03-24)
+
+- [x] Botón "Guardar Cambios" disabled si nada cambió (editHasChanges compara 6 campos)
+- [x] Selector responsable filtrado por empresa: `GET /users/usernames?company_id=X`
+- [x] BOSS solo ve WORKERs de sus empresas en selector responsable
+- [x] Cambiar empresa resetea responsable en ProjectCreate
+- [x] Validación backend: responsable debe pertenecer a la empresa del proyecto
+
 ---
 
 ## 🧪 Sprint 2: Testing & Quality (2-3 semanas)
@@ -326,6 +369,7 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 | Seguridad HIGH | 6 | 6 | 0 | ✅ |
 | Seguridad MEDIUM | 5 | 5 | 0 | ✅ |
 | Seguridad LOW | 2 | 2 | 0 | ✅ |
+| Seguridad proveedores | 7 | 7 | 0 | ✅ (SEC-1 a SEC-7) |
 | RGPD | 5 | 0 | 5 | ⏸️ Esperando abogado |
 | Rendimiento HIGH | 4 | 4 | 0 | ✅ |
 | Rendimiento MEDIUM | 6 | 6 | 0 | ✅ |
@@ -333,9 +377,11 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 | Lógica MEDIUM | 6 | 6 | 0 | ✅ |
 | UX HIGH | 2 | 2 | 0 | ✅ |
 | UX LOW | 3 | 3 | 0 | ✅ |
+| UX proveedores | 17 | 17 | 0 | ✅ (UX-1 a UX-18) |
+| Bugs proveedores | 21 | 20 | 1 | 🟡 (BUG-4 pendiente) |
 | Deuda técnica MEDIUM | 3 | 3 (parcial) | 0 | ✅ |
 | Deuda técnica LOW | 2 | 2 | 0 | ✅ |
-| **Total** | **50** | **44** | **5 RGPD + pendientes futuros** | |
+| **Total** | **94** | **85** | **5 RGPD + 4 pendientes** | |
 
 ---
 
@@ -421,4 +467,95 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 - [x] Si IA no puede leer IBAN → `valid: true` (no bloquea) + notificación admin "manual review recommended"
 - [x] Frontend Register.jsx: Step 2 "Continue" → valida IBAN vs cert antes de avanzar a Step 3
 - [x] Loading state "Verifying IBAN..." en botón Continue
-- [ ] Implementar en `routes/supplier_portal.py` antes del register endpoint
+- [x] Implementado en `routes/supplier_portal.py` — token validación + rate limit 5/h (SEC-2)
+
+---
+
+## ✅ Auditoría seguridad proveedores — Completado 2026-03-27
+
+### Seguridad (7 issues)
+- [x] **SEC-1:** IBAN movido de query param a Form body en request-iban-change (GDPR)
+- [x] **SEC-2:** Rate limiter unificado en `app/services/rate_limit.py` con `get_real_client_ip` (X-Forwarded-For). validate-bank-cert requiere token invitación + bajado a 5/hour
+- [x] **SEC-3:** Campo `iban` eliminado de SupplierInvoice response + schema (IBAN match sigue via ia_validation_result)
+- [x] **SEC-4:** `max_length=128` en password de RegisterRequest y LoginRequest (previene DoS bcrypt)
+- [x] **SEC-5:** `nif_cif unique=True` en Supplier + partial unique index case-insensitive + validación en registro
+- [x] **SEC-6:** `mark_notification_read` filtra por `recipient_type == ADMIN` (no puede marcar notifs de proveedor)
+- [x] **SEC-7:** `oc_id unique=True` en Supplier + partial unique index + validación en registro y assign-oc
+
+### Bugs críticos (20 issues)
+- [x] **BUG-1:** try/except en 2 llamadas Anthropic API + warning si API key falta
+- [x] **BUG-3:** Temp files → `tempfile.NamedTemporaryFile` (usa /tmp en Railway)
+- [x] **BUG-5:** Data changes en `extra_data` field de SupplierNotification (no free-text parse)
+- [x] **BUG-6:** `pending_bank_cert_url` campo dedicado en Supplier (no parsea mensaje)
+- [x] **BUG-7:** `delete_bank_cert()` creada + borrado R2 al rechazar IBAN
+- [x] **BUG-8:** Timezone fix en 5 funciones timeAgo (`dateStr + 'Z'` suffix)
+- [x] **BUG-9:** Certificado bancario en lightbox iframe con Google Docs Viewer
+- [x] **BUG-10:** IBAN normalización (guiones/puntos/espacios) + IBAN opcional en registro + mensaje non-EU
+- [x] **BUG-11:** Historial SupplierDetail filtra por `supplier_id` en backend (no 20 globales)
+- [x] **BUG-12:** `PENDING_TITLES` constante compartida en `models/suppliers.py`
+- [x] **BUG-13:** `currentPage` reset a 0 al navegar entre facturas
+- [x] **BUG-14:** initials `.filter(Boolean)` para doble espacio en nombre
+- [x] **BUG-15:** localStorage `JSON.parse` en try/catch
+- [x] **BUG-16:** `iva_percentage ?? 0` null guard (NaN% fix)
+- [x] **BUG-17:** N+1 fix en `list_received_invoices` con `joinedload(company)`
+- [x] **BUG-18:** Content-Disposition sanitizado con `re.sub(r'[^\w\s-]', '')`
+- [x] **BUG-19:** `backfill_date_parsed` en lotes de 100 con commit por lote
+- [x] **BUG-20:** OC_PENDING añadido al filtro status en portal Home
+- [x] **BUG-21:** DELETE_REQUESTED → ConfirmDialog/modal custom (no window.confirm)
+- [x] **BUG-26:** Banner pending-actions filtra solo PENDING_TITLES (sin IA_REJECTED)
+
+### UX (17 issues)
+- [x] **UX-1:** try/catch + showError en handleAddNote y handleDeleteNote
+- [x] **UX-2:** try/catch + showError en descarga PDF InvoiceDetail
+- [x] **UX-3:** Estado `acting` en handleAction InvoicesList (anti doble-clic)
+- [x] **UX-4:** Feedback archivos rechazados (tipo/tamaño) en portal Upload
+- [x] **UX-5:** Validación PDF + tamaño en ChangeIban + `finally` para setSending
+- [x] **UX-6:** Error state visible en portal Home.jsx (no catch vacío)
+- [x] **UX-7:** `showError` en SuppliersList catch (no lista vacía silenciosa)
+- [x] **UX-9:** Status badge dinámico en portal Profile (no hardcoded "ACTIVE")
+- [x] **UX-10:** STATUS_LABEL español en SuppliersList (ACTIVO/DESACTIVADO/NUEVO)
+- [x] **UX-11:** window.confirm → ConfirmDialog en InvoiceDetail DELETE_REQUESTED
+- [x] **UX-12:** Paginación con ellipsis en InvoicesList (algoritmo getPageNumbers)
+- [x] **UX-13:** timeAgo "0min" → "ahora" en SuppliersList, SupplierDetail, SuppliersDashboard
+- [x] **UX-14:** Banner acciones pendientes movido dentro columna derecha SupplierDetail
+- [x] **UX-15:** `logger.warning` en email PAID fallido (no `pass` silencioso)
+- [x] **UX-16:** Dropzone bloqueado durante análisis IA en Upload ("AI analyzing...")
+- [x] **UX-17:** Visor PDF facturas lightbox en portal Home (Google Docs Viewer + navegación)
+- [x] **UX-18:** Warning NIF duplicado en SupplierInvite (endpoint GET /ocs/check-nif + onBlur)
+
+---
+
+## 📋 Pendiente — Próximas sesiones
+
+### Bugs pendientes
+- [ ] **BUG-4:** Upload loop continúa tras unmount (portal Upload.jsx) — state update on unmounted
+- [ ] **BUG-22:** Proveedores sin IBAN — pendiente decisión contabilidad
+- [ ] **BUG-23:** Auditoría IA — para el final
+- [ ] **BUG-24:** PDF sube a Cloudinary aunque IA falle
+- [ ] **BUG-25:** IA rechaza OCs válidos
+- [ ] **BUG-27:** Admin no puede rechazar DELETE_REQUESTED
+
+### Admin pendiente
+- [ ] **ADM-1:** Borrado notificaciones admin (papelera individual + limpiar leídas)
+- [ ] **ADM-3:** Mejoras visuales admin proveedores
+
+### OCs y empresas
+- [ ] **OC-1:** Crear tabla oc_prefixes en BD + insertar prefijos 4 empresas
+- [ ] **OC-2:** Reemplazar OC_PREFIX_MAP hardcodeado → query a BD
+- [ ] **OC-3:** Actualizar oc_suggestions endpoint + campo EMPRESA en InvoiceDetail
+- [ ] **OC-4:** SupplierInvite.jsx — selector empresa → tipo → número
+- [ ] **OC-5:** InvoiceDetail.jsx — selector empresa → tipo → número al asignar OC
+- [ ] **OC-6:** Crear proyecto en DAZZ Producciones — selector empresa → tipo → número
+
+### Limpieza y deuda técnica
+- [ ] **LIM-1:** validate_supplier_invoice re-query supplier → pasar objeto
+- [ ] **LIM-2:** totalLoaded state nunca se usa en InvoicesList — eliminar
+- [ ] **LIM-3:** Array index como key en file list Upload.jsx
+- [ ] **LIM-4:** Limpieza código referencias eliminadas
+
+### Rendimiento e integración
+- [ ] **REN-1:** Revisión completa rendimiento (especialmente móvil)
+- [ ] **INT-1:** Facturas aprobadas → reflejarse en proyectos DAZZ Producciones
+
+### Testing
+- [ ] **TEST-1:** Computer Use testing automatizado
