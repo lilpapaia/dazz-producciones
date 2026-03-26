@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSummary, getMyInvoices, getReceivedInvoices, requestDeleteInvoice } from '../services/api';
-import { Search, Trash2, ExternalLink, Upload, Info, Download, FileText } from 'lucide-react';
+import { Search, Trash2, Upload, Info, Download, FileText, X } from 'lucide-react';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 const PILL = {
@@ -30,6 +30,7 @@ const Home = () => {
   const [receivedInvoices, setReceivedInvoices] = useState([]);
   const [receivedLoading, setReceivedLoading] = useState(false);
   const [error, setError] = useState('');
+  const [viewer, setViewer] = useState(null);
 
   const load = () => {
     setError('');
@@ -42,6 +43,7 @@ const Home = () => {
   };
 
   useEscapeKey(() => { setDeleteModal(null); setReason(''); }, !!deleteModal);
+  useEscapeKey(() => setViewer(null), !!viewer);
 
   useEffect(() => { setLoading(true); load(); }, [statusFilter]);
 
@@ -146,7 +148,8 @@ const Home = () => {
             ) : filtered.map(inv => {
               const pill = PILL[inv.status] || PILL.PENDING;
               return (
-                <div key={inv.id} className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 transition-colors active:border-amber-500/50">
+                <div key={inv.id} onClick={() => inv.file_url && setViewer(inv)}
+                  className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 transition-colors active:border-amber-500/50 cursor-pointer">
                   <div className="flex items-start justify-between mb-2">
                     <span className="font-['IBM_Plex_Mono'] text-xs font-medium text-zinc-200">{inv.invoice_number}</span>
                     <span className="font-['IBM_Plex_Mono'] text-sm font-semibold text-zinc-100">
@@ -168,13 +171,8 @@ const Home = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {inv.file_url && (
-                        <button onClick={() => window.open(inv.file_url, '_blank')} className="text-zinc-600 hover:text-zinc-300 transition-colors">
-                          <ExternalLink size={15} strokeWidth={1.5} />
-                        </button>
-                      )}
                       {(inv.status === 'PENDING' || inv.status === 'OC_PENDING') ? (
-                        <button onClick={() => setDeleteModal(inv)} className="w-7 h-7 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors">
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-7 h-7 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors">
                           <Trash2 size={13} strokeWidth={1.5} />
                         </button>
                       ) : (
@@ -291,6 +289,65 @@ const Home = () => {
           </div>
         </div>
       )}
+
+      {/* ═══ PDF Viewer Lightbox ═══ */}
+      {viewer && (() => {
+        const viewerIdx = filtered.findIndex(i => i.id === viewer.id);
+        return (
+          <div className="fixed inset-0 bg-black z-50 flex flex-col"
+            style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <div className="flex items-center gap-3">
+                {filtered.length > 1 && (
+                  <>
+                    <button onClick={() => setViewer(filtered[viewerIdx - 1])} disabled={viewerIdx <= 0}
+                      className="text-xs text-zinc-400 hover:text-zinc-200 disabled:opacity-30 transition-colors">← Previous</button>
+                    <span className="text-xs text-zinc-500 font-mono">{viewerIdx + 1}/{filtered.length}</span>
+                    <button onClick={() => setViewer(filtered[viewerIdx + 1])} disabled={viewerIdx >= filtered.length - 1}
+                      className="text-xs text-zinc-400 hover:text-zinc-200 disabled:opacity-30 transition-colors">Next →</button>
+                  </>
+                )}
+                <span className="text-xs text-zinc-300 font-mono">{viewer.invoice_number}</span>
+              </div>
+              <button onClick={() => setViewer(null)}
+                className="text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* PDF iframe */}
+            <div className="flex-1 min-h-0">
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewer.file_url)}&embedded=true`}
+                className="w-full h-full bg-white" title="Invoice PDF" />
+            </div>
+
+            {/* Footer info */}
+            <div className="px-4 py-3 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className={`text-[10px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 ${(PILL[viewer.status] || PILL.PENDING).cls}`}>
+                  <span className={`w-[5px] h-[5px] rounded-full ${(PILL[viewer.status] || PILL.PENDING).dot}`} />
+                  {STATUS_LABEL[viewer.status] || viewer.status}
+                </span>
+                <span className="text-xs text-zinc-300 font-mono">{viewer.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR</span>
+                <span className="text-xs text-zinc-500">{viewer.date}</span>
+                {viewer.oc_number ? (
+                  <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{viewer.oc_number}</span>
+                ) : (
+                  <span className="text-[10px] text-zinc-600">Pending assignment</span>
+                )}
+              </div>
+              {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING') && (
+                <button onClick={() => { setViewer(null); setDeleteModal(viewer); }}
+                  className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1">
+                  <Trash2 size={12} /> Delete
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
