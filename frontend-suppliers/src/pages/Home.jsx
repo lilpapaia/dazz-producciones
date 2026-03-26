@@ -294,24 +294,28 @@ const Home = () => {
       {viewer && (() => {
         const viewerIdx = filtered.findIndex(i => i.id === viewer.id);
         return (
-          <div className="fixed inset-0 bg-black z-50 flex flex-col"
+          <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col"
             style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <div className="flex items-center gap-3">
-                {filtered.length > 1 && (
-                  <>
+            <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-800">
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-3">
+                  {filtered.length > 1 && (
                     <button onClick={() => setViewer(filtered[viewerIdx - 1])} disabled={viewerIdx <= 0}
-                      className="text-xs text-zinc-400 hover:text-zinc-200 disabled:opacity-30 transition-colors">← Previous</button>
-                    <span className="text-xs text-zinc-500 font-mono">{viewerIdx + 1}/{filtered.length}</span>
+                      className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">← Previous</button>
+                  )}
+                  <span className="text-sm text-zinc-200 font-mono">{viewer.invoice_number}</span>
+                  {filtered.length > 1 && (
                     <button onClick={() => setViewer(filtered[viewerIdx + 1])} disabled={viewerIdx >= filtered.length - 1}
-                      className="text-xs text-zinc-400 hover:text-zinc-200 disabled:opacity-30 transition-colors">Next →</button>
-                  </>
+                      className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">Next →</button>
+                  )}
+                </div>
+                {filtered.length > 1 && (
+                  <span className="text-[11px] text-zinc-500">{viewerIdx + 1}/{filtered.length}</span>
                 )}
-                <span className="text-xs text-zinc-300 font-mono">{viewer.invoice_number}</span>
               </div>
               <button onClick={() => setViewer(null)}
-                className="text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700">
+                className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700">
                 <X size={20} />
               </button>
             </div>
@@ -324,24 +328,24 @@ const Home = () => {
             </div>
 
             {/* Footer info */}
-            <div className="px-4 py-3 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className={`text-[10px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 ${(PILL[viewer.status] || PILL.PENDING).cls}`}>
-                  <span className={`w-[5px] h-[5px] rounded-full ${(PILL[viewer.status] || PILL.PENDING).dot}`} />
+            <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className={`text-[12px] font-medium px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 ${(PILL[viewer.status] || PILL.PENDING).cls}`}>
+                  <span className={`w-[6px] h-[6px] rounded-full ${(PILL[viewer.status] || PILL.PENDING).dot}`} />
                   {STATUS_LABEL[viewer.status] || viewer.status}
                 </span>
-                <span className="text-xs text-zinc-300 font-mono">{viewer.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR</span>
-                <span className="text-xs text-zinc-500">{viewer.date}</span>
+                <span className="text-[15px] font-semibold text-zinc-100 font-mono">{viewer.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR</span>
+                <span className="text-[13px] text-zinc-400">{viewer.date}</span>
                 {viewer.oc_number ? (
-                  <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{viewer.oc_number}</span>
+                  <span className="text-[11px] px-2 py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{viewer.oc_number}</span>
                 ) : (
-                  <span className="text-[10px] text-zinc-600">Pending assignment</span>
+                  <span className="text-[11px] text-zinc-600">Pending assignment</span>
                 )}
               </div>
               {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING') && (
                 <button onClick={() => { setViewer(null); setDeleteModal(viewer); }}
-                  className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1">
-                  <Trash2 size={12} /> Delete
+                  className="text-[12px] text-red-400 border border-red-400/25 px-4 py-2 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1.5">
+                  <Trash2 size={13} /> Delete
                 </button>
               )}
             </div>
