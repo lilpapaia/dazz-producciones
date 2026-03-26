@@ -307,120 +307,6 @@ const SupplierDetail = () => {
         </button>
       </div>
 
-      {/* ═══ PENDING ACTIONS BANNER ═══ */}
-      {(pendingActions.length > 0 || (supplier && !supplier.ia_cert_verified)) && (
-        <div className="bg-amber-500/[.06] border border-amber-500/20 rounded-md p-4 mb-3.5">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={14} className="text-amber-400" />
-            <span className="text-[13px] font-semibold text-amber-400 tracking-wide">
-              ACCIONES PENDIENTES ({pendingActions.length + (supplier && !supplier.ia_cert_verified ? 1 : 0)})
-            </span>
-          </div>
-          <div className="space-y-2">
-            {/* A-9b: Cert verification */}
-            {supplier && !supplier.ia_cert_verified && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield size={13} className="text-amber-500" />
-                  <span className="text-[12px] font-semibold text-zinc-200">Certificado bancario pendiente de revisión manual</span>
-                </div>
-                <p className="text-[11px] text-zinc-400 mb-2">La verificación IA detectó discrepancias en el certificado bancario durante el registro.</p>
-                <button onClick={handleVerifyCert} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">
-                  Marcar como revisado
-                </button>
-              </div>
-            )}
-
-            {pendingActions.map(action => {
-              // A-9: IA alerts (invoice)
-              if (action.event_type === 'IA_REJECTED') return (
-                <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle size={13} className="text-amber-500" />
-                    <span className="text-[12px] font-semibold text-zinc-200">{action.title}</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 mb-2">{action.message}</p>
-                  {action.related_invoice_id && (
-                    <button onClick={() => navigate(`/suppliers/invoices/${action.related_invoice_id}?from=supplier&supplierId=${id}`)}
-                      className="text-[11px] text-blue-400 border border-blue-400/30 px-3 py-1.5 rounded hover:bg-blue-400/10 transition-colors">
-                      Ver factura →
-                    </button>
-                  )}
-                </div>
-              );
-
-              // A-7: Data Change
-              if (action.title === 'Data Change Request') {
-                const changes = parseDataChanges(action.message);
-                return (
-                  <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                    <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de cambio de datos</div>
-                    <div className="space-y-1 mb-3">
-                      {Object.entries(changes).map(([k, v]) => (
-                        <div key={k} className="flex gap-2 text-[11px]">
-                          <span className="text-zinc-500 w-16">{k}:</span>
-                          <span className="text-green-400">{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
-                      <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // A-8: IBAN Change
-              if (action.title === 'IBAN Change Request') {
-                const { maskedIban, certKey } = parseIbanInfo(action.message);
-                return (
-                  <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                    <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de cambio de IBAN</div>
-                    <div className="space-y-1 mb-3">
-                      <div className="flex gap-2 text-[11px]">
-                        <span className="text-zinc-500 w-16">Actual:</span>
-                        <span className="text-zinc-300 font-mono">{supplier?.iban || '—'}</span>
-                      </div>
-                      <div className="flex gap-2 text-[11px]">
-                        <span className="text-zinc-500 w-16">Nuevo:</span>
-                        <span className="text-green-400 font-mono">{maskedIban}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      {certKey && (
-                        <button onClick={() => handleViewCert()} disabled={certLoading}
-                          className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors">
-                          {certLoading ? 'Cargando...' : 'Ver certificado PDF'}</button>
-                      )}
-                      <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
-                      <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // A-10: Deactivation
-              if (action.title === 'Deactivation Request') {
-                const reason = parseDeactivationReason(action.message);
-                return (
-                  <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                    <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de baja</div>
-                    {reason && <p className="text-[11px] text-zinc-400 mb-2">Motivo: {reason}</p>}
-                    <div className="flex gap-2">
-                      <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-red-500 text-white font-semibold px-3 py-1.5 rounded hover:bg-red-400 transition-colors">Confirmar baja</button>
-                      <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
-                    </div>
-                  </div>
-                );
-              }
-
-              return null;
-            })}
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-3.5">
         {/* ═══ LEFT: Supplier card ═══ */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
@@ -527,6 +413,103 @@ const SupplierDetail = () => {
 
         {/* ═══ RIGHT: Facturas ═══ */}
         <div>
+          {/* ═══ PENDING ACTIONS BANNER ═══ */}
+          {(pendingActions.length > 0 || (supplier && !supplier.ia_cert_verified)) && (
+            <div className="bg-amber-500/[.06] border border-amber-500/20 rounded-md p-4 mb-3.5">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle size={14} className="text-amber-400" />
+                <span className="text-[13px] font-semibold text-amber-400 tracking-wide">
+                  ACCIONES PENDIENTES ({pendingActions.length + (supplier && !supplier.ia_cert_verified ? 1 : 0)})
+                </span>
+              </div>
+              <div className="space-y-2">
+                {/* A-9b: Cert verification */}
+                {supplier && !supplier.ia_cert_verified && (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield size={13} className="text-amber-500" />
+                      <span className="text-[12px] font-semibold text-zinc-200">Certificado bancario pendiente de revisión manual</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mb-2">La verificación IA detectó discrepancias en el certificado bancario durante el registro.</p>
+                    <button onClick={handleVerifyCert} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">
+                      Marcar como revisado
+                    </button>
+                  </div>
+                )}
+
+                {pendingActions.map(action => {
+                  // A-7: Data Change
+                  if (action.title === 'Data Change Request') {
+                    const changes = parseDataChanges(action.message);
+                    return (
+                      <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                        <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de cambio de datos</div>
+                        <div className="space-y-1 mb-3">
+                          {Object.entries(changes).map(([k, v]) => (
+                            <div key={k} className="flex gap-2 text-[11px]">
+                              <span className="text-zinc-500 w-16">{k}:</span>
+                              <span className="text-green-400">{v}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
+                          <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // A-8: IBAN Change
+                  if (action.title === 'IBAN Change Request') {
+                    const { maskedIban, certKey } = parseIbanInfo(action.message);
+                    return (
+                      <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                        <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de cambio de IBAN</div>
+                        <div className="space-y-1 mb-3">
+                          <div className="flex gap-2 text-[11px]">
+                            <span className="text-zinc-500 w-16">Actual:</span>
+                            <span className="text-zinc-300 font-mono">{supplier?.iban || '—'}</span>
+                          </div>
+                          <div className="flex gap-2 text-[11px]">
+                            <span className="text-zinc-500 w-16">Nuevo:</span>
+                            <span className="text-green-400 font-mono">{maskedIban}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {certKey && (
+                            <button onClick={() => handleViewCert()} disabled={certLoading}
+                              className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors">
+                              {certLoading ? 'Cargando...' : 'Ver certificado PDF'}</button>
+                          )}
+                          <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
+                          <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // A-10: Deactivation
+                  if (action.title === 'Deactivation Request') {
+                    const reason = parseDeactivationReason(action.message);
+                    return (
+                      <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                        <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de baja</div>
+                        {reason && <p className="text-[11px] text-zinc-400 mb-2">Motivo: {reason}</p>}
+                        <div className="flex gap-2">
+                          <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-red-500 text-white font-semibold px-3 py-1.5 rounded hover:bg-red-400 transition-colors">Confirmar baja</button>
+                          <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Buscador ProjectView pattern */}
           <div className="flex items-center gap-2.5 mb-3 flex-wrap">
             <div className="relative w-full sm:w-[300px]" ref={searchRef}>

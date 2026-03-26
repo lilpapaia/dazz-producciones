@@ -8,6 +8,19 @@ import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useClickOutside from '../../hooks/useClickOutside';
 
+const getPageNumbers = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i);
+  const pages = new Set([0, total - 1]);
+  for (let i = Math.max(1, current - 1); i <= Math.min(total - 2, current + 1); i++) pages.add(i);
+  const sorted = [...pages].sort((a, b) => a - b);
+  const result = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push('...');
+    result.push(sorted[i]);
+  }
+  return result;
+};
+
 const PILL = {
   PENDING: { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-500' },
   OC_PENDING: { cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20', dot: 'bg-blue-400' },
@@ -318,9 +331,13 @@ const InvoicesList = () => {
             {totalPages > 1 && (
               <div className="flex gap-1">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-2.5 py-1 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 disabled:opacity-30">← Anterior</button>
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
-                  <button key={i} onClick={() => setPage(i)} className={`px-2.5 py-1 rounded border transition-colors ${page === i ? 'bg-zinc-800 text-zinc-200 border-zinc-600' : 'border-zinc-700 text-zinc-500 hover:bg-zinc-800'}`}>{i + 1}</button>
-                ))}
+                {getPageNumbers(page, totalPages).map((p, i) =>
+                  p === '...' ? (
+                    <span key={`e${i}`} className="px-1.5 py-1 text-zinc-600">…</span>
+                  ) : (
+                    <button key={p} onClick={() => setPage(p)} className={`px-2.5 py-1 rounded border transition-colors ${page === p ? 'bg-zinc-800 text-zinc-200 border-zinc-600' : 'border-zinc-700 text-zinc-500 hover:bg-zinc-800'}`}>{p + 1}</button>
+                  )
+                )}
                 <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="px-2.5 py-1 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 disabled:opacity-30">Siguiente →</button>
               </div>
             )}
