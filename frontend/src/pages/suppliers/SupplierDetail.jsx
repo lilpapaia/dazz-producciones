@@ -117,7 +117,7 @@ const SupplierDetail = () => {
     setCertLoading(true);
     try {
       const { data } = await getBankCertUrl(id);
-      setCertUrl(data.url);
+      setCertUrl(`https://docs.google.com/viewer?url=${encodeURIComponent(data.url)}&embedded=true`);
       setShowCertLightbox(true);
     } catch { showError('No se pudo cargar el certificado bancario'); }
     setCertLoading(false);
