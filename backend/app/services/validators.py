@@ -474,7 +474,7 @@ def validate_iban_format(iban: str) -> str:
     Raises:
         HTTPException 400 si el formato es inválido
     """
-    cleaned = iban.strip().upper().replace(" ", "")
+    cleaned = iban.strip().upper().replace(" ", "").replace("-", "").replace(".", "")
 
     if len(cleaned) < 15 or len(cleaned) > 34:
         raise HTTPException(

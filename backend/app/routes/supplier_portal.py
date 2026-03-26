@@ -136,9 +136,9 @@ async def register_supplier(
                         oc_id = oc.id
                     break
 
-    # SEC-M1: Validate IBAN format (mod-97 checksum) before encrypting
+    # SEC-M1: Validate + normalize IBAN format (mod-97 checksum) before encrypting
     if body.iban:
-        validate_iban_format(body.iban)
+        body.iban = validate_iban_format(body.iban)
 
     # Create supplier
     email_hash = hashlib.sha256(invitation.email.lower().encode()).hexdigest()
@@ -169,9 +169,15 @@ async def register_supplier(
     refresh_token = create_supplier_refresh_token(db, supplier.id)
 
     # Notifications
-    _notify(db, NotificationRecipientType.ADMIN, 0, NotificationEventType.REGISTRATION,
-            "New Supplier Registered", f"{supplier.name} ({supplier.email})",
-            supplier_id=supplier.id)
+    if body.iban:
+        _notify(db, NotificationRecipientType.ADMIN, 0, NotificationEventType.REGISTRATION,
+                "New Supplier Registered", f"{supplier.name} ({supplier.email})",
+                supplier_id=supplier.id)
+    else:
+        _notify(db, NotificationRecipientType.ADMIN, 0, NotificationEventType.REGISTRATION,
+                "New Supplier Registered — No IBAN",
+                f"{supplier.name} ({supplier.email}) — registered without IBAN, payment method pending",
+                supplier_id=supplier.id)
     db.commit()
 
     return RegisterResponse(
@@ -833,8 +839,8 @@ async def request_iban_change(
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
-    # Validate IBAN format
-    validate_iban_format(new_iban)
+    # Validate + normalize IBAN format
+    new_iban = validate_iban_format(new_iban)
 
     # Save new cert to R2 (never overwrites — all versions kept for RGPD)
     cert_key = await asyncio.to_thread(

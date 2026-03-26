@@ -63,8 +63,21 @@ const UploadPage = () => {
         <h1 className="font-['Bebas_Neue'] text-[16px] tracking-wider text-zinc-300">Upload invoice</h1>
       </div>
 
+      {/* No IBAN — block upload */}
+      {profile && !profile.iban_masked && (
+        <div className="mx-4 bg-amber-500/[.06] border border-amber-500/[.12] rounded-xl p-6 text-center mb-4">
+          <AlertCircle size={28} className="text-amber-400 mx-auto mb-3" strokeWidth={1.5} />
+          <p className="text-sm font-medium text-zinc-200 mb-2">Payment method required</p>
+          <p className="text-[12px] text-zinc-400 leading-relaxed">
+            To upload invoices, please contact{' '}
+            <a href="mailto:suppliers@dazzcreative.com" className="text-amber-500 hover:underline">suppliers@dazzcreative.com</a>
+            {' '}to set up your payment method.
+          </p>
+        </div>
+      )}
+
       {/* Drop zone */}
-      {!allDone && (
+      {!allDone && (!profile || profile.iban_masked) && (
         <div
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -85,7 +98,7 @@ const UploadPage = () => {
       )}
 
       {/* OC info warning */}
-      {!allDone && (
+      {!allDone && (!profile || profile.iban_masked) && (
         <div className="mx-4 mb-3 rounded-lg p-2.5 text-[11px] flex items-start gap-2 bg-amber-500/[.06] text-amber-400 border border-amber-500/[.12] leading-relaxed">
           <AlertCircle size={13} className="flex-shrink-0 mt-0.5" strokeWidth={1.5} />
           Make sure your invoice includes the correct OC. AI will identify the project and company automatically.

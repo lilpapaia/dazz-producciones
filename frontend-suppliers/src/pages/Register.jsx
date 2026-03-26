@@ -180,12 +180,13 @@ const Register = () => {
           {step === 2 && (
             <>
               <div className="mb-3">
-                <label htmlFor="reg-iban" className={labelCls}>IBAN <span className="text-amber-500">*</span></label>
-                <input id="reg-iban" value={form.iban} onChange={set('iban')} placeholder="ES12 1234 5678 9012 3456 7890" className={inputCls} />
+                <label htmlFor="reg-iban" className={labelCls}>IBAN</label>
+                <input id="reg-iban" value={form.iban} onChange={e => setForm(f => ({ ...f, iban: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }))} placeholder="ES1212345678901234567890" className={`${inputCls} font-['IBM_Plex_Mono']`} />
                 <p className="text-[10px] text-zinc-600 mt-1">Your IBAN will be encrypted and stored securely.</p>
+                <p className="text-[10px] text-zinc-400 mt-1.5">Based outside the EU or don't have an IBAN? Contact us at <a href="mailto:suppliers@dazzcreative.com" className="text-amber-500 hover:underline">suppliers@dazzcreative.com</a> to arrange an alternative payment method.</p>
               </div>
               <div className="mb-4">
-                <label className={labelCls}>Bank certificate (PDF) <span className="text-amber-500">*</span></label>
+                <label className={labelCls}>Bank certificate (PDF)</label>
                 {bankCertFile ? (
                   <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-md p-2.5">
                     <FileText size={16} className="text-red-400 flex-shrink-0" />
@@ -220,6 +221,15 @@ const Register = () => {
                   setError('');
                   setIbanStatus(null);
                   setIbanMessage('');
+                  // Skip validation if no IBAN provided
+                  if (!form.iban.trim()) {
+                    setStep(3);
+                    return;
+                  }
+                  if (!bankCertFile) {
+                    setError('Please upload a bank certificate to verify your IBAN');
+                    return;
+                  }
                   setValidatingCert(true);
                   try {
                     const { data } = await validateBankCertIban(form.iban, bankCertFile, form.nif_cif, token);
@@ -238,7 +248,7 @@ const Register = () => {
                     setError(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : 'IBAN validation failed');
                   }
                   setValidatingCert(false);
-                }} disabled={!form.iban.trim() || !bankCertFile || validatingCert}
+                }} disabled={validatingCert}
                   className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
                   {validatingCert ? 'Verifying IBAN...' : 'Continue'}
                 </button>

@@ -48,7 +48,7 @@ const ChangeIban = () => {
       <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-4 mb-4">
         <div className="mb-3">
           <label className={labelCls}>New IBAN <span className="text-amber-500">*</span></label>
-          <input value={newIban} onChange={e => setNewIban(e.target.value)} placeholder="ES12 1234 5678 9012 3456 7890"
+          <input value={newIban} onChange={e => setNewIban(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} placeholder="ES1212345678901234567890"
             className={`${inputCls} font-['IBM_Plex_Mono']`} />
           <div className="text-[11px] text-zinc-600 mt-1">Must match the IBAN on the bank certificate — AI will verify</div>
         </div>
