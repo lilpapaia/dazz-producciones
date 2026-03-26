@@ -449,7 +449,8 @@ async def export_supplier_excel(
     wb.save(buf)
     buf.seek(0)
 
-    safe_name = supplier.name.replace(" ", "_")[:30]
+    import re as _re
+    safe_name = _re.sub(r'[^\w\s-]', '', supplier.name).replace(' ', '_')[:30]
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -873,16 +874,19 @@ async def confirm_invoice_deletion(
 @router.get("/notifications/all", response_model=List[NotificationResponse])
 async def list_notifications(
     unread_only: bool = False,
+    supplier_id: Optional[int] = Query(None),
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Get admin notifications (polling endpoint)."""
+    """Get admin notifications (polling endpoint). Optionally filter by supplier."""
     query = db.query(SupplierNotification).filter(
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN
     )
     if unread_only:
         query = query.filter(SupplierNotification.is_read == False)
+    if supplier_id:
+        query = query.filter(SupplierNotification.related_supplier_id == supplier_id)
 
     notifications = query.order_by(desc(SupplierNotification.created_at)).limit(limit).all()
 
@@ -938,21 +942,29 @@ async def backfill_date_parsed(
     admin: User = Depends(get_current_admin_user),
 ):
     """One-time backfill: parse date string → date_parsed for old invoices with NULL date_parsed."""
-    invoices = db.query(SupplierInvoice).filter(
-        SupplierInvoice.date_parsed == None,
-        SupplierInvoice.date != None,
-        SupplierInvoice.date != "",
-    ).all()
-
+    batch_size = 100
     updated = 0
-    for inv in invoices:
-        parsed = parse_invoice_date(inv.date)
-        if parsed:
-            inv.date_parsed = parsed
-            updated += 1
+    total = 0
+    while True:
+        invoices = db.query(SupplierInvoice).filter(
+            SupplierInvoice.date_parsed == None,
+            SupplierInvoice.date != None,
+            SupplierInvoice.date != "",
+        ).limit(batch_size).all()
 
-    db.commit()
-    return {"message": f"Backfilled {updated}/{len(invoices)} invoices"}
+        if not invoices:
+            break
+
+        total += len(invoices)
+        for inv in invoices:
+            parsed = parse_invoice_date(inv.date)
+            if parsed:
+                inv.date_parsed = parsed
+                updated += 1
+
+        db.commit()
+
+    return {"message": f"Backfilled {updated}/{total} invoices"}
 
 
 # ============================================

@@ -77,11 +77,11 @@ const SupplierDetail = () => {
     Promise.all([
       getSupplier(id),
       getAllInvoices({ supplier_id: id }),
-      getNotifications({ limit: 20 }),
+      getNotifications({ supplier_id: id, limit: 50 }),
     ]).then(([s, inv, notifs]) => {
       setSupplier(s.data);
       setInvoices(inv.data || []);
-      setHistory((notifs.data || []).filter(n => n.related_supplier_id === parseInt(id)));
+      setHistory(notifs.data || []);
     }).catch(() => navigate('/suppliers/list'))
       .finally(() => setLoading(false));
 
