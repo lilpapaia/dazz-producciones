@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import os
 import logging
@@ -16,25 +16,7 @@ from database_config import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics, companies
 from app.routes import suppliers as suppliers_admin, supplier_portal, autoinvoice
-
-# ============================================
-# 🔒 RATE LIMITING
-# ============================================
-def _get_real_client_ip(request: Request) -> str:
-    """Key function for rate limiting behind Railway proxy."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return "unknown"
-
-limiter = Limiter(
-    key_func=_get_real_client_ip,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://",
-    headers_enabled=True
-)
+from app.services.rate_limit import limiter
 
 # Create FastAPI app
 app = FastAPI(
@@ -237,6 +219,11 @@ async def startup_event():
             ))
             conn.execute(text(
                 "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS ia_cert_verified BOOLEAN DEFAULT TRUE"
+            ))
+            # SEC-7: OC unique constraint (partial index — allows multiple NULLs)
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_suppliers_oc_id "
+                "ON suppliers (oc_id) WHERE oc_id IS NOT NULL"
             ))
             # Detección duplicados: hash de archivo
             conn.execute(text(

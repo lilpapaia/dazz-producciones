@@ -78,10 +78,10 @@ export const uploadBankCert = (file) => {
 };
 
 export const getBankCertUrl = () => api.get('/portal/bank-cert-url');
-export const validateBankCertIban = (iban, file, nifCif) => {
+export const validateBankCertIban = (iban, file, nifCif, token) => {
   const form = new FormData();
   form.append('file', file);
-  let url = `/portal/validate-bank-cert?iban=${encodeURIComponent(iban)}`;
+  let url = `/portal/validate-bank-cert?iban=${encodeURIComponent(iban)}&token=${encodeURIComponent(token)}`;
   if (nifCif) url += `&nif_cif=${encodeURIComponent(nifCif)}`;
   return api.post(url, form, { headers: { 'Content-Type': 'multipart/form-data' } });
 };

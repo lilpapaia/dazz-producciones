@@ -222,7 +222,7 @@ const Register = () => {
                   setIbanMessage('');
                   setValidatingCert(true);
                   try {
-                    const { data } = await validateBankCertIban(form.iban, bankCertFile, form.nif_cif);
+                    const { data } = await validateBankCertIban(form.iban, bankCertFile, form.nif_cif, token);
                     if (data.warnings?.length > 0) {
                       setIbanStatus('warning');
                       setIbanMessage(data.warnings.join(' · '));

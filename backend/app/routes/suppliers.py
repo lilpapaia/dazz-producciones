@@ -528,6 +528,14 @@ async def assign_oc(
     if not oc:
         raise HTTPException(404, f"OC '{body.oc_number}' not found")
 
+    # SEC-7: Verify OC is not already assigned to another supplier
+    existing = db.query(Supplier).filter(
+        Supplier.oc_id == oc.id,
+        Supplier.id != supplier_id,
+    ).first()
+    if existing:
+        raise HTTPException(409, f"OC '{body.oc_number}' is already assigned to supplier '{existing.name}'")
+
     supplier.oc_id = oc.id
     db.commit()
     return {"message": f"OC {oc.oc_number} assigned to {supplier.name}"}
@@ -893,7 +901,11 @@ async def mark_notification_read(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    notif = db.query(SupplierNotification).filter(SupplierNotification.id == notification_id).first()
+    # SEC-6: Only allow marking ADMIN notifications, not supplier ones
+    notif = db.query(SupplierNotification).filter(
+        SupplierNotification.id == notification_id,
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+    ).first()
     if not notif:
         raise HTTPException(404, "Notification not found")
 

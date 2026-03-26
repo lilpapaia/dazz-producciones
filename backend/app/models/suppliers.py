@@ -84,7 +84,7 @@ class Supplier(Base):
     ia_cert_verified = Column(Boolean, default=True, nullable=False)
     # supplier_type column still exists in BD but removed from ORM (no DROP COLUMN needed)
     status = Column(Enum(SupplierStatus), default=SupplierStatus.NEW, nullable=False)
-    oc_id = Column(Integer, ForeignKey("supplier_ocs.id", ondelete="SET NULL"), nullable=True)
+    oc_id = Column(Integer, ForeignKey("supplier_ocs.id", ondelete="SET NULL"), nullable=True, unique=True)
     gdpr_consent = Column(Boolean, default=False, nullable=False)
     gdpr_consent_at = Column(DateTime, nullable=True)
     notes_internal = Column(Text, nullable=True)

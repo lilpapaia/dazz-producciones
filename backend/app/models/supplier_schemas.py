@@ -169,7 +169,7 @@ class RegisterRequest(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=50)
     address: Optional[str] = Field(default=None, max_length=500)
     iban: Optional[str] = Field(default=None, max_length=50)
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=8, max_length=128)
     gdpr_consent: bool
     has_cert_warnings: bool = False
 
@@ -198,7 +198,7 @@ class RegisterResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=128)
 
 
 class LoginResponse(BaseModel):

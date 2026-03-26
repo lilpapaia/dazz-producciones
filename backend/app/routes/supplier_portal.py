@@ -41,10 +41,7 @@ from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.validators import validate_pdf_bytes, sanitize_filename, validate_iban_format
 from app.services.supplier_ai import format_date_for_response
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-limiter = Limiter(key_func=get_remote_address)
+from app.services.rate_limit import limiter
 
 router = APIRouter(prefix="/portal", tags=["Supplier Portal"])
 
@@ -123,7 +120,10 @@ async def register_supplier(
             ocs_with_nif = db.query(SupplierOC).filter(SupplierOC.nif_cif != None).all()
             for oc in ocs_with_nif:
                 if _normalize_nif(oc.nif_cif) == normalized:
-                    oc_id = oc.id
+                    # SEC-7: Only assign if OC is not already taken by another supplier
+                    already_taken = db.query(Supplier).filter(Supplier.oc_id == oc.id).first()
+                    if not already_taken:
+                        oc_id = oc.id
                     break
 
     # SEC-M1: Validate IBAN format (mod-97 checksum) before encrypting
@@ -329,15 +329,24 @@ async def get_my_bank_cert_url(
 
 
 @router.post("/validate-bank-cert")
-@limiter.limit("10/hour")
+@limiter.limit("5/hour")
 async def validate_bank_cert_iban(
     request: Request,
     iban: str = Query(..., min_length=10, max_length=50),
     nif_cif: Optional[str] = Query(None, max_length=50),
+    token: str = Query(..., min_length=1, description="Invitation token for auth during registration"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
     """Validate bank certificate: document type, IBAN match, NIF match. Never blocks registration."""
+    # SEC-2: Verify invitation token exists and is not expired (do NOT consume it)
+    invitation = db.query(SupplierInvitation).filter(
+        SupplierInvitation.token == token,
+        SupplierInvitation.used_at == None,
+        SupplierInvitation.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if not invitation:
+        raise HTTPException(403, "Invalid or expired invitation token")
     import uuid as _uuid
 
     contents = await file.read()
