@@ -109,6 +109,7 @@ const SupplierDetail = () => {
   const handleConfirmAction = async () => {
     if (confirmAction?.type === 'deactivate') await deactivateSupplier(id);
     else if (confirmAction?.type === 'reactivate') await reactivateSupplier(id);
+    else if (confirmAction?.type === 'delete_invoice') { await handleDeleteInvoice(confirmAction.invoice, null); return; }
     setConfirmAction(null);
     load();
   };
@@ -161,7 +162,7 @@ const SupplierDetail = () => {
 
   const handleTrashClick = (inv) => {
     if (inv.status === 'DELETE_REQUESTED') {
-      if (window.confirm('¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.')) handleDeleteInvoice(inv, null);
+      setConfirmAction({ type: 'delete_invoice', invoice: inv });
     } else {
       setDeleteModal(inv);
     }
@@ -802,11 +803,15 @@ const SupplierDetail = () => {
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirmAction}
-        title={confirmAction?.type === 'deactivate' ? 'Desactivar proveedor' : 'Reactivar proveedor'}
-        message={confirmAction?.type === 'deactivate'
+        title={confirmAction?.type === 'delete_invoice' ? 'Eliminar factura'
+          : confirmAction?.type === 'deactivate' ? 'Desactivar proveedor'
+          : 'Reactivar proveedor'}
+        message={confirmAction?.type === 'delete_invoice'
+          ? '¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.'
+          : confirmAction?.type === 'deactivate'
           ? '¿Desactivar este proveedor? Se invalidarán todos sus tokens.'
           : '¿Reactivar este proveedor?'}
-        type={confirmAction?.type === 'deactivate' ? 'danger' : 'warning'}
+        type={confirmAction?.type === 'deactivate' || confirmAction?.type === 'delete_invoice' ? 'danger' : 'warning'}
       />
 
       {/* ═══ MODAL: Rechazar acción pendiente ═══ */}

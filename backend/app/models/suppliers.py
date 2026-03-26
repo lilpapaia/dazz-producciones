@@ -43,6 +43,10 @@ class NotificationEventType(str, enum.Enum):
     IA_REJECTED = "IA_REJECTED"
 
 
+# Titles used to detect actionable pending notifications (BUG-12: single source of truth)
+PENDING_TITLES = ["Data Change Request", "IBAN Change Request", "Deactivation Request"]
+
+
 # ============================================
 # TABLA: SUPPLIER_OCS (OCs de influencers)
 # ============================================

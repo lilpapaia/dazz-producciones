@@ -19,7 +19,7 @@ from app.models.database import User, Company, Project, ProjectStatus, Ticket, T
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierOC, SupplierNotification,
     SupplierInvitation, InvoiceStatus, SupplierStatus,
-    NotificationRecipientType, NotificationEventType,
+    NotificationRecipientType, NotificationEventType, PENDING_TITLES,
 )
 from app.services.auth import get_current_admin_user
 from app.models.supplier_schemas import (
@@ -275,7 +275,7 @@ async def list_suppliers(
         SupplierNotification.is_read == False,
         SupplierNotification.related_supplier_id.in_(supplier_ids),
         or_(
-            SupplierNotification.title.in_(["Data Change Request", "IBAN Change Request", "Deactivation Request"]),
+            SupplierNotification.title.in_(PENDING_TITLES),
             SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
         )
     ).group_by(SupplierNotification.related_supplier_id).all()
@@ -341,7 +341,7 @@ def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
         SupplierNotification.is_read == False,
         SupplierNotification.related_supplier_id == s.id,
         or_(
-            SupplierNotification.title.in_(["Data Change Request", "IBAN Change Request", "Deactivation Request"]),
+            SupplierNotification.title.in_(PENDING_TITLES),
             SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
         )
     ).scalar() or 0
@@ -1010,8 +1010,6 @@ async def dashboard_stats(
 # ============================================
 # PENDING ACTIONS (A-7 to A-11)
 # ============================================
-
-PENDING_TITLES = ["Data Change Request", "IBAN Change Request", "Deactivation Request"]
 
 
 def _get_pending_notification(db: Session, supplier_id: int, notification_id: int) -> SupplierNotification:

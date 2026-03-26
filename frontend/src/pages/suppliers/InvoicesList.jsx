@@ -84,6 +84,7 @@ const InvoicesList = () => {
       if (action === 'approve') await updateInvoiceStatus(invoice.id, { status: 'APPROVED' });
       else if (action === 'pay') await updateInvoiceStatus(invoice.id, { status: 'PAID' });
       else if (action === 'delete') { if (!reason.trim()) return; await deleteInvoice(invoice.id, reason); }
+      else if (action === 'confirm_delete') await deleteInvoice(invoice.id, null);
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setActionModal(null); setReason(''); load();
   };
@@ -227,7 +228,7 @@ const InvoicesList = () => {
                       className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
                   )}
                   {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
-                    <button onClick={async (e) => { e.stopPropagation(); if (inv.status === 'DELETE_REQUESTED') { if (window.confirm('¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.')) { try { await deleteInvoice(inv.id, null); load(); } catch (err) { showError(err.response?.data?.detail || 'Error'); } } } else { setActionModal({ invoice: inv, action: 'delete' }); } }}
+                    <button onClick={(e) => { e.stopPropagation(); if (inv.status === 'DELETE_REQUESTED') { setActionModal({ invoice: inv, action: 'confirm_delete' }); } else { setActionModal({ invoice: inv, action: 'delete' }); } }}
                       className="w-[30px] h-[30px] flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
                       <Trash2 size={13} strokeWidth={1.5} />
                     </button>
@@ -292,7 +293,7 @@ const InvoicesList = () => {
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
                         {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') ? (
-                          <button onClick={async (e) => { e.stopPropagation(); if (inv.status === 'DELETE_REQUESTED') { if (window.confirm('¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.')) { try { await deleteInvoice(inv.id, null); load(); } catch (err) { showError(err.response?.data?.detail || 'Error'); } } } else { setActionModal({ invoice: inv, action: 'delete' }); } }}
+                          <button onClick={(e) => { e.stopPropagation(); if (inv.status === 'DELETE_REQUESTED') { setActionModal({ invoice: inv, action: 'confirm_delete' }); } else { setActionModal({ invoice: inv, action: 'delete' }); } }}
                             className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
                             <Trash2 size={12} strokeWidth={1.5} />
                           </button>
@@ -332,10 +333,12 @@ const InvoicesList = () => {
             <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">
               {actionModal.action === 'approve' && 'Aprobar factura'}
               {actionModal.action === 'pay' && 'Marcar como pagada'}
-              {actionModal.action === 'delete' && 'Eliminar factura'}
+              {(actionModal.action === 'delete' || actionModal.action === 'confirm_delete') && 'Eliminar factura'}
             </h3>
             <p className="text-xs text-zinc-500 mb-4">
-              Factura <span className="font-mono text-zinc-300">{actionModal.invoice.invoice_number}</span> de {actionModal.invoice.supplier_name}
+              {actionModal.action === 'confirm_delete'
+                ? '¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.'
+                : <>Factura <span className="font-mono text-zinc-300">{actionModal.invoice.invoice_number}</span> de {actionModal.invoice.supplier_name}</>}
             </p>
             {actionModal.action === 'delete' && (
               <div className="mb-4">
@@ -346,7 +349,7 @@ const InvoicesList = () => {
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setActionModal(null); setReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
               <button onClick={handleAction} disabled={actionModal.action === 'delete' && !reason.trim()}
-                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${actionModal.action === 'delete' ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
+                className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${actionModal.action === 'delete' || actionModal.action === 'confirm_delete' ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
                 {actionModal.action === 'approve' ? 'Aprobar' : actionModal.action === 'pay' ? 'Confirmar pago' : 'Eliminar'}
               </button>
             </div>

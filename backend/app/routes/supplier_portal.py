@@ -25,7 +25,7 @@ from app.models.supplier_schemas import (
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierOC, SupplierNotification,
     SupplierInvitation, InvoiceStatus, SupplierStatus,
-    NotificationRecipientType, NotificationEventType,
+    NotificationRecipientType, NotificationEventType, PENDING_TITLES,
 )
 from app.services.supplier_auth import (
     get_password_hash, verify_password,
@@ -293,7 +293,7 @@ async def get_profile(
         SupplierNotification.event_type.in_([
             NotificationEventType.REGISTRATION,  # reuse for data changes
         ]),
-        SupplierNotification.title.in_(["Data Change Request", "IBAN Change Request", "Deactivation Request"]),
+        SupplierNotification.title.in_(PENDING_TITLES),
     ).first()
 
     return ProfileResponse(
