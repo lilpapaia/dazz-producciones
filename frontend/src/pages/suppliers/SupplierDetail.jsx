@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, UserX, Link2, ExternalLink, Check, Download, Search, X, Edit3, Mic, Trash2, AlertTriangle, Shield } from 'lucide-react';
+import { Save, UserX, Link2, Check, Download, Search, X, Edit3, Mic, Trash2, AlertTriangle, Shield } from 'lucide-react';
 import { getSupplier, updateSupplier, deactivateSupplier, reactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel, getPendingActions, approveDataChange, rejectDataChange, approveIbanChange, rejectIbanChange, confirmDeactivation, rejectDeactivation, verifyCert } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useEscapeKey from '../../hooks/useEscapeKey';
@@ -61,6 +61,11 @@ const SupplierDetail = () => {
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  // Cert lightbox
+  const [showCertLightbox, setShowCertLightbox] = useState(false);
+  const [certUrl, setCertUrl] = useState(null);
+  const [certLoading, setCertLoading] = useState(false);
+
   // Voice search
   const { isListening, startVoiceSearch } = useVoiceSearch({
     lang: 'es-ES',
@@ -72,6 +77,7 @@ const SupplierDetail = () => {
   useClickOutside(searchRef, useCallback(() => setShowSuggestions(false), []));
   useEscapeKey(() => setEditModal(false), editModal);
   useEscapeKey(() => { setDeleteModal(null); setDeleteReason(''); }, !!deleteModal);
+  useEscapeKey(() => setShowCertLightbox(false), showCertLightbox);
 
   const load = () => {
     Promise.all([
@@ -108,10 +114,13 @@ const SupplierDetail = () => {
   };
 
   const handleViewCert = async () => {
+    setCertLoading(true);
     try {
       const { data } = await getBankCertUrl(id);
-      window.open(data.url, '_blank');
+      setCertUrl(data.url);
+      setShowCertLightbox(true);
     } catch { showError('No se pudo cargar el certificado bancario'); }
+    setCertLoading(false);
   };
 
   const handleAddNote = async () => {
@@ -374,8 +383,9 @@ const SupplierDetail = () => {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       {certKey && (
-                        <button onClick={() => { getBankCertUrl(id).then(r => window.open(r.data.url, '_blank')).catch(() => showError('Error al cargar certificado')); }}
-                          className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors">Ver certificado PDF</button>
+                        <button onClick={() => handleViewCert()} disabled={certLoading}
+                          className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors">
+                          {certLoading ? 'Cargando...' : 'Ver certificado PDF'}</button>
                       )}
                       <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                       <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
@@ -447,7 +457,8 @@ const SupplierDetail = () => {
             <div key={label} className="flex justify-between py-2 border-b border-white/[.04] last:border-0">
               <span className="text-[13px] text-zinc-500">{label}</span>
               {val === 'pdf' ? (
-                <button onClick={handleViewCert} className="text-[13px] text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">Ver PDF → <ExternalLink size={10} /></button>
+                <button onClick={handleViewCert} disabled={certLoading} className="text-[13px] text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">
+                  {certLoading ? 'Cargando...' : 'Ver PDF'}</button>
               ) : (
                 <span className={`text-right max-w-[175px] break-all text-[13px] ${mono ? 'font-mono' : ''} ${amber ? 'text-amber-400' : 'text-zinc-300'}`}>
                   {val || '—'}
@@ -814,6 +825,21 @@ const SupplierDetail = () => {
               <button onClick={handleRejectAction} className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors">Rechazar</button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ═══ LIGHTBOX: Certificado bancario PDF ═══ */}
+      {showCertLightbox && certUrl && (
+        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center backdrop-blur-sm"
+          style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          onClick={() => setShowCertLightbox(false)}>
+          <button onClick={(e) => { e.stopPropagation(); setShowCertLightbox(false); }}
+            className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
+            style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><X size={32} /></button>
+          <iframe
+            src={certUrl}
+            className="w-full h-full max-w-4xl max-h-[90vh] md:rounded-lg border border-zinc-700 bg-white"
+            onClick={(e) => e.stopPropagation()}
+            title="Certificado bancario" />
         </div>
       )}
     </div>
