@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, CheckCircle, Shield } from 'lucide-react';
-import { inviteSupplier, createOC } from '../../services/suppliersApi';
+import { Send, CheckCircle, Shield, AlertTriangle } from 'lucide-react';
+import { inviteSupplier, createOC, checkOcNif } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
 
 const SupplierInvite = () => {
@@ -12,6 +12,7 @@ const SupplierInvite = () => {
   // OC fields (optional step 1)
   const [talentName, setTalentName] = useState('');
   const [talentNif, setTalentNif] = useState('');
+  const [nifWarning, setNifWarning] = useState('');
   const [talentOC, setTalentOC] = useState('');
   const [mgmtCompanyId, setMgmtCompanyId] = useState(null);
   const [ocCreated, setOcCreated] = useState(false);
@@ -151,8 +152,20 @@ const SupplierInvite = () => {
             </div>
             <div>
               <label className={labelCls}>NIF / DNI</label>
-              <input value={talentNif} onChange={e => setTalentNif(e.target.value)} placeholder="12345678A" className={inputCls} />
-              <div className="text-[12px] text-zinc-600 mt-0.5">Para el matching automático al registrarse</div>
+              <input value={talentNif} onChange={e => { setTalentNif(e.target.value); setNifWarning(''); }}
+                onBlur={async () => {
+                  if (!talentNif.trim()) return;
+                  try {
+                    const { data } = await checkOcNif(talentNif.trim());
+                    if (data.exists) setNifWarning(`Ya existe un OC (${data.oc_number}) con este NIF — verifica que no es un duplicado`);
+                  } catch {}
+                }}
+                placeholder="12345678A" className={inputCls} />
+              {nifWarning ? (
+                <div className="text-[11px] text-amber-400 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {nifWarning}</div>
+              ) : (
+                <div className="text-[12px] text-zinc-600 mt-0.5">Para el matching automático al registrarse</div>
+              )}
             </div>
             <div>
               <label className={labelCls}>Empresa</label>

@@ -4,6 +4,12 @@ import { getProfile, getBankCertUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ExternalLink, Edit3, CreditCard, UserMinus, Info } from 'lucide-react';
 
+const STATUS_MAP = {
+  ACTIVE: { cls: 'bg-green-400/10 text-green-400 border-green-400/20', label: 'ACTIVE' },
+  NEW: { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', label: 'NEW' },
+  DEACTIVATED: { cls: 'bg-zinc-700/50 text-zinc-500 border-zinc-700', label: 'DEACTIVATED' },
+};
+
 const Profile = () => {
   const navigate = useNavigate();
   const { supplier } = useAuth();
@@ -50,8 +56,8 @@ const Profile = () => {
                   {profile.name?.toUpperCase()}
                 </div>
                 <div className="mt-1">
-                  <span className="text-[10px] font-bold px-[7px] py-[1px] rounded bg-green-400/10 text-green-400 border border-green-400/20">
-                    ACTIVE
+                  <span className={`text-[10px] font-bold px-[7px] py-[1px] rounded border ${(STATUS_MAP[profile.status] || STATUS_MAP.ACTIVE).cls}`}>
+                    {(STATUS_MAP[profile.status] || STATUS_MAP.ACTIVE).label}
                   </span>
                 </div>
               </div>

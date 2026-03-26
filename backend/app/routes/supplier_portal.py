@@ -300,6 +300,7 @@ async def get_profile(
         id=supplier.id, name=supplier.name, email=supplier.email,
         nif_cif=supplier.nif_cif, phone=supplier.phone, address=supplier.address,
         iban_masked=iban_masked,
+        status=supplier.status.value if supplier.status else "ACTIVE",
         has_permanent_oc=supplier.oc_id is not None,
         oc_number=oc_number,
         company_name=company_name,

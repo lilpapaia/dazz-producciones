@@ -260,6 +260,7 @@ const SupplierDetail = () => {
     if (!d) return '';
     const diff = Date.now() - new Date(d.endsWith('Z') ? d : d + 'Z').getTime();
     const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'ahora';
     if (mins < 60) return `${mins}min`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h`;

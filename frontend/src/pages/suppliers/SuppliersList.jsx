@@ -11,11 +11,13 @@ const STATUS_BADGE = {
   NEW: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
   DEACTIVATED: 'bg-zinc-700/50 text-zinc-500 border border-zinc-700',
 };
+const STATUS_LABEL = { ACTIVE: 'ACTIVO', NEW: 'NUEVO', DEACTIVATED: 'DESACTIVADO' };
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return '—';
   const diff = Date.now() - new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z').getTime();
   const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'ahora';
   if (mins < 60) return `${mins}min`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h`;
@@ -199,7 +201,7 @@ const SuppliersList = () => {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] text-zinc-500 font-mono">{s.nif_cif || '—'}</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{STATUS_LABEL[s.status] || s.status}</span>
                 {s.oc_number && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{s.oc_number}</span>
                 )}
@@ -235,7 +237,7 @@ const SuppliersList = () => {
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-400 font-mono">{s.nif_cif || '—'}</td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{s.status}</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${STATUS_BADGE[s.status] || STATUS_BADGE.NEW}`}>{STATUS_LABEL[s.status] || s.status}</span>
                 </td>
                 <td className="px-3 py-2.5 border-b border-white/[.04]">
                   {s.oc_number ? (

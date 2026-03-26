@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status, Query, Requ
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc, case, or_
+from sqlalchemy import func, desc, case
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import secrets
@@ -105,6 +105,19 @@ async def create_oc(
         nif_cif=oc.nif_cif,
         company_id=oc.company_id,
     )
+
+
+@router.get("/ocs/check-nif")
+async def check_oc_nif(
+    nif: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Check if a NIF already exists in supplier_ocs."""
+    existing = db.query(SupplierOC).filter(
+        func.upper(SupplierOC.nif_cif) == nif.strip().upper()
+    ).first()
+    return {"exists": existing is not None, "oc_number": existing.oc_number if existing else None}
 
 
 @router.get("/oc-suggestions")
@@ -274,10 +287,7 @@ async def list_suppliers(
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.is_read == False,
         SupplierNotification.related_supplier_id.in_(supplier_ids),
-        or_(
-            SupplierNotification.title.in_(PENDING_TITLES),
-            SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
-        )
+        SupplierNotification.title.in_(PENDING_TITLES),
     ).group_by(SupplierNotification.related_supplier_id).all()
     pending_actions_map = {sid: cnt for sid, cnt in pending_actions_q}
 
@@ -340,10 +350,7 @@ def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.is_read == False,
         SupplierNotification.related_supplier_id == s.id,
-        or_(
-            SupplierNotification.title.in_(PENDING_TITLES),
-            SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
-        )
+        SupplierNotification.title.in_(PENDING_TITLES),
     ).scalar() or 0
 
     return SupplierResponse(
@@ -1031,15 +1038,12 @@ async def get_pending_actions(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """List pending actions for a supplier (unread admin notifications)."""
+    """List pending actions for a supplier (unread admin notifications requiring decision)."""
     notifs = db.query(SupplierNotification).filter(
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.related_supplier_id == supplier_id,
         SupplierNotification.is_read == False,
-        or_(
-            SupplierNotification.title.in_(PENDING_TITLES),
-            SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
-        )
+        SupplierNotification.title.in_(PENDING_TITLES),
     ).order_by(desc(SupplierNotification.created_at)).all()
 
     return [{

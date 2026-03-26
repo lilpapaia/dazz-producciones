@@ -222,6 +222,7 @@ class ProfileResponse(BaseModel):
     has_permanent_oc: bool = False
     oc_number: Optional[str] = None
     company_name: Optional[str] = None
+    status: str = "ACTIVE"
     has_pending_change: bool = False
     pending_change_info: Optional[str] = None
     created_at: datetime

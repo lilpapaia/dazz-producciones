@@ -29,6 +29,7 @@ const InvoiceDetail = () => {
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
   const [acting, setActing] = useState(false);
+  const [confirmDeleteRequested, setConfirmDeleteRequested] = useState(false);
 
   // OC assignment
   const [ocSearch, setOcSearch] = useState('');
@@ -49,6 +50,7 @@ const InvoiceDetail = () => {
 
   useEscapeKey(() => setShowLightbox(false), showLightbox);
   useEscapeKey(() => { setDeleteModal(false); setDeleteReason(''); }, deleteModal);
+  useEscapeKey(() => setConfirmDeleteRequested(false), confirmDeleteRequested);
 
   const load = () => {
     getInvoice(invoiceId)
@@ -446,7 +448,7 @@ const InvoiceDetail = () => {
               </button>
             )}
             {invoice.status === 'DELETE_REQUESTED' && (
-              <button onClick={() => { if (window.confirm('¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.')) handleDelete(null); }} disabled={acting}
+              <button onClick={() => setConfirmDeleteRequested(true)} disabled={acting}
                 className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 <Trash2 size={13} /> Confirmar borrado
               </button>
@@ -474,6 +476,23 @@ const InvoiceDetail = () => {
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setDeleteModal(false); setDeleteReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
               <button onClick={() => handleDelete(deleteReason)} disabled={!deleteReason.trim() || acting}
+                className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors disabled:opacity-40">
+                {acting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: Confirmar borrado DELETE_REQUESTED ═══ */}
+      {confirmDeleteRequested && (
+        <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center" onClick={() => setConfirmDeleteRequested(false)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-[420px] max-w-[95vw] p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">Eliminar factura</h3>
+            <p className="text-xs text-zinc-500 mb-4">¿Confirmar borrado definitivo? El proveedor ya solicitó la eliminación.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmDeleteRequested(false)} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
+              <button onClick={() => { setConfirmDeleteRequested(false); handleDelete(null); }} disabled={acting}
                 className="text-xs px-4 py-2 rounded bg-red-500 hover:bg-red-400 text-white font-semibold transition-colors disabled:opacity-40">
                 {acting ? 'Eliminando...' : 'Eliminar'}
               </button>
