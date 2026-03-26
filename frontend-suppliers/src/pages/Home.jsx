@@ -328,26 +328,31 @@ const Home = () => {
             </div>
 
             {/* Footer info */}
-            <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className={`text-[12px] font-medium px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 ${(PILL[viewer.status] || PILL.PENDING).cls}`}>
-                  <span className={`w-[6px] h-[6px] rounded-full ${(PILL[viewer.status] || PILL.PENDING).dot}`} />
-                  {STATUS_LABEL[viewer.status] || viewer.status}
-                </span>
-                <span className="text-[15px] font-semibold text-zinc-100 font-mono">{viewer.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR</span>
-                <span className="text-[13px] text-zinc-400">{viewer.date}</span>
-                {viewer.oc_number ? (
-                  <span className="text-[11px] px-2 py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{viewer.oc_number}</span>
-                ) : (
-                  <span className="text-[11px] text-zinc-600">Pending assignment</span>
+            <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[13px] text-zinc-400">{viewer.invoice_number}</span>
+                <span className="text-[18px] font-semibold text-zinc-100 font-mono">{viewer.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR</span>
+              </div>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className={`text-[11px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1.5 ${(PILL[viewer.status] || PILL.PENDING).cls}`}>
+                    <span className={`w-[5px] h-[5px] rounded-full ${(PILL[viewer.status] || PILL.PENDING).dot}`} />
+                    {STATUS_LABEL[viewer.status] || viewer.status}
+                  </span>
+                  <span className="text-[12px] text-zinc-500">{viewer.date}</span>
+                  {viewer.oc_number ? (
+                    <span className="text-[11px] px-2 py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{viewer.oc_number}</span>
+                  ) : (
+                    <span className="text-[11px] text-zinc-600">Pending assignment</span>
+                  )}
+                </div>
+                {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING') && (
+                  <button onClick={() => { setViewer(null); setDeleteModal(viewer); }}
+                    className="text-[12px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1.5">
+                    <Trash2 size={12} /> Delete
+                  </button>
                 )}
               </div>
-              {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING') && (
-                <button onClick={() => { setViewer(null); setDeleteModal(viewer); }}
-                  className="text-[12px] text-red-400 border border-red-400/25 px-4 py-2 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1.5">
-                  <Trash2 size={13} /> Delete
-                </button>
-              )}
             </div>
           </div>
         );
