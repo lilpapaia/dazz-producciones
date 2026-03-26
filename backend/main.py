@@ -225,6 +225,11 @@ async def startup_event():
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_suppliers_oc_id "
                 "ON suppliers (oc_id) WHERE oc_id IS NOT NULL"
             ))
+            # SEC-5: NIF unique constraint (case-insensitive partial index)
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_suppliers_nif_cif "
+                "ON suppliers (UPPER(nif_cif)) WHERE nif_cif IS NOT NULL"
+            ))
             # Detección duplicados: hash de archivo
             conn.execute(text(
                 "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS file_hash VARCHAR(32)"

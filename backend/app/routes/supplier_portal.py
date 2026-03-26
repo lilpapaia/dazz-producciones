@@ -5,7 +5,7 @@ Prefijo: /portal
 
 import os
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -108,6 +108,14 @@ async def register_supplier(
     # Check email uniqueness
     if db.query(Supplier).filter(Supplier.email == invitation.email).first():
         raise HTTPException(400, "A supplier with this email already exists")
+
+    # SEC-5: Check NIF uniqueness (case-insensitive)
+    if body.nif_cif:
+        existing_nif = db.query(Supplier).filter(
+            func.upper(Supplier.nif_cif) == body.nif_cif.strip().upper()
+        ).first()
+        if existing_nif:
+            raise HTTPException(400, "A supplier with this NIF/CIF already exists")
 
     # Mark token as used (one-time)
     invitation.used_at = datetime.now(timezone.utc)
@@ -509,7 +517,6 @@ async def upload_invoice(
             date=extracted.get("date", ""),
             provider_name=extracted.get("provider", supplier.name),
             nif_cif=extracted.get("nif_cif"),
-            iban=extracted.get("iban"),
             oc_number=extracted.get("oc_number") or None,
             project_id=validation["project_id"],
             company_id=validation["company_id"],
@@ -818,12 +825,12 @@ async def request_data_change(
 
 @router.post("/request-iban-change")
 async def request_iban_change(
-    new_iban: str = Query(..., min_length=10, max_length=50),
+    new_iban: str = Form(..., min_length=10, max_length=50),
     file: UploadFile = File(...),
     supplier: Supplier = Depends(get_current_active_supplier),
     db: Session = Depends(get_db),
 ):
-    """Request IBAN change with new bank certificate. Admin must approve."""
+    """Request IBAN change with new bank certificate. Admin must approve. SEC-1: IBAN in body, not URL."""
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 

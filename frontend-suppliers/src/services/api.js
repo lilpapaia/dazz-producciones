@@ -109,7 +109,8 @@ export const requestDataChange = (data) => api.post('/portal/request-data-change
 export const requestIbanChange = (newIban, file) => {
   const form = new FormData();
   form.append('file', file);
-  return api.post(`/portal/request-iban-change?new_iban=${encodeURIComponent(newIban)}`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  form.append('new_iban', newIban);
+  return api.post('/portal/request-iban-change', form, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 export const requestDeactivation = (data) => api.post('/portal/request-deactivation', data);
 

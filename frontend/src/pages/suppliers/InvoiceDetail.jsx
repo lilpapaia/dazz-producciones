@@ -161,7 +161,7 @@ const InvoiceDetail = () => {
   const labelCls = "text-zinc-500";
   const valCls = "text-zinc-200 text-right max-w-[200px] break-all";
   const monoCls = "font-mono text-[11px]";
-  const ibanCls = "text-zinc-200 text-right font-mono text-[11px] whitespace-nowrap overflow-hidden text-ellipsis";
+
 
   return (
     <div>
@@ -301,7 +301,6 @@ const InvoiceDetail = () => {
             <div className={rowCls}><span className={labelCls}>Fecha</span><span className={valCls}>{invoice.date}</span></div>
             <div className={rowCls}><span className={labelCls}>Proveedor</span><span className={valCls}>{invoice.provider_name}</span></div>
             <div className={rowCls}><span className={labelCls}>NIF/CIF</span><span className={`${valCls} ${monoCls}`}>{invoice.nif_cif || '—'}</span></div>
-            <div className={rowCls}><span className={labelCls}>IBAN</span><span className={ibanCls}>{invoice.iban || '—'}</span></div>
             <div className={rowCls}>
               <span className={labelCls}>OC</span>
               {invoice.oc_number

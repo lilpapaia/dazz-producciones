@@ -126,7 +126,6 @@ class InvoiceResponse(BaseModel):
 
 class InvoiceDetailResponse(InvoiceResponse):
     nif_cif: Optional[str] = None
-    iban: Optional[str] = None
     ia_validation_result: Optional[str] = None
 
 

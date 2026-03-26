@@ -75,7 +75,7 @@ class Supplier(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     email_hash = Column(String, nullable=True, index=True)
     hashed_password = Column(String, nullable=False)
-    nif_cif = Column(String, nullable=True)
+    nif_cif = Column(String, nullable=True, unique=True)
     phone = Column(String, nullable=True)
     address = Column(Text, nullable=True)
     iban_encrypted = Column(LargeBinary, nullable=True)

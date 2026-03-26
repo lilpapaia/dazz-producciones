@@ -700,7 +700,7 @@ async def get_invoice(
         file_pages=invoice.file_pages,
         status=invoice.status.value if invoice.status else "PENDING",
         rejection_reason=invoice.rejection_reason, delete_reason=invoice.delete_reason,
-        nif_cif=invoice.nif_cif, iban=invoice.iban,
+        nif_cif=invoice.nif_cif,
         ia_validation_result=invoice.ia_validation_result,
         created_at=invoice.created_at,
     )
