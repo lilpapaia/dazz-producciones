@@ -12,18 +12,25 @@ const UploadPage = () => {
   const [files, setFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [rejected, setRejected] = useState('');
   const [currentIdx, setCurrentIdx] = useState(-1);
   const [profile, setProfile] = useState(null);
 
   useEffect(() => { getProfile().then(r => setProfile(r.data)).catch(() => {}); }, []);
 
   const addFiles = (fileList) => {
-    const valid = Array.from(fileList).filter(f => f.type === 'application/pdf' && f.size <= 10 * 1024 * 1024);
+    setRejected('');
+    const all = Array.from(fileList);
+    const tooBig = all.filter(f => f.size > 10 * 1024 * 1024);
+    const wrongType = all.filter(f => f.type !== 'application/pdf' && f.size <= 10 * 1024 * 1024);
+    const valid = all.filter(f => f.type === 'application/pdf' && f.size <= 10 * 1024 * 1024);
+    if (tooBig.length) setRejected(`${tooBig.length} file(s) too large (max 10MB)`);
+    else if (wrongType.length) setRejected(`${wrongType.length} file(s) rejected — only PDF accepted`);
     if (!valid.length) return;
     setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: 'pending', result: null }))]);
   };
 
-  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
+  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (!uploading && e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
   const removeFile = (i) => setFiles(prev => prev.filter((_, idx) => idx !== i));
 
   const handleUploadAll = async () => {
@@ -79,21 +86,40 @@ const UploadPage = () => {
       {/* Drop zone */}
       {!allDone && (!profile || profile.iban_masked) && (
         <div
-          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragOver={e => { e.preventDefault(); if (!uploading) setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          onClick={() => fileRef.current?.click()}
-          className={`mx-4 border-2 border-dashed rounded-xl p-7 text-center cursor-pointer transition-all mb-3 ${
-            dragOver ? 'border-amber-500 bg-amber-500/[.03]' : 'border-zinc-700 bg-white/[.01] active:border-amber-500'
+          onClick={() => { if (!uploading) fileRef.current?.click(); }}
+          className={`mx-4 border-2 border-dashed rounded-xl p-7 text-center transition-all mb-3 ${
+            uploading ? 'border-zinc-800 bg-zinc-900/50 cursor-not-allowed opacity-50' :
+            dragOver ? 'border-amber-500 bg-amber-500/[.03] cursor-pointer' : 'border-zinc-700 bg-white/[.01] active:border-amber-500 cursor-pointer'
           }`}
         >
-          <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2" strokeWidth={1.5} />
-          <p className="text-sm font-medium text-zinc-300 mb-1">Select your invoice</p>
-          <p className="text-[11px] text-zinc-500">PDF only · Max 10MB · Multiple files allowed</p>
-          <p className="text-[10px] text-zinc-600 mt-2 bg-[#27272a] inline-block px-2.5 py-1 rounded-md">
-            AI will extract and verify all data automatically
-          </p>
-          <input ref={fileRef} type="file" accept=".pdf,application/pdf" multiple onChange={e => { if (e.target.files?.length) addFiles(e.target.files); e.target.value = ''; }} className="hidden" />
+          {uploading ? (
+            <>
+              <Loader2 size={28} className="text-amber-500 mx-auto mb-2 animate-spin" strokeWidth={1.5} />
+              <p className="text-sm font-medium text-amber-400 mb-1">AI analyzing...</p>
+              <p className="text-[11px] text-zinc-500">Please wait until processing completes</p>
+            </>
+          ) : (
+            <>
+              <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2" strokeWidth={1.5} />
+              <p className="text-sm font-medium text-zinc-300 mb-1">Select your invoice</p>
+              <p className="text-[11px] text-zinc-500">PDF only · Max 10MB · Multiple files allowed</p>
+              <p className="text-[10px] text-zinc-600 mt-2 bg-[#27272a] inline-block px-2.5 py-1 rounded-md">
+                AI will extract and verify all data automatically
+              </p>
+            </>
+          )}
+          <input ref={fileRef} type="file" accept=".pdf,application/pdf" multiple disabled={uploading} onChange={e => { if (e.target.files?.length) addFiles(e.target.files); e.target.value = ''; }} className="hidden" />
+        </div>
+      )}
+
+      {/* Rejected files feedback */}
+      {rejected && (
+        <div className="mx-4 mb-3 bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-[12px] flex items-center gap-2">
+          <AlertCircle size={13} className="flex-shrink-0" strokeWidth={1.5} />
+          {rejected}
         </div>
       )}
 

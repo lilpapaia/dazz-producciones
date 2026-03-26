@@ -31,6 +31,7 @@ const InvoicesList = () => {
   const searchRef = useRef(null);
   const [actionModal, setActionModal] = useState(null);
   const [reason, setReason] = useState('');
+  const [acting, setActing] = useState(false);
   const [page, setPage] = useState(0);
   const [totalLoaded, setTotalLoaded] = useState(0);
 
@@ -78,15 +79,16 @@ const InvoicesList = () => {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
 
   const handleAction = async () => {
-    if (!actionModal) return;
+    if (!actionModal || acting) return;
+    setActing(true);
     const { invoice, action } = actionModal;
     try {
       if (action === 'approve') await updateInvoiceStatus(invoice.id, { status: 'APPROVED' });
       else if (action === 'pay') await updateInvoiceStatus(invoice.id, { status: 'PAID' });
-      else if (action === 'delete') { if (!reason.trim()) return; await deleteInvoice(invoice.id, reason); }
+      else if (action === 'delete') { if (!reason.trim()) { setActing(false); return; } await deleteInvoice(invoice.id, reason); }
       else if (action === 'confirm_delete') await deleteInvoice(invoice.id, null);
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
-    setActionModal(null); setReason(''); load();
+    setActionModal(null); setReason(''); setActing(false); load();
   };
 
   if (loading) return (
@@ -347,8 +349,8 @@ const InvoicesList = () => {
               </div>
             )}
             <div className="flex gap-2 justify-end">
-              <button onClick={() => { setActionModal(null); setReason(''); }} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Cancelar</button>
-              <button onClick={handleAction} disabled={actionModal.action === 'delete' && !reason.trim()}
+              <button onClick={() => { setActionModal(null); setReason(''); }} disabled={acting} className="text-xs px-4 py-2 rounded border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors disabled:opacity-40">Cancelar</button>
+              <button onClick={handleAction} disabled={acting || (actionModal.action === 'delete' && !reason.trim())}
                 className={`text-xs px-4 py-2 rounded font-semibold transition-colors disabled:opacity-40 ${actionModal.action === 'delete' || actionModal.action === 'confirm_delete' ? 'bg-red-500 hover:bg-red-400 text-white' : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'}`}>
                 {actionModal.action === 'approve' ? 'Aprobar' : actionModal.action === 'pay' ? 'Confirmar pago' : 'Eliminar'}
               </button>
