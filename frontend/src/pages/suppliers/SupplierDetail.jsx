@@ -244,7 +244,7 @@ const SupplierDetail = () => {
 
   const timeAgo = (d) => {
     if (!d) return '';
-    const diff = Date.now() - new Date(d).getTime();
+    const diff = Date.now() - new Date(d.endsWith('Z') ? d : d + 'Z').getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins}min`;
     const hrs = Math.floor(mins / 60);

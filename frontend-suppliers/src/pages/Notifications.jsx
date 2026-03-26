@@ -18,7 +18,7 @@ const ACCOUNT_RE = /Data Change|IBAN Change|Deactivation/i;
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff = Date.now() - new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z').getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;

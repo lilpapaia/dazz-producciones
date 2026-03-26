@@ -45,7 +45,7 @@ const SuppliersDashboard = () => {
   ];
 
   const timeAgo = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = Date.now() - new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z').getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins}min`;
     const hours = Math.floor(mins / 60);

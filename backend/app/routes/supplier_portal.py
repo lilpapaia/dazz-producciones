@@ -5,6 +5,7 @@ Prefijo: /portal
 
 import os
 import asyncio
+import tempfile
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -360,10 +361,10 @@ async def validate_bank_cert_iban(
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
-    temp_path = os.path.join("uploads", "suppliers", f"tmp_cert_{_uuid.uuid4().hex[:8]}.pdf")
-    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-    with open(temp_path, "wb") as f:
-        f.write(contents)
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    temp_path = tmp.name
+    tmp.write(contents)
+    tmp.close()
 
     try:
         cert_data = await asyncio.to_thread(extract_bank_cert_data, temp_path)
@@ -459,12 +460,10 @@ async def upload_invoice(
     validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
 
     # Save to temp file for AI extraction (Cloudinary upload happens AFTER validation)
-    import uuid as _uuid
-    temp_id = _uuid.uuid4().hex[:8]
-    temp_path = os.path.join("uploads", "suppliers", f"tmp_ai_{temp_id}.pdf")
-    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-    with open(temp_path, "wb") as out:
-        out.write(contents)
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    temp_path = tmp.name
+    tmp.write(contents)
+    tmp.close()
 
     try:
         # PERF-M1: Offload AI extraction (3-10s) al thread pool

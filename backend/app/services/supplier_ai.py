@@ -29,6 +29,10 @@ from app.services.encryption import decrypt_iban
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+if not ANTHROPIC_API_KEY:
+    import logging as _logging
+    _logging.getLogger(__name__).warning("ANTHROPIC_API_KEY not set — AI features will fail")
+
 CLAUDE_MODEL = "claude-sonnet-4-6"
 
 # ============================================
@@ -133,31 +137,34 @@ def extract_supplier_invoice(file_path: str, file_type: str) -> Dict[str, Any]:
 
     media_type = "application/pdf" if file_type == "application/pdf" else file_type
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
-    message = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=1024,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document" if media_type == "application/pdf" else "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64_data,
+        message = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document" if media_type == "application/pdf" else "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": base64_data,
+                            },
                         },
-                    },
-                    {
-                        "type": "text",
-                        "text": EXTRACTION_PROMPT,
-                    },
-                ],
-            }
-        ],
-    )
+                        {
+                            "type": "text",
+                            "text": EXTRACTION_PROMPT,
+                        },
+                    ],
+                }
+            ],
+        )
+    except Exception as e:
+        return {"error": f"AI service temporarily unavailable: {type(e).__name__}", "confidence": 0.0}
 
     response_text = message.content[0].text.strip()
 
@@ -491,22 +498,25 @@ def extract_bank_cert_data(file_path: str) -> Dict[str, Any]:
 
     base64_data = base64.b64encode(file_data).decode("utf-8")
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
-    message = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=256,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "document",
-                    "source": {"type": "base64", "media_type": "application/pdf", "data": base64_data},
-                },
-                {"type": "text", "text": CERT_VALIDATION_PROMPT},
-            ],
-        }],
-    )
+        message = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=256,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "document",
+                        "source": {"type": "base64", "media_type": "application/pdf", "data": base64_data},
+                    },
+                    {"type": "text", "text": CERT_VALIDATION_PROMPT},
+                ],
+            }],
+        )
+    except Exception:
+        return {}
 
     response_text = message.content[0].text.strip()
     if response_text.startswith("```"):
