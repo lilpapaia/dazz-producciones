@@ -13,6 +13,8 @@ const ChangeIban = () => {
 
   const handleSubmit = async () => {
     if (!newIban.trim() || !file) return;
+    if (file.type !== 'application/pdf') { setError('Only PDF files are accepted'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('File size must be under 10MB'); return; }
     setError('');
     setSending(true);
     try {
@@ -20,8 +22,9 @@ const ChangeIban = () => {
       navigate('/profile');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to submit IBAN change request');
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2.5 rounded-[7px] focus:border-amber-500 outline-none";

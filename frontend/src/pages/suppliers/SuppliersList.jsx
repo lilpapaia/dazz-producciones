@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, Mic } from 'lucide-react';
 import { getSuppliers } from '../../services/suppliersApi';
+import { showError } from '../../utils/toast';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useClickOutside from '../../hooks/useClickOutside';
 
@@ -53,7 +54,7 @@ const SuppliersList = () => {
     if (statusFilter) params.status = statusFilter;
     getSuppliers(params)
       .then((s) => { setSuppliers(s.data); })
-      .catch(() => {})
+      .catch(() => showError('Error al cargar proveedores'))
       .finally(() => setLoading(false));
   };
 

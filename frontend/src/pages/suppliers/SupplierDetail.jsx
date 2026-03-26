@@ -127,9 +127,11 @@ const SupplierDetail = () => {
   const handleAddNote = async () => {
     if (!note.trim()) return;
     setSaving(true);
-    await addSupplierNote(id, note);
-    setNote('');
-    load();
+    try {
+      await addSupplierNote(id, note);
+      setNote('');
+      load();
+    } catch { showError('Error al añadir nota'); }
     setSaving(false);
   };
 
@@ -137,8 +139,10 @@ const SupplierDetail = () => {
     if (!supplier.notes_internal) return;
     const lines = supplier.notes_internal.split('\n');
     const updated = lines.filter((_, i) => i !== lineIndex).join('\n').trim();
-    await updateSupplier(id, { notes_internal: updated || null });
-    load();
+    try {
+      await updateSupplier(id, { notes_internal: updated || null });
+      load();
+    } catch { showError('Error al eliminar nota'); }
   };
 
   const handleInvoiceAction = async (invoiceId, status) => {

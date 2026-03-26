@@ -791,8 +791,8 @@ async def update_invoice_status(
             try:
                 send_supplier_invoice_paid(supplier.name, supplier.email,
                                            invoice.invoice_number, invoice.final_total)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to send PAID email to {supplier.email}: {e}")
 
     # Single commit: status change + ticket + notifications
     db.commit()

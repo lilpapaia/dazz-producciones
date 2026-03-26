@@ -196,19 +196,21 @@ const InvoiceDetail = () => {
         <div className="flex items-center gap-2">
           {invoice.file_url && (
             <button onClick={async () => {
-              const res = await fetch(invoice.file_url);
-              const blob = await res.blob();
-              const a = document.createElement('a');
-              a.href = URL.createObjectURL(blob);
-              const supplier = (invoice.supplier_name || invoice.provider_name || 'proveedor').replace(/\s+/g, '_');
-              const date = invoice.date || '';
-              a.download = invoice.invoice_number
-                ? `${supplier}_${date}_${invoice.invoice_number}.pdf`
-                : `${supplier}_${date}.pdf`;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(a.href);
+              try {
+                const res = await fetch(invoice.file_url);
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                const supplier = (invoice.supplier_name || invoice.provider_name || 'proveedor').replace(/\s+/g, '_');
+                const date = invoice.date || '';
+                a.download = invoice.invoice_number
+                  ? `${supplier}_${date}_${invoice.invoice_number}.pdf`
+                  : `${supplier}_${date}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(a.href);
+              } catch { showError('Error al descargar PDF'); }
             }}
               className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
               <Download size={14} /> Descargar PDF
