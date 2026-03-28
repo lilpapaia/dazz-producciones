@@ -10,6 +10,168 @@ import useVoiceSearch from '../hooks/useVoiceSearch';
 import useClickOutside from '../hooks/useClickOutside';
 import { ROLES } from '../constants/roles';
 
+// ── Tarjeta de proyecto (hoisted — avoids remount on every Dashboard render) ──
+const ProjectCard = ({ project, navigate, activeTab, companies }) => (
+  <div
+    onClick={() => navigate(`/projects/${project.id}`)}
+    className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
+  >
+    <div className="flex items-center justify-between gap-2 mb-3">
+      <h3 className="text-lg font-bebas tracking-wider">{project.creative_code}</h3>
+      <StatusBadge type="project" value={project.status} />
+    </div>
+
+    <p className="text-sm text-zinc-300 mb-3 line-clamp-2">{project.description}</p>
+
+    <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2 flex-wrap">
+      <div className="flex items-center gap-1">
+        <span>👤</span>
+        <span>{project.responsible}</span>
+      </div>
+      <span>•</span>
+      <div className="flex items-center gap-1">
+        <span>📅</span>
+        <span>{project.year}</span>
+      </div>
+      <span>•</span>
+      <div className="flex items-center gap-1">
+        <span>🎫</span>
+        <span>{project.tickets_count} tickets</span>
+      </div>
+    </div>
+
+    {activeTab === 'all' && companies.length > 1 && (
+      <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
+        <Building2 size={13} className="text-zinc-500" />
+        <span>{project.owner_company?.name || project.company || 'Sin empresa'}</span>
+      </div>
+    )}
+
+    <div className="pt-3 border-t border-zinc-800">
+      <p className="text-sm text-zinc-500">
+        IMPORTE TOTAL <span className="text-amber-500 font-bold text-2xl ml-2">| {project.total_amount?.toFixed(2)}€</span>
+      </p>
+    </div>
+  </div>
+);
+
+// ── Barra de búsqueda + filtros (hoisted) ──
+const SearchAndFilters = ({
+  projects, statusFilter, setStatusFilter, searchTerm, handleSearchChange,
+  showSuggestions, suggestions, navigate, saveRecentSearch, recentSearches,
+  setSearchTerm, setShowSuggestions, clearSearch, handleSearchSubmit,
+  startVoiceSearch, isListening, searchRef,
+}) => (
+  <div className="flex flex-col md:flex-row md:items-center gap-4">
+    <div className="flex gap-2 overflow-x-auto">
+      {[
+        { key: 'all', label: 'TODOS', count: projects.length },
+        { key: 'en_curso', label: 'EN CURSO', count: projects.filter(p => p.status === 'en_curso').length },
+        { key: 'cerrado', label: 'CERRADOS', count: projects.filter(p => p.status === 'cerrado').length },
+      ].map(f => (
+        <button
+          key={f.key}
+          onClick={() => setStatusFilter(f.key)}
+          className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors whitespace-nowrap ${
+            statusFilter === f.key
+              ? 'bg-amber-500 text-zinc-950'
+              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+          }`}
+        >
+          {f.label} ({f.count})
+        </button>
+      ))}
+    </div>
+
+    <div className="w-full md:w-96 relative md:ml-auto" ref={searchRef}>
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
+        <input
+          type="search"
+          placeholder=" Buscar proyectos..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          onFocus={() => searchTerm && setShowSuggestions(true)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+          className="w-full px-3 py-2 pl-10 pr-20 bg-zinc-900 border border-zinc-700 rounded-sm text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+        />
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
+          {searchTerm && (
+            <button onClick={clearSearch} className="p-1 hover:bg-zinc-800 rounded-sm transition-colors" title="Limpiar búsqueda">
+              <X size={16} className="text-zinc-500" />
+            </button>
+          )}
+          <button
+            onClick={startVoiceSearch}
+            disabled={isListening}
+            className={`p-1 rounded-sm transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
+            title="Búsqueda por voz"
+          >
+            <Mic size={16} />
+          </button>
+        </div>
+      </div>
+
+      {showSuggestions && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-sm shadow-xl max-h-96 overflow-y-auto z-50">
+          {searchTerm && suggestions.length > 0 && (
+            <div>
+              <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800">
+                PROYECTOS ENCONTRADOS
+              </div>
+              {suggestions.map((project) => (
+                <div
+                  key={project.id}
+                  onClick={() => { navigate(`/projects/${project.id}`); saveRecentSearch(searchTerm); }}
+                  className="px-3 py-2.5 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{project.creative_code}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">{project.description}</p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500">
+                        <span>👤 {project.responsible}</span>
+                        <span>📅 {project.year}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-amber-500 font-bold text-sm">{project.total_amount?.toFixed(2)}€</p>
+                      <p className="text-xs text-zinc-500">{project.tickets_count} tickets</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {searchTerm && suggestions.length === 0 && (
+            <div className="px-4 py-6 text-center text-zinc-500">
+              <p className="text-sm">No se encontraron proyectos</p>
+            </div>
+          )}
+          {!searchTerm && recentSearches.length > 0 && (
+            <div>
+              <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800 flex items-center gap-2">
+                <Clock size={12} />
+                BÚSQUEDAS RECIENTES
+              </div>
+              {recentSearches.map((term, index) => (
+                <div
+                  key={index}
+                  onClick={() => { setSearchTerm(term); setShowSuggestions(true); }}
+                  className="px-3 py-2 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0 flex items-center gap-2"
+                >
+                  <Search size={12} className="text-zinc-600" />
+                  <span className="text-sm text-zinc-300">{term}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -150,169 +312,8 @@ const Dashboard = () => {
     importe: projects.reduce((sum, p) => sum + (p.total_amount || 0), 0),
   };
 
-  // ── Tarjeta de proyecto (reutilizable) ─────────────────────────────────────
-  const ProjectCard = ({ project }) => (
-    <div
-      onClick={() => navigate(`/projects/${project.id}`)}
-      className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
-    >
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h3 className="text-lg font-bebas tracking-wider">{project.creative_code}</h3>
-        <StatusBadge type="project" value={project.status} />
-      </div>
-
-      <p className="text-sm text-zinc-300 mb-3 line-clamp-2">{project.description}</p>
-
-      <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2 flex-wrap">
-        <div className="flex items-center gap-1">
-          <span>👤</span>
-          <span>{project.responsible}</span>
-        </div>
-        <span>•</span>
-        <div className="flex items-center gap-1">
-          <span>📅</span>
-          <span>{project.year}</span>
-        </div>
-        <span>•</span>
-        <div className="flex items-center gap-1">
-          <span>🎫</span>
-          <span>{project.tickets_count} tickets</span>
-        </div>
-      </div>
-
-      {/* Empresa — visible en tab 'Todas' cuando hay múltiples empresas */}
-      {activeTab === 'all' && companies.length > 1 && (
-        <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
-          <Building2 size={13} className="text-zinc-500" />
-          <span>{project.owner_company?.name || project.company || 'Sin empresa'}</span>
-        </div>
-      )}
-
-      <div className="pt-3 border-t border-zinc-800">
-        <p className="text-sm text-zinc-500">
-          IMPORTE TOTAL <span className="text-amber-500 font-bold text-2xl ml-2">| {project.total_amount?.toFixed(2)}€</span>
-        </p>
-      </div>
-    </div>
-  );
-
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) return <LoadingSpinner size="lg" fullPage />;
-
-  // ── Barra de búsqueda + filtros de estado (compartida) ─────────────────────
-  const SearchAndFilters = () => (
-    <div className="flex flex-col md:flex-row md:items-center gap-4">
-      {/* Filtros estado */}
-      <div className="flex gap-2 overflow-x-auto">
-        {[
-          { key: 'all', label: 'TODOS', count: projects.length },
-          { key: 'en_curso', label: 'EN CURSO', count: projects.filter(p => p.status === 'en_curso').length },
-          { key: 'cerrado', label: 'CERRADOS', count: projects.filter(p => p.status === 'cerrado').length },
-        ].map(f => (
-          <button
-            key={f.key}
-            onClick={() => setStatusFilter(f.key)}
-            className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors whitespace-nowrap ${
-              statusFilter === f.key
-                ? 'bg-amber-500 text-zinc-950'
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-            }`}
-          >
-            {f.label} ({f.count})
-          </button>
-        ))}
-      </div>
-
-      {/* Búsqueda */}
-      <div className="w-full md:w-96 relative md:ml-auto" ref={searchRef}>
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 text-zinc-500" size={18} />
-          <input
-            type="search"
-            placeholder=" Buscar proyectos..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onFocus={() => searchTerm && setShowSuggestions(true)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-            className="w-full px-3 py-2 pl-10 pr-20 bg-zinc-900 border border-zinc-700 rounded-sm text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-          />
-          <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
-            {searchTerm && (
-              <button onClick={clearSearch} className="p-1 hover:bg-zinc-800 rounded-sm transition-colors" title="Limpiar búsqueda">
-                <X size={16} className="text-zinc-500" />
-              </button>
-            )}
-            <button
-              onClick={startVoiceSearch}
-              disabled={isListening}
-              className={`p-1 rounded-sm transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-zinc-800 text-zinc-500'}`}
-              title="Búsqueda por voz"
-            >
-              <Mic size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Dropdown sugerencias + historial */}
-        {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-sm shadow-xl max-h-96 overflow-y-auto z-50">
-            {searchTerm && suggestions.length > 0 && (
-              <div>
-                <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800">
-                  PROYECTOS ENCONTRADOS
-                </div>
-                {suggestions.map((project) => (
-                  <div
-                    key={project.id}
-                    onClick={() => { navigate(`/projects/${project.id}`); saveRecentSearch(searchTerm); }}
-                    className="px-3 py-2.5 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">{project.creative_code}</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">{project.description}</p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500">
-                          <span>👤 {project.responsible}</span>
-                          <span>📅 {project.year}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-amber-500 font-bold text-sm">{project.total_amount?.toFixed(2)}€</p>
-                        <p className="text-xs text-zinc-500">{project.tickets_count} tickets</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {searchTerm && suggestions.length === 0 && (
-              <div className="px-4 py-6 text-center text-zinc-500">
-                <p className="text-sm">No se encontraron proyectos</p>
-              </div>
-            )}
-            {!searchTerm && recentSearches.length > 0 && (
-              <div>
-                <div className="px-3 py-1.5 text-xs text-zinc-500 font-mono border-b border-zinc-800 flex items-center gap-2">
-                  <Clock size={12} />
-                  BÚSQUEDAS RECIENTES
-                </div>
-                {recentSearches.map((term, index) => (
-                  <div
-                    key={index}
-                    onClick={() => { setSearchTerm(term); setShowSuggestions(true); }}
-                    className="px-3 py-2 hover:bg-zinc-800 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0 flex items-center gap-2"
-                  >
-                    <Search size={12} className="text-zinc-600" />
-                    <span className="text-sm text-zinc-300">{term}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   // ══════════════════════════════════════════════════════════════════
   // VISTA ADMIN — con tabs por empresa
@@ -418,7 +419,16 @@ const Dashboard = () => {
             </div>
 
             {/* Filtros + búsqueda */}
-            <SearchAndFilters />
+            <SearchAndFilters
+              projects={projects} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              searchTerm={searchTerm} handleSearchChange={handleSearchChange}
+              showSuggestions={showSuggestions} suggestions={suggestions}
+              navigate={navigate} saveRecentSearch={saveRecentSearch}
+              recentSearches={recentSearches} setSearchTerm={setSearchTerm}
+              setShowSuggestions={setShowSuggestions} clearSearch={clearSearch}
+              handleSearchSubmit={handleSearchSubmit} startVoiceSearch={startVoiceSearch}
+              isListening={isListening} searchRef={searchRef}
+            />
 
             {/* Contador */}
             <p className="text-sm text-zinc-500 mt-3">
@@ -438,7 +448,7 @@ const Dashboard = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map(project => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} navigate={navigate} activeTab={activeTab} companies={companies} />
               ))}
             </div>
           )}
@@ -482,7 +492,16 @@ const Dashboard = () => {
             </button>
           </div>
 
-          <SearchAndFilters />
+          <SearchAndFilters
+              projects={projects} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              searchTerm={searchTerm} handleSearchChange={handleSearchChange}
+              showSuggestions={showSuggestions} suggestions={suggestions}
+              navigate={navigate} saveRecentSearch={saveRecentSearch}
+              recentSearches={recentSearches} setSearchTerm={setSearchTerm}
+              setShowSuggestions={setShowSuggestions} clearSearch={clearSearch}
+              handleSearchSubmit={handleSearchSubmit} startVoiceSearch={startVoiceSearch}
+              isListening={isListening} searchRef={searchRef}
+            />
 
           <p className="text-sm text-zinc-500 mt-4">
             Mostrando {filteredProjects.length} de {projects.length} proyectos
@@ -504,7 +523,7 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map(project => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard key={project.id} project={project} navigate={navigate} activeTab={activeTab} companies={companies} />
             ))}
           </div>
         )}
