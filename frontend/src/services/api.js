@@ -140,14 +140,7 @@ export const createProject = (data) => api.post('/projects', data);
 
 export const updateProject = (id, data) => api.put(`/projects/${id}`, data);
 
-export const closeProject = (id) => api.post(`/projects/${id}/close`);
-
 export const reopenProject = (id) => api.post(`/projects/${id}/reopen`);
-
-export const closeProjectWithDownload = (id) =>
-  api.post(`/projects/${id}/close`, {}, {
-    responseType: 'blob'
-  });
 
 export const closeProjectWithEmails = (id, emails) =>
   api.post(`/projects/${id}/close`,

@@ -11,6 +11,19 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 CLAUDE_MODEL = "claude-sonnet-4-6"
 
+
+def strip_markdown_json(text: str) -> str:
+    """Strip markdown code block wrappers from Claude API JSON responses."""
+    text = text.strip()
+    if text.startswith("```json"):
+        text = text[7:]
+    if text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    return text.strip()
+
+
 def _normalize_media_type(file_type: str, filename: Optional[str] = None) -> str:
     """Normalize media type for Claude API which only accepts:
     image/jpeg, image/png, image/gif, image/webp, application/pdf.
@@ -280,18 +293,8 @@ Ejemplo 3 - Factura Canarias (EUR con IGIC):
     )
     
     # Extract JSON from response
-    response_text = message.content[0].text.strip()
-    
-    # Remove markdown code blocks if present
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.startswith("```"):
-        response_text = response_text[3:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-    
-    response_text = response_text.strip()
-    
+    response_text = strip_markdown_json(message.content[0].text)
+
     # Parse JSON
     try:
         extracted_data = json.loads(response_text)

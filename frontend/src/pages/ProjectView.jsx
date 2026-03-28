@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, deleteTicket, deleteProject, closeProject, reopenProject } from '../services/api';
+import { getProject, getProjectTickets, deleteTicket, deleteProject, reopenProject } from '../services/api';
 import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { showSuccess, showError } from '../utils/toast';

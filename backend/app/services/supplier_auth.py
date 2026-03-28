@@ -55,9 +55,7 @@ def create_supplier_access_token(supplier_id: int, email: str) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def _generate_token(length: int = 64) -> str:
-    characters = string.ascii_letters + string.digits
-    return "".join(secrets.choice(characters) for _ in range(length))
+from app.services.auth import _generate_token
 
 
 def create_supplier_refresh_token(db: Session, supplier_id: int) -> str:

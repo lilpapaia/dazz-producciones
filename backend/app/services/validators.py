@@ -84,41 +84,6 @@ def sanitize_string(text: str, max_length: Optional[int] = None) -> str:
     return sanitized
 
 
-def validate_no_sql_patterns(text: str) -> bool:
-    """
-    DEPRECATED — No usar en validaciones nuevas.
-
-    SQLAlchemy ORM con queries parametrizadas es la protección real contra
-    SQL injection. Esta función tiene patrones incompletos (no detecta
-    bypasses con comentarios, encoding, etc.) y causa falsos positivos
-    (ej: una descripción con "DELETE FROM the old records" sería rechazada).
-
-    Se mantiene por compatibilidad pero ya no se llama desde
-    validate_string_input(). Si necesitas validación de input, usa
-    sanitize_string() para XSS y confía en el ORM para SQL.
-
-    Returns:
-        True si es seguro según estos patrones (incompletos), False si sospechoso
-    """
-    # Patrones sospechosos (case-insensitive)
-    dangerous_patterns = [
-        r"(\bUNION\b.*\bSELECT\b)",
-        r"(\bDROP\b.*\bTABLE\b)",
-        r"(\bINSERT\b.*\bINTO\b)",
-        r"(\bDELETE\b.*\bFROM\b)",
-        r"(--)",  # Comentarios SQL
-        r"(\/\*|\*\/)",  # Comentarios multi-línea
-        r"(\bEXEC\b|\bEXECUTE\b)",
-    ]
-    
-    text_upper = text.upper()
-    
-    for pattern in dangerous_patterns:
-        if re.search(pattern, text_upper, re.IGNORECASE):
-            return False
-    
-    return True
-
 
 def validate_string_input(
     text: str,

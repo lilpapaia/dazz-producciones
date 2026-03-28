@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.models.database import Company, Project
 from app.models.suppliers import Supplier, SupplierOC, SupplierInvoice
 from app.services.encryption import decrypt_iban
+from app.services.claude_ai import strip_markdown_json
 
 load_dotenv()
 
@@ -166,16 +167,7 @@ def extract_supplier_invoice(file_path: str, file_type: str) -> Dict[str, Any]:
     except Exception as e:
         return {"error": f"AI service temporarily unavailable: {type(e).__name__}", "confidence": 0.0}
 
-    response_text = message.content[0].text.strip()
-
-    # Limpiar markdown si Claude lo envuelve
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.startswith("```"):
-        response_text = response_text[3:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-    response_text = response_text.strip()
+    response_text = strip_markdown_json(message.content[0].text)
 
     try:
         return json.loads(response_text)
@@ -473,17 +465,6 @@ Return ONLY a JSON object:
 No explanations, no markdown — ONLY the JSON."""
 
 
-def extract_iban_from_cert(file_path: str) -> Optional[str]:
-    """
-    Extract IBAN from a bank certificate PDF using Claude.
-    Legacy function — kept for backward compatibility.
-
-    Returns:
-        IBAN string or None if not found/not parseable
-    """
-    result = extract_bank_cert_data(file_path)
-    return result.get("iban") if result else None
-
 
 def extract_bank_cert_data(file_path: str) -> Dict[str, Any]:
     """
@@ -518,12 +499,7 @@ def extract_bank_cert_data(file_path: str) -> Dict[str, Any]:
     except Exception:
         return {}
 
-    response_text = message.content[0].text.strip()
-    if response_text.startswith("```"):
-        response_text = response_text.split("```")[1]
-        if response_text.startswith("json"):
-            response_text = response_text[4:]
-        response_text = response_text.strip()
+    response_text = strip_markdown_json(message.content[0].text)
 
     try:
         return json.loads(response_text)

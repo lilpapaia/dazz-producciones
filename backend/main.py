@@ -256,8 +256,8 @@ async def startup_event():
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_updated_at ON supplier_invoices (updated_at)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_related_supplier ON supplier_notifications (related_supplier_id)"))
             conn.commit()
-        except Exception:
-            pass  # SQLite u otros motores pueden no soportar IF NOT EXISTS
+        except Exception as e:
+            logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")
 
     logger.info("Base de datos inicializada")
     logger.info(f"Modo: {ENVIRONMENT}")

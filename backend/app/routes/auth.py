@@ -21,7 +21,8 @@ from app.services.auth import (
     validate_refresh_token,
     revoke_refresh_token,
     revoke_all_user_refresh_tokens,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    _generate_token,
 )
 from app.services.email import send_set_password_email, send_forgot_password_email
 
@@ -34,11 +35,6 @@ from app.services.rate_limit import limiter, get_real_client_ip
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-def generate_token(length=32):
-    """Generar token aleatorio seguro"""
-    characters = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(characters) for _ in range(length))
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(
@@ -142,7 +138,7 @@ async def register(
 
     try:
         # Generar token
-        token = generate_token()
+        token = _generate_token(32)
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
 
         reset_token = PasswordResetToken(
@@ -414,7 +410,7 @@ async def forgot_password(
         ).update({"used_at": datetime.now(timezone.utc)})
 
         # Generar nuevo token
-        token = generate_token()
+        token = _generate_token(32)
         expires_at = datetime.now(timezone.utc) + timedelta(hours=1)  # 1 hora para reset
 
         reset_token = PasswordResetToken(

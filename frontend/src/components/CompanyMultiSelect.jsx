@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 
 const CompanyMultiSelect = ({ selectedCompanyIds = [], onChange, companies = [], label = "Empresas" }) => {

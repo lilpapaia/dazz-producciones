@@ -38,6 +38,9 @@ from app.services.supplier_email import (
     send_supplier_invoice_paid,
 )
 
+from app.services.notifications import create_notification as _notify
+from app.services.auth import _generate_token
+
 router = APIRouter(prefix="/suppliers", tags=["Suppliers (Admin)"])
 
 
@@ -46,26 +49,6 @@ def _decode_iban(supplier) -> str | None:
     if not supplier.iban_encrypted:
         return None
     return decrypt_iban(supplier.iban_encrypted)
-
-
-def _generate_token(length: int = 64) -> str:
-    chars = string.ascii_letters + string.digits
-    return "".join(secrets.choice(chars) for _ in range(length))
-
-
-def _notify(db: Session, recipient_type, recipient_id: int, event_type,
-            title: str, message: str, invoice_id=None, supplier_id=None):
-    """Helper to create a notification."""
-    notif = SupplierNotification(
-        recipient_type=recipient_type,
-        recipient_id=recipient_id,
-        event_type=event_type,
-        title=title,
-        message=message,
-        related_invoice_id=invoice_id,
-        related_supplier_id=supplier_id,
-    )
-    db.add(notif)
 
 
 # ============================================

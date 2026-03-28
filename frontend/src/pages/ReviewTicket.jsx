@@ -539,10 +539,7 @@ const ReviewTicket = () => {
                   <p className="text-zinc-500 text-xs mb-1">Divisa</p>
                   <p className="font-semibold">
                     <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-sm">
-                      {ticket.currency === 'USD' ? '$ USD' : 
-                       ticket.currency === 'GBP' ? '£ GBP' :
-                       ticket.currency === 'JPY' ? '¥ JPY' :
-                       ticket.currency}
+                      {getCurrencySymbol(ticket.currency)} {ticket.currency}
                     </span>
                   </p>
                 </div>
@@ -566,10 +563,7 @@ const ReviewTicket = () => {
                     <div>
                       <span className="text-zinc-400 text-xs">Base: </span>
                       <span className="font-semibold text-blue-400">
-                        {ticket.currency === 'USD' ? '$' : 
-                         ticket.currency === 'GBP' ? '£' :
-                         ticket.currency === 'JPY' ? '¥' : ''}
-                        {ticket.foreign_amount.toFixed(2)}
+                        {getCurrencySymbol(ticket.currency)}{ticket.foreign_amount.toFixed(2)}
                       </span>
                     </div>
                     {ticket.foreign_tax_amount && (
@@ -578,10 +572,7 @@ const ReviewTicket = () => {
                         <div>
                           <span className="text-zinc-400 text-xs">IVA: </span>
                           <span className="font-semibold text-blue-400">
-                            {ticket.currency === 'USD' ? '$' : 
-                             ticket.currency === 'GBP' ? '£' :
-                             ticket.currency === 'JPY' ? '¥' : ''}
-                            {ticket.foreign_tax_amount.toFixed(2)}
+                            {getCurrencySymbol(ticket.currency)}{ticket.foreign_tax_amount.toFixed(2)}
                           </span>
                         </div>
                       </>

@@ -36,7 +36,7 @@ from app.services.supplier_auth import (
 )
 from app.services.supplier_ai import (
     extract_supplier_invoice, validate_supplier_invoice, resolve_company_from_oc,
-    extract_iban_from_cert, extract_bank_cert_data, _normalize_iban, _normalize_nif,
+    extract_bank_cert_data, _normalize_iban, _normalize_nif,
 )
 from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url
 from app.services.encryption import encrypt_iban, decrypt_iban
@@ -44,26 +44,12 @@ from app.services.validators import validate_pdf_bytes, sanitize_filename, valid
 from app.services.supplier_ai import format_date_for_response
 
 from app.services.rate_limit import limiter
+from app.services.notifications import create_notification as _notify
 import cloudinary.uploader
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portal", tags=["Supplier Portal"])
-
-
-def _notify(db: Session, recipient_type, recipient_id: int, event_type,
-            title: str, message: str, invoice_id=None, supplier_id=None, extra_data=None):
-    notif = SupplierNotification(
-        recipient_type=recipient_type,
-        recipient_id=recipient_id,
-        event_type=event_type,
-        title=title,
-        message=message,
-        related_invoice_id=invoice_id,
-        related_supplier_id=supplier_id,
-        extra_data=extra_data,
-    )
-    db.add(notif)
 
 
 # ============================================
