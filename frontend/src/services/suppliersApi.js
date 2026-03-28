@@ -11,7 +11,7 @@ export const deactivateSupplier = (id) => api.put(`/suppliers/${id}/deactivate`)
 export const reactivateSupplier = (id) => api.put(`/suppliers/${id}/reactivate`);
 export const assignOC = (id, ocNumber) => api.put(`/suppliers/${id}/assign-oc`, { oc_number: ocNumber });
 export const addSupplierNote = (id, note) => api.post(`/suppliers/${id}/notes`, { note });
-export const getBankCertUrl = (id) => api.get(`/suppliers/${id}/bank-cert-url`);
+export const getBankCertUrl = (id, type = 'current') => api.get(`/suppliers/${id}/bank-cert-url`, { params: { cert_type: type } });
 export const inviteSupplier = (data) => api.post('/suppliers/invite', data);
 export const createOC = (data) => api.post('/suppliers/ocs', data);
 export const checkOcNif = (nif) => api.get('/suppliers/ocs/check-nif', { params: { nif } });

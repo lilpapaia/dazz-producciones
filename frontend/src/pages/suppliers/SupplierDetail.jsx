@@ -114,10 +114,10 @@ const SupplierDetail = () => {
     load();
   };
 
-  const handleViewCert = async () => {
+  const handleViewCert = async (type = 'current') => {
     setCertLoading(true);
     try {
-      const { data } = await getBankCertUrl(id);
+      const { data } = await getBankCertUrl(id, type);
       setCertUrl(`https://docs.google.com/viewer?url=${encodeURIComponent(data.url)}&embedded=true`);
       setShowCertLightbox(true);
     } catch { showError('No se pudo cargar el certificado bancario'); }
@@ -477,11 +477,9 @@ const SupplierDetail = () => {
                           </div>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          {certKey && (
-                            <button onClick={() => handleViewCert()} disabled={certLoading}
-                              className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors">
-                              {certLoading ? 'Cargando...' : 'Ver certificado PDF'}</button>
-                          )}
+                          <button onClick={() => handleViewCert('pending')} disabled={certLoading}
+                            className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors">
+                            {certLoading ? 'Cargando...' : 'Ver certificado PDF'}</button>
                           <button onClick={() => handleApproveAction(action)} className="text-[11px] bg-amber-500 text-zinc-950 font-semibold px-3 py-1.5 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
                           <button onClick={() => setRejectModal(action)} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">Rechazar</button>
                         </div>

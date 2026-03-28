@@ -386,6 +386,7 @@ async def get_supplier(
 @router.get("/{supplier_id}/bank-cert-url")
 async def get_supplier_bank_cert(
     supplier_id: int,
+    cert_type: str = Query("current", regex="^(current|pending)$"),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
@@ -393,9 +394,10 @@ async def get_supplier_bank_cert(
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not supplier:
         raise HTTPException(404, "Supplier not found")
-    if not supplier.bank_cert_url:
+    cert_key = supplier.pending_bank_cert_url if cert_type == "pending" else supplier.bank_cert_url
+    if not cert_key:
         raise HTTPException(404, "No bank certificate uploaded")
-    return {"url": get_bank_cert_url(supplier.bank_cert_url)}
+    return {"url": get_bank_cert_url(cert_key)}
 
 
 @router.get("/{supplier_id}/export-excel")
