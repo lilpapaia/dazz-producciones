@@ -43,6 +43,9 @@ export default defineConfig({
     }),
   ],
   server: { port: 5174 },
+  esbuild: {
+    drop: ['debugger'],
+  },
   build: {
     sourcemap: false,
     rollupOptions: {

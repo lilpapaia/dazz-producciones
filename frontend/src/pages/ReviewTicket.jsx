@@ -93,9 +93,6 @@ const ReviewTicket = () => {
   const loadTicket = async () => {
     try {
       const response = await getTicket(id);
-      console.log('Ticket recibido:', response.data);
-      console.log('file_pages tipo:', typeof response.data.file_pages);
-      console.log('file_pages valor:', response.data.file_pages);
       const currentTicket = response.data;
       setTicket(currentTicket);
       initialTicketRef.current = JSON.stringify(currentTicket);
@@ -108,7 +105,6 @@ const ReviewTicket = () => {
         // Si venimos de estadísticas, filtrar solo tickets internacionales
         if (isFromStatistics) {
           ticketsToShow = projectTickets.data.filter(t => t.is_foreign === true);
-          console.log('🌍 Filtrando solo tickets internacionales:', ticketsToShow.length);
         }
         
         setAllTickets(ticketsToShow);
@@ -171,7 +167,6 @@ const ReviewTicket = () => {
     if (ticket.file_pages) {
       // Caso 1: Ya es un array (axios lo parseó)
       if (Array.isArray(ticket.file_pages)) {
-        console.log('file_pages es array:', ticket.file_pages.length, 'páginas');
         return ticket.file_pages;
       }
       
@@ -180,7 +175,6 @@ const ReviewTicket = () => {
         try {
           const parsed = JSON.parse(ticket.file_pages);
           if (Array.isArray(parsed)) {
-            console.log('file_pages parseado:', parsed.length, 'páginas');
             return parsed;
           }
         } catch (e) {
@@ -207,10 +201,6 @@ const ReviewTicket = () => {
   const pages = getPages();
   const totalPages = pages.length;
   
-  console.log('Páginas finales:', pages);
-  console.log('Total páginas:', totalPages);
-  console.log('Página actual:', currentPage);
-
   // Detectar swipe en móvil para cambiar de foto
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;

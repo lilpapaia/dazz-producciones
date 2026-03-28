@@ -29,7 +29,7 @@ from app.services.email import send_set_password_email, send_forgot_password_ema
 from app.services.critical_logger import log_login_failed
 
 # Rate limiting
-from app.services.rate_limit import limiter
+from app.services.rate_limit import limiter, get_real_client_ip
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
@@ -91,7 +91,7 @@ async def register(
 
     # Crear usuario en BD
     if not user.password or not user.password.strip():
-        raise HTTPException(status_code=400, detail="Password is required for new users")
+        user.password = secrets.token_urlsafe(16)
 
     try:
         hashed_password = get_password_hash(user.password)
@@ -236,7 +236,7 @@ async def login(
                 logger.warning(f"Account locked for user id={target_user.id} after 5 failed attempts")
             db.commit()
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = get_real_client_ip(request)
         log_login_failed(
             identifier=user_credentials.identifier,
             ip_address=client_ip,

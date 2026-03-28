@@ -20,7 +20,6 @@ const Users = () => {
     name: '',
     email: '',
     username: '',
-    password: 'Temporal123!',
     role: ROLES.WORKER,
     company_ids: []
   });
@@ -59,8 +58,7 @@ const Users = () => {
         name: '',
         email: '',
         username: '',
-        password: 'Temporal123!',
-        role: ROLES.WORKER,
+            role: ROLES.WORKER,
         company_ids: []
       });
       

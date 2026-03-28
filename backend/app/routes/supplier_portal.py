@@ -152,7 +152,7 @@ async def register_supplier(
 
     supplier = Supplier(
         name=body.name,
-        email=invitation.email,
+        email=invitation.email.lower(),
         email_hash=email_hash,
         hashed_password=get_password_hash(body.password),
         nif_cif=body.nif_cif,

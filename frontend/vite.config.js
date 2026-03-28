@@ -179,6 +179,9 @@ export default defineConfig({
   },
   
   // Optimizaciones de build
+  esbuild: {
+    drop: ['debugger'],
+  },
   build: {
     sourcemap: false, // Desactivar en producción para menor tamaño
     rollupOptions: {
