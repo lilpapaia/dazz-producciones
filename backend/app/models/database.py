@@ -82,15 +82,15 @@ class Project(Base):
     __tablename__ = "projects"
     
     id = Column(Integer, primary_key=True, index=True)
-    year = Column(String, nullable=False)
+    year = Column(String, nullable=False, index=True)
     send_date = Column(String)
-    creative_code = Column(String, nullable=False)
+    creative_code = Column(String, nullable=False, index=True)
     
     # ⚠️ MANTENER CAMPO ANTIGUO POR AHORA (compatibilidad)
     company = Column(String, nullable=True)
     
     # ✅ NUEVO CAMPO - Empresa dueña del proyecto
-    owner_company_id = Column(Integer, ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True)
+    owner_company_id = Column(Integer, ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True, index=True)
     
     responsible = Column(String, nullable=False)
     invoice_type = Column(String, nullable=False)
@@ -100,13 +100,13 @@ class Project(Base):
     client_data = Column(Text)
     client_email = Column(String)
     project_link = Column(String)
-    status = Column(Enum(ProjectStatus), default=ProjectStatus.EN_CURSO, nullable=False)
+    status = Column(Enum(ProjectStatus), default=ProjectStatus.EN_CURSO, nullable=False, index=True)
     total_amount = Column(Float, default=0.0)
     tickets_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     closed_at = Column(DateTime, nullable=True)
     
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     # Relaciones
     owner = relationship("User", back_populates="projects")
@@ -162,7 +162,7 @@ class Ticket(Base):
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True, index=True)
     supplier_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id"), nullable=True, index=True)
 
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
 
     # Relaciones
     project = relationship("Project", back_populates="tickets")

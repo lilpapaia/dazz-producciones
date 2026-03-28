@@ -126,7 +126,7 @@ class SupplierInvoice(Base):
     iban = Column(String, nullable=True)
     oc_number = Column(String, nullable=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
-    company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True, index=True)
     base_amount = Column(Float, nullable=False)
     iva_percentage = Column(Float, nullable=False)
     iva_amount = Column(Float, nullable=False)
@@ -144,7 +144,7 @@ class SupplierInvoice(Base):
     is_autoinvoice = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
-                        onupdate=lambda: datetime.now(timezone.utc))
+                        onupdate=lambda: datetime.now(timezone.utc), index=True)
 
     # Relaciones
     supplier = relationship("Supplier", back_populates="invoices")
@@ -170,7 +170,7 @@ class SupplierNotification(Base):
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     related_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id", ondelete="SET NULL"), nullable=True)
-    related_supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True)
+    related_supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True, index=True)
     extra_data = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -245,6 +245,16 @@ async def startup_event():
             conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_tickets_file_hash ON tickets (file_hash)"
             ))
+            # #8/#9: Missing indexes for Projects, Tickets, SupplierInvoices, Notifications
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_projects_year ON projects (year)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_projects_status ON projects (status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_projects_owner_company_id ON projects (owner_company_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_projects_owner_id ON projects (owner_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_projects_creative_code ON projects (creative_code)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_project_id ON tickets (project_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_company_id ON supplier_invoices (company_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_updated_at ON supplier_invoices (updated_at)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_related_supplier ON supplier_notifications (related_supplier_id)"))
             conn.commit()
         except Exception:
             pass  # SQLite u otros motores pueden no soportar IF NOT EXISTS
