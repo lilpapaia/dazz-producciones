@@ -18,7 +18,7 @@ const SuppliersLayout = () => {
 
   const fetchStats = () => getSuppliersDashboard().then(r => setStats(r.data)).catch(() => {});
 
-  useEffect(() => { fetchStats(); }, [location.pathname]);
+  useEffect(() => { fetchStats(); }, []);
   useEffect(() => {
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);

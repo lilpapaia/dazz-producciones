@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects, getCompanies } from '../services/api';
 import { Plus, Search, X, Mic, Clock, Building2 } from 'lucide-react';
@@ -289,8 +289,8 @@ const Dashboard = () => {
       });
   };
 
-  const filteredProjects = getFilteredProjects();
-  const suggestions = filteredProjects.slice(0, 5);
+  const filteredProjects = useMemo(() => getFilteredProjects(), [projects, activeTab, companies, statusFilter, searchTerm, isAdmin]);
+  const suggestions = useMemo(() => filteredProjects.slice(0, 5), [filteredProjects]);
 
   // Stats por empresa para las tabs
   const getCompanyStats = (company) => {
@@ -305,12 +305,12 @@ const Dashboard = () => {
     };
   };
 
-  const allStats = {
+  const allStats = useMemo(() => ({
     total: projects.length,
     activos: projects.filter(p => p.status === 'en_curso').length,
     cerrados: projects.filter(p => p.status === 'cerrado').length,
     importe: projects.reduce((sum, p) => sum + (p.total_amount || 0), 0),
-  };
+  }), [projects]);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) return <LoadingSpinner size="lg" fullPage />;

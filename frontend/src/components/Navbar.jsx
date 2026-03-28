@@ -2,15 +2,15 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, BarChart3, Users, LogOut, Truck } from 'lucide-react';
 import DazzLogo from './DazzLogo';
 import { ROLES } from '../constants/roles';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

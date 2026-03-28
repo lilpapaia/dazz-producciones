@@ -43,6 +43,7 @@ const ReviewTicket = () => {
 
   // UX-L1: Detectar cambios sin guardar
   const initialTicketRef = useRef(null);
+  const ticketRef = useRef(ticket);
 
   // UX-L2: Cerrar lightbox con Escape
   useEscapeKey(() => setShowLightbox(false), showLightbox);
@@ -64,17 +65,20 @@ const ReviewTicket = () => {
     }
   }, [ticket?.payment_status]);
 
+  // UX-L1: Sync ticket ref for stable beforeunload listener
+  useEffect(() => { ticketRef.current = ticket; }, [ticket]);
+
   // UX-L1: Avisar si hay cambios sin guardar al cerrar/navegar
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (ticket && initialTicketRef.current && JSON.stringify(ticket) !== initialTicketRef.current) {
+      if (ticketRef.current && initialTicketRef.current && JSON.stringify(ticketRef.current) !== initialTicketRef.current) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [ticket]);
+  }, []);
 
   // Bloquear scroll cuando se abre el lightbox
   useEffect(() => {
