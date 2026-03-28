@@ -220,6 +220,23 @@ async def update_project(
                 detail="No tienes permiso para mover el proyecto a esa empresa"
             )
 
+    # Validar que el responsable pertenece a la empresa del proyecto (si se cambia)
+    new_responsible = getattr(project_update, 'responsible', None)
+    if new_responsible:
+        target_company_id = project_update.owner_company_id or project.owner_company_id
+        responsible_user = db.query(User).filter(
+            func.lower(User.name) == new_responsible.lower()
+        ).first()
+        if responsible_user:
+            from sqlalchemy.orm import joinedload as jl
+            ru = db.query(User).options(jl(User.companies)).filter(User.id == responsible_user.id).first()
+            resp_company_ids = [c.id for c in ru.companies] if ru else []
+            if resp_company_ids and target_company_id not in resp_company_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"El responsable '{new_responsible}' no pertenece a la empresa seleccionada"
+                )
+
     # Actualizar
     update_data = project_update.dict(exclude_unset=True)
     for key, value in update_data.items():

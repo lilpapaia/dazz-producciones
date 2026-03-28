@@ -51,6 +51,13 @@ def _decode_iban(supplier) -> str | None:
     return decrypt_iban(supplier.iban_encrypted)
 
 
+def _mask_iban(iban: str | None) -> str | None:
+    """Mask IBAN for list view: show first 4 + last 4 only."""
+    if not iban or len(iban) < 8:
+        return iban
+    return f"{iban[:4]}{'*' * (len(iban) - 8)}{iban[-4:]}"
+
+
 # ============================================
 # OC MANAGEMENT
 # ============================================
@@ -283,7 +290,7 @@ async def list_suppliers(
 
         result.append(SupplierResponse(
             id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
-            phone=s.phone, address=s.address, iban=_decode_iban(s),
+            phone=s.phone, address=s.address, iban=_mask_iban(_decode_iban(s)),
             bank_cert_url=s.bank_cert_url,
             status=s.status.value if s.status else "NEW",
             has_permanent_oc=s.oc_id is not None,

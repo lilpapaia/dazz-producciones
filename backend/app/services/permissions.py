@@ -64,7 +64,8 @@ def can_modify_project(user: User, project: Project, db: Session) -> bool:
         company_ids = get_user_company_ids(user, db)
         return project.owner_company_id in company_ids
 
-    # WORKER: proyectos donde es owner O responsible
+    # WORKER: proyectos donde es owner O responsible, AND misma empresa
+    company_ids = get_user_company_ids(user, db)
     is_owner = project.owner_id == user.id
     is_responsible = (user.username or "").lower() == (project.responsible or "").lower()
-    return is_owner or is_responsible
+    return (is_owner or is_responsible) and project.owner_company_id in company_ids
