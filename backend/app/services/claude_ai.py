@@ -2,43 +2,83 @@ import anthropic
 import json
 import base64
 import os
-from typing import Dict, Any
+from pathlib import Path
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-def extract_ticket_data(file_path: str, file_type: str) -> Dict[str, Any]:
+def _normalize_media_type(file_type: str, filename: Optional[str] = None) -> str:
+    """Normalize media type for Claude API which only accepts:
+    image/jpeg, image/png, image/gif, image/webp, application/pdf.
+
+    Strategy:
+    1. Try content_type (normalized to lowercase)
+    2. If generic/unknown → fall back to filename extension
+    3. If still unknown → fallback image/jpeg
+    """
+    MIME_MAP = {
+        "image/jpeg": "image/jpeg",
+        "image/jpg": "image/jpeg",
+        "image/png": "image/png",
+        "image/gif": "image/gif",
+        "image/webp": "image/webp",
+        "image/heic": "image/jpeg",
+        "image/heif": "image/jpeg",
+        "application/pdf": "application/pdf",
+    }
+    EXT_MAP = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".heic": "image/jpeg",
+        ".heif": "image/jpeg",
+        ".pdf": "application/pdf",
+    }
+
+    normalized = (file_type or "").strip().lower()
+    if normalized in MIME_MAP:
+        return MIME_MAP[normalized]
+
+    # Generic or unknown content_type → try extension
+    if filename:
+        ext = Path(filename).suffix.lower()
+        if ext in EXT_MAP:
+            return EXT_MAP[ext]
+
+    return "image/jpeg"
+
+
+def extract_ticket_data(file_path: str, file_type: str, filename: Optional[str] = None) -> Dict[str, Any]:
     """
     Extract data from ticket/invoice using Claude AI
-    
+
     MEJORAS:
     - Detecta fechas en múltiples idiomas y convierte a DD/MM/YYYY
     - Detecta automáticamente facturas internacionales
     - Extrae divisa, país, e importes originales
-    
+
     Args:
         file_path: Path to the image/PDF file
         file_type: MIME type of the file
-        
+        filename: Original filename (used as fallback for type detection)
+
     Returns:
         Dictionary with extracted data
     """
-    
+
     # Read and encode file
     with open(file_path, "rb") as f:
         file_data = f.read()
-    
+
     base64_data = base64.b64encode(file_data).decode("utf-8")
-    
-    # Determine media type
-    if file_type.startswith("image/"):
-        media_type = file_type
-    elif file_type == "application/pdf":
-        media_type = "application/pdf"
-    else:
-        media_type = "image/jpeg"  # fallback
+
+    # BUG-28: Normalize media type (image/jpg → image/jpeg, HEIC → jpeg, etc.)
+    media_type = _normalize_media_type(file_type, filename or file_path)
     
     # Create Claude client
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)

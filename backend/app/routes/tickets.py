@@ -79,7 +79,7 @@ async def upload_ticket(
         ai_mime = file.content_type
 
         # PERF-M1: Offload AI extraction (3-10s) al thread pool
-        extracted_data = await asyncio.to_thread(extract_ticket_data, ai_file_path, ai_mime)
+        extracted_data = await asyncio.to_thread(extract_ticket_data, ai_file_path, ai_mime, file.filename)
 
         # 3. Procesar moneda extranjera
         is_foreign = extracted_data.get("is_foreign", False) if "error" not in extracted_data else False
