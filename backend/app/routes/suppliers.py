@@ -132,37 +132,33 @@ async def oc_suggestions(
     if len(term) < 2:
         return results
 
-    # 1. OCs permanentes (supplier_ocs)
-    ocs = db.query(SupplierOC).filter(
+    # 1. OCs permanentes (supplier_ocs) — joinedload avoids N+1 company queries
+    ocs = db.query(SupplierOC).options(
+        joinedload(SupplierOC.company)
+    ).filter(
         SupplierOC.oc_number.ilike(f"%{term}%")
     ).limit(5).all()
     for oc in ocs:
-        company_name = None
-        if oc.company_id:
-            co = db.query(Company).filter(Company.id == oc.company_id).first()
-            company_name = co.name if co else None
         results.append({
             "type": "permanent_oc",
             "oc_number": oc.oc_number,
             "label": oc.talent_name,
-            "company_name": company_name,
+            "company_name": oc.company.name if oc.company else None,
         })
 
-    # 2. Proyectos abiertos (creative_code o description)
-    projects = db.query(Project).filter(
+    # 2. Proyectos abiertos (creative_code o description) — joinedload avoids N+1
+    projects = db.query(Project).options(
+        joinedload(Project.owner_company)
+    ).filter(
         Project.status == ProjectStatus.EN_CURSO,
         (Project.creative_code.ilike(f"%{term}%") | Project.description.ilike(f"%{term}%")),
     ).limit(5).all()
     for p in projects:
-        company_name = None
-        if p.owner_company_id:
-            co = db.query(Company).filter(Company.id == p.owner_company_id).first()
-            company_name = co.name if co else None
         results.append({
             "type": "project",
             "oc_number": p.creative_code,
             "label": p.description or p.creative_code,
-            "company_name": company_name,
+            "company_name": p.owner_company.name if p.owner_company else None,
             "project_id": p.id,
             "company_id": p.owner_company_id,
         })

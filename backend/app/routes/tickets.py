@@ -2,7 +2,7 @@ import logging
 import hashlib
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 import asyncio
 import os, shutil, json
@@ -232,10 +232,10 @@ async def get_project_tickets(project_id: int, db: Session = Depends(get_db), cu
 
 @router.get("/{ticket_id}", response_model=schemas.TicketResponse)
 async def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    ticket = db.query(Ticket).options(joinedload(Ticket.project)).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    project = db.query(Project).filter(Project.id == ticket.project_id).first()
+    project = ticket.project
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return ticket
@@ -243,10 +243,10 @@ async def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user
 
 @router.put("/{ticket_id}", response_model=schemas.TicketResponse)
 async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    ticket = db.query(Ticket).options(joinedload(Ticket.project)).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    project = db.query(Project).filter(Project.id == ticket.project_id).first()
+    project = ticket.project
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     old_total = ticket.final_total
@@ -262,10 +262,10 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
 
 @router.delete("/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    ticket = db.query(Ticket).options(joinedload(Ticket.project)).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    project = db.query(Project).filter(Project.id == ticket.project_id).first()
+    project = ticket.project
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
