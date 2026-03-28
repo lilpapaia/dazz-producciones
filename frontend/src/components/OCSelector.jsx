@@ -25,8 +25,11 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
   const [validating, setValidating] = useState(false);
 
   useEffect(() => {
-    getCompanies().then(r => setCompanies(r.data)).catch(() => {});
-    getOCPrefixes(permanentOnly).then(r => setPrefixes(r.data)).catch(() => {});
+    if (!permanentOnly) getCompanies().then(r => setCompanies(r.data)).catch(() => {});
+    getOCPrefixes(permanentOnly).then(r => {
+      setPrefixes(r.data);
+      if (permanentOnly && r.data.length > 0) setSelectedPrefix(r.data[0].prefix);
+    }).catch(() => {});
   }, [permanentOnly]);
 
   // Sync external companyId
@@ -91,8 +94,8 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
 
   return (
     <div className="space-y-2">
-      {/* Step 1: Company (hidden if pre-selected) */}
-      {!externalCompanyId && (
+      {/* Step 1: Company (hidden if pre-selected or permanentOnly) */}
+      {!externalCompanyId && !permanentOnly && (
         <div>
           <label className={labelCls}>Empresa</label>
           <select value={selectedCompany} onChange={e => handleCompanyChange(e.target.value)} className={inputCls}>
@@ -102,8 +105,8 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
         </div>
       )}
 
-      {/* Step 2: Prefix */}
-      {(selectedCompany || externalCompanyId) && (
+      {/* Step 2: Prefix (hidden if permanentOnly — auto-selected) */}
+      {!permanentOnly && (selectedCompany || externalCompanyId) && (
         <div>
           <label className={labelCls}>Prefijo OC</label>
           <select value={selectedPrefix || ''} onChange={e => handlePrefixChange(e.target.value)} className={inputCls}>
@@ -129,6 +132,9 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
               className="bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-2 py-2 rounded focus:border-amber-500 outline-none font-mono w-20"
             />
           </div>
+          {ocDigits && ocDigits.length < numberDigits && !validating && (
+            <div className="text-[11px] text-zinc-500 mt-1">Introduce {numberDigits} dígitos ({ocDigits.length}/{numberDigits})</div>
+          )}
           {validating && <span className="text-[11px] text-zinc-500 mt-1">Verificando...</span>}
           {validation && !validation.valid && (
             <div className="text-[11px] text-red-400 mt-1 flex items-center gap-1">

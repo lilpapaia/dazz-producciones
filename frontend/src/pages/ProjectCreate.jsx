@@ -161,7 +161,7 @@ const ProjectCreate = () => {
             {/* ← NUEVO: Dropdown de empresas */}
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">
-                EMPRESA FACTURACIÓN *
+                EMPRESA *
               </label>
               
               {loadingCompanies ? (

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download, Search, Trash2, RotateCcw } from 'lucide-react';
 import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions, deleteInvoice, rejectInvoiceDeletion } from '../../services/suppliersApi';
-import OCSelector from '../../components/OCSelector';
 import { showError, showSuccess } from '../../utils/toast';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
@@ -36,8 +35,6 @@ const InvoiceDetail = () => {
   const [ocSearch, setOcSearch] = useState('');
   const [ocSuggestions, setOcSuggestions] = useState([]);
   const [assigning, setAssigning] = useState(false);
-  const [ocMode, setOcMode] = useState('search'); // 'search' | 'create'
-  const [ocFromSelector, setOcFromSelector] = useState('');
 
   // Lightbox (ReviewTicket pattern)
   const [currentPage, setCurrentPage] = useState(0);
@@ -409,64 +406,36 @@ const InvoiceDetail = () => {
                   <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                   La IA no detectó el OC en esta factura. Asígnalo manualmente.
                 </div>
-                {/* Toggle search / create */}
-                <div className="flex gap-2 mb-3">
-                  <button onClick={() => setOcMode('search')}
-                    className={`text-[11px] px-3 py-1 rounded-full border transition-all ${ocMode === 'search' ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>
-                    Buscar existente
-                  </button>
-                  <button onClick={() => setOcMode('create')}
-                    className={`text-[11px] px-3 py-1 rounded-full border transition-all ${ocMode === 'create' ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold' : 'border-zinc-700 text-zinc-400'}`}>
-                    Crear nuevo OC
-                  </button>
-                </div>
-
-                {ocMode === 'search' && (
-                  <>
-                    <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Buscar OC o proyecto</label>
-                    <div className="relative mb-2">
-                      <Search size={13} className="absolute left-2.5 top-2.5 text-zinc-500 pointer-events-none" />
-                      <input
-                        value={ocSearch}
-                        onChange={e => setOcSearch(e.target.value)}
-                        placeholder="Escribe OC o nombre de proyecto..."
-                        className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none"
-                      />
-                      {ocSuggestions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-md overflow-hidden z-50 shadow-xl">
-                          {ocSuggestions.map((s, i) => (
-                            <div key={i} onClick={() => handleAssignOC(s.oc_number)}
-                              className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs border-b border-white/[.04] last:border-0 flex items-center gap-2">
-                              <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{s.oc_number}</span>
-                              <span className="text-zinc-400 truncate">{s.label}{s.company_name ? ` · ${s.company_name}` : ''}</span>
-                            </div>
-                          ))}
-                          <div onClick={() => handleAssignOC(ocSearch)}
-                            className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-[12px] text-zinc-500 text-center border-t border-white/[.04]">
-                            + Escribir OC personalizado
-                          </div>
+                <label className="text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block">Buscar OC o proyecto</label>
+                <div className="relative mb-2">
+                  <Search size={13} className="absolute left-2.5 top-2.5 text-zinc-500 pointer-events-none" />
+                  <input
+                    value={ocSearch}
+                    onChange={e => setOcSearch(e.target.value)}
+                    placeholder="Escribe OC o nombre de proyecto..."
+                    className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] pl-8 pr-3 py-2 rounded focus:border-amber-500 outline-none"
+                  />
+                  {ocSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-md overflow-hidden z-50 shadow-xl">
+                      {ocSuggestions.map((s, i) => (
+                        <div key={i} onClick={() => handleAssignOC(s.oc_number)}
+                          className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-xs border-b border-white/[.04] last:border-0 flex items-center gap-2">
+                          <span className="text-[11px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{s.oc_number}</span>
+                          <span className="text-zinc-400 truncate">{s.label}{s.company_name ? ` · ${s.company_name}` : ''}</span>
                         </div>
-                      )}
+                      ))}
+                      <div onClick={() => handleAssignOC(ocSearch)}
+                        className="px-3 py-2 hover:bg-zinc-800 cursor-pointer text-[12px] text-zinc-500 text-center border-t border-white/[.04]">
+                        + Escribir OC personalizado
+                      </div>
                     </div>
-                    {ocSearch.length >= 2 && ocSuggestions.length === 0 && (
-                      <button onClick={() => handleAssignOC(ocSearch)} disabled={assigning}
-                        className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 mb-2">
-                        {assigning ? 'Asignando...' : `Asignar "${ocSearch}" como OC`}
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {ocMode === 'create' && (
-                  <div className="space-y-2">
-                    <OCSelector onSelect={oc => setOcFromSelector(oc)} onClear={() => setOcFromSelector('')} />
-                    {ocFromSelector && (
-                      <button onClick={() => handleAssignOC(ocFromSelector)} disabled={assigning}
-                        className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50">
-                        {assigning ? 'Asignando...' : `Asignar ${ocFromSelector}`}
-                      </button>
-                    )}
-                  </div>
+                  )}
+                </div>
+                {ocSearch.length >= 2 && ocSuggestions.length === 0 && (
+                  <button onClick={() => handleAssignOC(ocSearch)} disabled={assigning}
+                    className="w-full text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 mb-2">
+                    {assigning ? 'Asignando...' : `Asignar "${ocSearch}" como OC`}
+                  </button>
                 )}
               </div>
             )}
