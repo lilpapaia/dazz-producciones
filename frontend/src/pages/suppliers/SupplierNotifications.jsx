@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Upload, UserPlus, FileText, Trash2, Link2, CreditCard, AlertTriangle, ChevronRight } from 'lucide-react';
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services/suppliersApi';
+import { Bell, Upload, UserPlus, FileText, Trash2, Link2, CreditCard, AlertTriangle } from 'lucide-react';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification, deleteReadNotifications } from '../../services/suppliersApi';
 
 const EVENT_CONFIG = {
   NEW_INVOICE: { icon: Upload, bg: 'bg-blue-400/10', color: 'text-blue-400' },
@@ -16,6 +16,23 @@ const EVENT_CONFIG = {
 
 const INVOICE_TYPES = ['NEW_INVOICE', 'APPROVED', 'PAID', 'DELETED', 'OC_LINKED'];
 const ACCOUNT_RE = /Data Change|IBAN Change|Deactivation/i;
+
+const getRoute = (n) => {
+  // Invoice-centric events → invoice detail
+  if (['NEW_INVOICE', 'OC_LINKED', 'DELETED'].includes(n.event_type) && n.related_invoice_id) {
+    return `/suppliers/invoices/${n.related_invoice_id}?from=notifications`;
+  }
+  // REJECTED with invoice → invoice detail
+  if (n.event_type === 'REJECTED' && n.related_invoice_id) {
+    return `/suppliers/invoices/${n.related_invoice_id}?from=notifications`;
+  }
+  // Supplier-centric → supplier detail
+  if (n.related_supplier_id && n.related_supplier_id > 0) {
+    return `/suppliers/${n.related_supplier_id}`;
+  }
+  // No navigable destination (#3-6 IA_REJECTED cert without supplier_id)
+  return null;
+};
 
 const SupplierNotifications = () => {
   const navigate = useNavigate();
@@ -48,6 +65,23 @@ const SupplierNotifications = () => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
+  const handleDelete = async (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    await deleteNotification(id).catch(() => {});
+  };
+
+  const handleDeleteRead = async () => {
+    setNotifications(prev => prev.filter(n => !n.is_read));
+    await deleteReadNotifications().catch(() => {});
+  };
+
+  const handleClick = (n) => {
+    const route = getRoute(n);
+    if (!route) return;
+    if (!n.is_read) handleMarkRead(n.id);
+    navigate(route);
+  };
+
   const timeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z').getTime();
     const mins = Math.floor(diff / 60000);
@@ -59,6 +93,7 @@ const SupplierNotifications = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const readCount = notifications.filter(n => n.is_read).length;
   const displayed = notifications.filter(n => {
     if (readFilter === 'unread' && n.is_read) return false;
     if (typeFilter === 'all') return true;
@@ -83,6 +118,11 @@ const SupplierNotifications = () => {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">Notificaciones</h1>
         <div className="flex gap-2">
+          {readCount > 0 && (
+            <button onClick={handleDeleteRead} className="text-[11px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1">
+              <Trash2 size={11} /> Limpiar leídas ({readCount})
+            </button>
+          )}
           {unreadCount > 0 && (
             <button onClick={handleMarkAllRead} className="text-[11px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors">
               Marcar todo leído
@@ -123,16 +163,18 @@ const SupplierNotifications = () => {
           visible.map(n => {
             const cfg = EVENT_CONFIG[n.event_type] || { icon: Bell, bg: 'bg-zinc-800', color: 'text-zinc-400' };
             const Icon = cfg.icon;
-            const hasSupplier = n.related_supplier_id && n.related_supplier_id > 0;
+            const route = getRoute(n);
+            const isClickable = !!route;
             return (
               <div
                 key={n.id}
+                onClick={() => isClickable && handleClick(n)}
                 className={`flex items-start gap-2.5 px-3.5 py-3 border-b border-white/[.04] last:border-0 transition-colors ${
                   !n.is_read ? 'bg-amber-500/[.02]' : ''
-                }`}
+                } ${isClickable ? 'cursor-pointer hover:bg-zinc-800/50' : 'cursor-default'}`}
               >
                 {!n.is_read ? (
-                  <button onClick={() => handleMarkRead(n.id)} className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mt-1.5 cursor-pointer hover:bg-amber-400" title="Mark as read" />
+                  <button onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }} className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mt-1.5 cursor-pointer hover:bg-amber-400" title="Marcar leída" />
                 ) : (
                   <div className="w-2 h-2 flex-shrink-0 mt-1.5" />
                 )}
@@ -149,14 +191,13 @@ const SupplierNotifications = () => {
                     {!n.is_read && <b className="text-amber-400 ml-2">sin leer</b>}
                   </div>
                 </div>
-                {hasSupplier && (
-                  <button
-                    onClick={() => { if (!n.is_read) handleMarkRead(n.id); navigate(`/suppliers/${n.related_supplier_id}`); }}
-                    className="text-[10px] text-zinc-500 hover:text-zinc-300 border border-zinc-700 px-2 py-1 rounded flex items-center gap-0.5 flex-shrink-0 transition-colors"
-                  >
-                    Ver <ChevronRight size={10} />
-                  </button>
-                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
+                  className="w-[26px] h-[26px] flex items-center justify-center rounded text-zinc-600 hover:text-red-400 hover:bg-red-400/10 transition-colors flex-shrink-0"
+                  title="Eliminar"
+                >
+                  <Trash2 size={12} strokeWidth={1.5} />
+                </button>
               </div>
             );
           })

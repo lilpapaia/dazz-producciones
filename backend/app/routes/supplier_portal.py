@@ -394,7 +394,7 @@ async def validate_bank_cert_iban(
     if not cert_data or (not cert_data.get("iban") and not cert_data.get("nif") and cert_data.get("is_bank_certificate") is None):
         _notify(db, NotificationRecipientType.ADMIN, 0,
                 NotificationEventType.IA_REJECTED, "Bank cert not readable",
-                "New supplier registration: AI could not read the bank certificate — manual review needed",
+                f"{invitation.name} ({invitation.email}) — AI could not read the bank certificate — manual review needed",
                 supplier_id=None)
         db.commit()
         return {"valid": True, "iban_match": None, "nif_match": None, "is_bank_certificate": None,
@@ -405,7 +405,7 @@ async def validate_bank_cert_iban(
     if is_cert is False:
         _notify(db, NotificationRecipientType.ADMIN, 0,
                 NotificationEventType.IA_REJECTED, "Document is not a bank certificate",
-                "New supplier registration: uploaded document does not appear to be a bank certificate",
+                f"{invitation.name} ({invitation.email}) — uploaded document does not appear to be a bank certificate",
                 supplier_id=None)
         warnings.append("Document may not be a bank certificate")
 
@@ -421,7 +421,7 @@ async def validate_bank_cert_iban(
             iban_match = False
             _notify(db, NotificationRecipientType.ADMIN, 0,
                     NotificationEventType.IA_REJECTED, "IBAN mismatch on bank cert",
-                    f"New supplier registration: IBAN on certificate does not match the one entered by supplier",
+                    f"{invitation.name} ({invitation.email}) — IBAN on certificate does not match the one entered by supplier",
                     supplier_id=None)
             warnings.append("IBAN on certificate does not match")
 
@@ -438,7 +438,7 @@ async def validate_bank_cert_iban(
                 nif_match = False
                 _notify(db, NotificationRecipientType.ADMIN, 0,
                         NotificationEventType.IA_REJECTED, "NIF mismatch on bank cert",
-                        f"New supplier registration: NIF on certificate does not match the one entered by supplier",
+                        f"{invitation.name} ({invitation.email}) — NIF on certificate does not match the one entered by supplier",
                         supplier_id=None)
                 warnings.append("NIF on certificate does not match")
 

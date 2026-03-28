@@ -972,6 +972,38 @@ async def mark_all_notifications_read(
     return {"message": "All notifications marked as read"}
 
 
+@router.delete("/notifications/read")
+async def delete_read_notifications(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Delete all read admin notifications."""
+    count = db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.is_read == True,
+    ).delete()
+    db.commit()
+    return {"message": f"{count} read notifications deleted"}
+
+
+@router.delete("/notifications/{notification_id}")
+async def delete_notification(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Delete a single admin notification."""
+    notif = db.query(SupplierNotification).filter(
+        SupplierNotification.id == notification_id,
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+    ).first()
+    if not notif:
+        raise HTTPException(404, "Notification not found")
+    db.delete(notif)
+    db.commit()
+    return {"message": "Notification deleted"}
+
+
 # ============================================
 # ADMIN UTILITIES
 # ============================================
