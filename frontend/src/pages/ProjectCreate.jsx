@@ -151,11 +151,19 @@ const ProjectCreate = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">CÓDIGO CREATIVO (OC) *</label>
-              <OCSelector
-                companyId={formData.owner_company_id ? parseInt(formData.owner_company_id) : null}
-                onSelect={oc => setFormData(prev => ({ ...prev, creative_code: oc }))}
-                onClear={() => setFormData(prev => ({ ...prev, creative_code: '' }))}
-              />
+              {formData.owner_company_id ? (
+                <OCSelector
+                  companyId={parseInt(formData.owner_company_id)}
+                  onSelect={oc => setFormData(prev => ({ ...prev, creative_code: oc }))}
+                  onClear={() => setFormData(prev => ({ ...prev, creative_code: '' }))}
+                  inputClassName="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                  labelClassName="block text-xs font-mono text-zinc-400 mb-2 tracking-wider"
+                />
+              ) : (
+                <div className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-500 text-sm">
+                  Selecciona una empresa primero
+                </div>
+              )}
             </div>
 
             {/* ← NUEVO: Dropdown de empresas */}

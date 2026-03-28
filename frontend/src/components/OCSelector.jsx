@@ -3,8 +3,8 @@ import { getOCPrefixes, validateOC } from '../services/suppliersApi';
 import { getCompanies } from '../services/api';
 import { AlertTriangle, Check } from 'lucide-react';
 
-const labelCls = 'text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block';
-const inputCls = 'w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2 rounded focus:border-amber-500 outline-none';
+const defaultLabelCls = 'text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block';
+const defaultInputCls = 'w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2 rounded focus:border-amber-500 outline-none';
 
 /**
  * OCSelector — 3-step OC builder (Company → Prefix → Number)
@@ -14,8 +14,12 @@ const inputCls = 'w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[
  *   permanentOnly   — only show permanent_oc=true prefixes (for SupplierInvite)
  *   onSelect(oc)    — called with the full OC string when valid
  *   onClear()       — called when selection is reset
+ *   inputClassName  — override input/select CSS classes
+ *   labelClassName  — override label CSS classes
  */
-const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSelect, onClear }) => {
+const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSelect, onClear, inputClassName, labelClassName }) => {
+  const labelCls = labelClassName || defaultLabelCls;
+  const inputCls = inputClassName || defaultInputCls;
   const [companies, setCompanies] = useState([]);
   const [prefixes, setPrefixes] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(externalCompanyId || '');
