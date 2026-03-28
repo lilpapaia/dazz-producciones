@@ -263,6 +263,38 @@ async def startup_event():
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")
 
+    # OC-1: Seed oc_prefixes (idempotent — skips if prefix already exists)
+    from sqlalchemy import text as _text
+    with engine.connect() as conn:
+        try:
+            _seed = [
+                ("BR",            "DAZZLE AGENCY, S.L.",                      "DAZZLE AGENCY, S.L.",                      "Proyectos",               5, "2026", False),
+                ("BRMKT",         "DAZZLE AGENCY, S.L.",                      "DAZZLE AGENCY, S.L.",                      "Gastos empresa",          3, "2026", False),
+                ("CRPROD",        "DAZZ CREATIVE",                            "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Producciones",            5, "2026", False),
+                ("CRREP",         "DAZZ CREATIVE",                            "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Representacion creativos", 5, "2026", False),
+                ("CRAI",          "DAZZ CREATIVE",                            "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","IA",                      5, "2026", False),
+                ("CRMKT",         "DAZZ CREATIVE",                            "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Gastos empresa",          3, "2026", False),
+                ("CRESTUDIOBCN",  "DAZZ CREATIVE",                            "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Estudio Barcelona",       3, "2026", False),
+                ("CRESTUDIOMAD",  "DAZZ CREATIVE",                            "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Estudio Madrid",          3, "2026", False),
+                ("MGMTINT",       "DAZZLE MGMT",                              "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Talents internos",        3, "2026", True),
+                ("MGMTEXT",       "DAZZLE MGMT",                              "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Talents externos",        3, "2026", False),
+                ("MGMTMKT",       "DAZZLE MGMT",                              "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Gastos empresa",          3, "2026", False),
+                ("HDM",           "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Proyectos especiales",    3, "26",   False),
+                ("HDMKT",         "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Gastos empresa",          3, "2026", False),
+            ]
+            for prefix, co_name, bill_name, desc, digits, yr_fmt, perm in _seed:
+                conn.execute(_text(
+                    "INSERT INTO oc_prefixes (prefix, company_id, billing_company_id, description, number_digits, year_format, permanent_oc, active) "
+                    "SELECT :prefix, c1.id, c2.id, :desc, :digits, :yr_fmt, :perm, true "
+                    "FROM companies c1, companies c2 "
+                    "WHERE c1.name = :co_name AND c2.name = :bill_name "
+                    "AND NOT EXISTS (SELECT 1 FROM oc_prefixes WHERE prefix = :prefix)"
+                ), {"prefix": prefix, "co_name": co_name, "bill_name": bill_name, "desc": desc, "digits": digits, "yr_fmt": yr_fmt, "perm": perm})
+            conn.commit()
+            logger.info("OC prefixes seeded")
+        except Exception as e:
+            logger.warning(f"OC prefixes seed warning: {e}")
+
     logger.info("Base de datos inicializada")
     logger.info(f"Modo: {ENVIRONMENT}")
     logger.info(f"CORS permitido para: {ALLOWED_ORIGINS}")

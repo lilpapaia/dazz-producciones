@@ -23,7 +23,8 @@ from typing import Dict, Any, List, Optional, Tuple
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
-from app.models.database import Company, Project
+from sqlalchemy import func
+from app.models.database import Company, Project, OCPrefix
 from app.models.suppliers import Supplier, SupplierOC, SupplierInvoice
 from app.services.encryption import decrypt_iban
 from app.services.claude_ai import strip_markdown_json
@@ -38,25 +39,6 @@ if not ANTHROPIC_API_KEY:
     _logging.getLogger(__name__).warning("ANTHROPIC_API_KEY not set — AI features will fail")
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
-
-# ============================================
-# MAPEO PREFIJO OC → EMPRESA
-# Ordenado de más largo a más corto para longest-prefix-match
-# ============================================
-
-OC_PREFIX_MAP = [
-    ("CRESTUDIOBCN", "DAZZ CREATIVE"),
-    ("CRESTUDIOMAD", "DAZZ CREATIVE"),
-    ("OC-MGMTINT",   "DAZZLE MGMT"),
-    ("CRPROD",        "DAZZ CREATIVE"),
-    ("CRREP",         "DAZZ CREATIVE"),
-    ("CRMKT",         "DAZZ CREATIVE"),
-    ("CRAI",          "DAZZ CREATIVE"),
-    ("HDMKT",         "DIGITAL ADVERTISING SOCIAL SERVICES, S.L."),
-    ("BRMKT",         "DAZZLE AGENCY, S.L."),
-    ("HDM",           "DIGITAL ADVERTISING SOCIAL SERVICES, S.L."),
-    ("BR",            "DAZZLE AGENCY, S.L."),
-]
 
 MATH_TOLERANCE = 0.02  # 2 céntimos de tolerancia en validación matemática
 
@@ -186,37 +168,43 @@ def extract_supplier_invoice(file_path: str, file_type: str) -> Dict[str, Any]:
 # RESOLUCIÓN DE EMPRESA POR PREFIJO OC
 # ============================================
 
+def _get_oc_prefixes(db: Session):
+    """Load active OC prefixes ordered by length descending (longest-prefix-match)."""
+    return db.query(OCPrefix).filter(
+        OCPrefix.active == True
+    ).order_by(func.length(OCPrefix.prefix).desc()).all()
+
+
 def resolve_company_from_oc(oc_number: str, db: Session) -> Optional[int]:
     """
-    Mapea un OC a su company_id usando el prefijo.
+    Mapea un OC a su billing_company_id usando el prefijo de la tabla oc_prefixes.
     Usa longest-prefix-match para evitar ambigüedad (BR vs BRMKT).
 
     Returns:
-        company_id o None si no hay match
+        billing_company_id o None si no hay match
     """
     if not oc_number:
         return None
 
     oc_upper = oc_number.strip().upper()
 
-    for prefix, company_name in OC_PREFIX_MAP:
-        if oc_upper.startswith(prefix.upper()):
-            company = db.query(Company).filter(Company.name == company_name).first()
-            return company.id if company else None
+    for p in _get_oc_prefixes(db):
+        if oc_upper.startswith(p.prefix.upper()):
+            return p.billing_company_id
 
     return None
 
 
-def _get_company_name_from_oc(oc_number: str) -> Optional[str]:
-    """Devuelve el nombre de empresa esperado para un OC, sin consultar BD."""
+def _get_company_name_from_oc(oc_number: str, db: Session) -> Optional[str]:
+    """Devuelve el nombre de empresa (billing) esperado para un OC."""
     if not oc_number:
         return None
 
     oc_upper = oc_number.strip().upper()
 
-    for prefix, company_name in OC_PREFIX_MAP:
-        if oc_upper.startswith(prefix.upper()):
-            return company_name
+    for p in _get_oc_prefixes(db):
+        if oc_upper.startswith(p.prefix.upper()):
+            return p.billing_company.name if p.billing_company else None
 
     return None
 
@@ -412,7 +400,7 @@ def _resolve_oc_as_project(
     Returns:
         (oc_status, company_id, project_id)
     """
-    expected_company_name = _get_company_name_from_oc(oc_number)
+    expected_company_name = _get_company_name_from_oc(oc_number, db)
 
     if expected_company_name is None:
         errors.append(

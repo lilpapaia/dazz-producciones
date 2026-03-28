@@ -41,6 +41,27 @@ class Company(Base):
     projects = relationship("Project", back_populates="owner_company")
 
 # ============================================
+# TABLA: OC_PREFIXES (prefijos OC → empresa)
+# ============================================
+
+class OCPrefix(Base):
+    __tablename__ = "oc_prefixes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prefix = Column(String, unique=True, nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    billing_company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    description = Column(String, nullable=True)
+    number_digits = Column(Integer, default=3)
+    year_format = Column(String, default="2026")
+    permanent_oc = Column(Boolean, default=False)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    company = relationship("Company", foreign_keys=[company_id])
+    billing_company = relationship("Company", foreign_keys=[billing_company_id])
+
+# ============================================
 # NUEVA TABLA INTERMEDIA: USER_COMPANIES (Many-to-Many)
 # ============================================
 
