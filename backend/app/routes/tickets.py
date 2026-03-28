@@ -203,8 +203,8 @@ async def upload_ticket(
                     json.dumps(cloudinary_result.get("pages", [])),
                     cloudinary_result.get("pdf_url")
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Cloudinary cleanup failed after DB rollback: {e}")
             raise
         db.refresh(ticket)
         return {

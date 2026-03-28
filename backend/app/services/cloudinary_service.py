@@ -201,9 +201,9 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except Exception:
-                pass
-        
+            except Exception as e:
+                logger.warning(f"Temp file cleanup failed: {e}")
+
         # 2. Subir PDF original para descarga (si no es muy grande)
         pdf_result = upload_pdf_original(file_path, public_id)
         pdf_url = pdf_result["url"] if pdf_result else None
@@ -241,8 +241,8 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
             if temp_compressed and os.path.exists(temp_compressed):
                 try:
                     os.remove(temp_compressed)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Temp compressed file cleanup failed: {e}")
 
 
 def delete_ticket_files(file_pages_json: str = None, pdf_url: str = None) -> bool:

@@ -15,6 +15,7 @@ Fase 2 del módulo de proveedores.
 import anthropic
 import json
 import base64
+import logging
 import os
 import re
 from datetime import date as date_type
@@ -26,6 +27,8 @@ from app.models.database import Company, Project
 from app.models.suppliers import Supplier, SupplierOC, SupplierInvoice
 from app.services.encryption import decrypt_iban
 from app.services.claude_ai import strip_markdown_json
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -496,7 +499,8 @@ def extract_bank_cert_data(file_path: str) -> Dict[str, Any]:
                 ],
             }],
         )
-    except Exception:
+    except Exception as e:
+        logger.error(f"Claude API call failed for bank cert extraction: {e}")
         return {}
 
     response_text = strip_markdown_json(message.content[0].text)

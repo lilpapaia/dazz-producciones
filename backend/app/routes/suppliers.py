@@ -11,8 +11,6 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, case
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
-import secrets
-import string
 
 from config.database import get_db
 from app.models.database import User, Company, Project, ProjectStatus, Ticket, TicketType
