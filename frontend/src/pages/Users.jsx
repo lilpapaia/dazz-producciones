@@ -306,7 +306,7 @@ const Users = () => {
                 </button>
                 <button
                   onClick={handleCreate}
-                  disabled={!newUser.name || !newUser.email || !newUser.username}
+                  disabled={!newUser.name || !newUser.email || !newUser.username || newUser.company_ids.length === 0}
                   className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
                 >

@@ -113,7 +113,11 @@ async def get_monthly_evolution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
-    tickets = db.query(Ticket).join(Project).filter(Project.year == str(year)).all()
+    query = db.query(Ticket).join(Project).filter(Project.year == str(year))
+    if current_user.role == UserRole.BOSS:
+        boss_cids = get_user_company_ids(current_user, db)
+        query = query.filter(Project.owner_company_id.in_(boss_cids))
+    tickets = query.all()
     monthly_totals = [0.0] * 12
     
     for ticket in tickets:
@@ -140,7 +144,11 @@ async def get_currency_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
-    tickets = db.query(Ticket).join(Project).filter(Project.year == str(year)).all()
+    query = db.query(Ticket).join(Project).filter(Project.year == str(year))
+    if current_user.role == UserRole.BOSS:
+        boss_cids = get_user_company_ids(current_user, db)
+        query = query.filter(Project.owner_company_id.in_(boss_cids))
+    tickets = query.all()
     if quarter:
         tickets = filter_tickets_by_quarter(tickets, quarter)
     return _calc_distribution_from_tickets(tickets)
@@ -157,6 +165,9 @@ async def get_foreign_breakdown(
         Project.year == str(year),
         Ticket.is_foreign == True
     )
+    if current_user.role == UserRole.BOSS:
+        boss_cids = get_user_company_ids(current_user, db)
+        query = query.filter(Project.owner_company_id.in_(boss_cids))
     tickets = query.all()
     if quarter:
         tickets = filter_tickets_by_quarter(tickets, quarter)
