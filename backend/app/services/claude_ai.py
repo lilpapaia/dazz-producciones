@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+CLAUDE_MODEL = "claude-sonnet-4-6"
 
 def _normalize_media_type(file_type: str, filename: Optional[str] = None) -> str:
     """Normalize media type for Claude API which only accepts:
@@ -255,7 +256,7 @@ Ejemplo 3 - Factura Canarias (EUR con IGIC):
     
     # Call Claude API
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=CLAUDE_MODEL,
         max_tokens=1024,
         messages=[
             {

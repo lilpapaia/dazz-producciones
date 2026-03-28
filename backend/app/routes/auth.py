@@ -106,12 +106,9 @@ async def register(
         )
 
         db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
+        db.flush()  # Generate db_user.id without committing
 
-        logger.info(f"Usuario creado: {user.email} (ID: {db_user.id})")
-
-        # Asignar empresas al usuario
+        # Asignar empresas al usuario (same transaction)
         if user.company_ids:
             for company_id in user.company_ids:
                 user_company = UserCompany(
@@ -119,11 +116,13 @@ async def register(
                     company_id=company_id
                 )
                 db.add(user_company)
-
-            db.commit()
             logger.info(f"{len(user.company_ids)} empresa(s) asignada(s) a {user.email}")
         else:
             logger.warning(f"Usuario creado SIN empresas asignadas: {user.email}")
+
+        db.commit()  # Atomic: user + companies in one transaction
+        db.refresh(db_user)
+        logger.info(f"Usuario creado: {user.email} (ID: {db_user.id})")
 
     except Exception as e:
         db.rollback()

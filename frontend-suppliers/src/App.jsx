@@ -1,17 +1,28 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
+
+// Eager: first screens
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
-import Upload from './pages/Upload';
-import Profile from './pages/Profile';
-import Notifications from './pages/Notifications';
-import EditData from './pages/EditData';
-import ChangeIban from './pages/ChangeIban';
-import RequestDeactivation from './pages/RequestDeactivation';
+
+// Lazy: secondary pages
+const Upload = lazy(() => import('./pages/Upload'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const EditData = lazy(() => import('./pages/EditData'));
+const ChangeIban = lazy(() => import('./pages/ChangeIban'));
+const RequestDeactivation = lazy(() => import('./pages/RequestDeactivation'));
+
+const PageLoader = () => (
+  <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+    <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function App() {
   return (
@@ -19,6 +30,7 @@ function App() {
       <Router>
         <ErrorBoundary>
         <div className="min-h-screen bg-[#09090b] text-zinc-100">
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -36,6 +48,7 @@ function App() {
               </div>
             } />
           </Routes>
+          </Suspense>
         </div>
         </ErrorBoundary>
       </Router>
