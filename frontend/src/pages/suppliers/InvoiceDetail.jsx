@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download, Search, Trash2 } from 'lucide-react';
-import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions, deleteInvoice } from '../../services/suppliersApi';
+import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomIn, Download, Search, Trash2, RotateCcw } from 'lucide-react';
+import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions, deleteInvoice, rejectInvoiceDeletion } from '../../services/suppliersApi';
 import { showError, showSuccess } from '../../utils/toast';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
@@ -132,6 +132,16 @@ const InvoiceDetail = () => {
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setDeleteModal(false);
     setDeleteReason('');
+    setActing(false);
+  };
+
+  const handleRejectDeletion = async () => {
+    setActing(true);
+    try {
+      await rejectInvoiceDeletion(invoiceId);
+      showSuccess('Solicitud de borrado rechazada');
+      load();
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setActing(false);
   };
 
@@ -448,10 +458,16 @@ const InvoiceDetail = () => {
               </button>
             )}
             {invoice.status === 'DELETE_REQUESTED' && (
-              <button onClick={() => setConfirmDeleteRequested(true)} disabled={acting}
-                className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                <Trash2 size={13} /> Confirmar borrado
-              </button>
+              <div className="space-y-2">
+                <button onClick={handleRejectDeletion} disabled={acting}
+                  className="w-full text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <RotateCcw size={13} /> Rechazar borrado
+                </button>
+                <button onClick={() => setConfirmDeleteRequested(true)} disabled={acting}
+                  className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <Trash2 size={13} /> Confirmar borrado
+                </button>
+              </div>
             )}
             {invoice.status === 'PAID' && (
               <p className="text-xs text-zinc-600 text-center py-2">Factura cerrada — no hay acciones disponibles</p>

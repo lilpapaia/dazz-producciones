@@ -876,6 +876,37 @@ async def confirm_invoice_deletion(
     return {"message": "Invoice deleted"}
 
 
+@router.post("/invoices/{invoice_id}/reject-deletion")
+async def reject_invoice_deletion(
+    invoice_id: int,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Reject a supplier's deletion request and restore invoice to previous status."""
+    invoice = db.query(SupplierInvoice).filter(SupplierInvoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(404, "Invoice not found")
+    if invoice.status != InvoiceStatus.DELETE_REQUESTED:
+        raise HTTPException(400, "Invoice is not in DELETE_REQUESTED status")
+
+    invoice.status = InvoiceStatus.PENDING if invoice.oc_number else InvoiceStatus.OC_PENDING
+    invoice.delete_reason = None
+
+    supplier = db.query(Supplier).filter(Supplier.id == invoice.supplier_id).first()
+    if supplier:
+        reason = body.get("reason", "")
+        msg = f"Your deletion request for invoice {invoice.invoice_number} was rejected."
+        if reason:
+            msg += f" Reason: {reason}"
+        _notify(db, NotificationRecipientType.SUPPLIER, supplier.id,
+                NotificationEventType.REJECTED, "Deletion request rejected",
+                msg, invoice_id=invoice.id, supplier_id=supplier.id)
+
+    db.commit()
+    return {"message": "Deletion request rejected", "new_status": invoice.status.value}
+
+
 # ============================================
 # NOTIFICATIONS
 # ============================================

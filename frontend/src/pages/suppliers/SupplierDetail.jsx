@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, UserX, Link2, Check, Download, Search, X, Edit3, Mic, Trash2, AlertTriangle, Shield } from 'lucide-react';
-import { getSupplier, updateSupplier, deactivateSupplier, reactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, exportSupplierExcel, getPendingActions, approveDataChange, rejectDataChange, approveIbanChange, rejectIbanChange, confirmDeactivation, rejectDeactivation, verifyCert } from '../../services/suppliersApi';
+import { Save, UserX, Link2, Check, Download, Search, X, Edit3, Mic, Trash2, AlertTriangle, Shield, RotateCcw } from 'lucide-react';
+import { getSupplier, updateSupplier, deactivateSupplier, reactivateSupplier, assignOC, addSupplierNote, getAllInvoices, getNotifications, getBankCertUrl, updateInvoiceStatus, deleteInvoice, rejectInvoiceDeletion, exportSupplierExcel, getPendingActions, approveDataChange, rejectDataChange, approveIbanChange, rejectIbanChange, confirmDeactivation, rejectDeactivation, verifyCert } from '../../services/suppliersApi';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import { showError } from '../../utils/toast';
@@ -162,6 +162,13 @@ const SupplierDetail = () => {
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
     setDeleteModal(null);
     setDeleteReason('');
+  };
+
+  const handleRejectDeletion = async (inv) => {
+    try {
+      await rejectInvoiceDeletion(inv.id);
+      load();
+    } catch (e) { showError(e.response?.data?.detail || 'Error'); }
   };
 
   const handleTrashClick = (inv) => {
@@ -649,6 +656,11 @@ const SupplierDetail = () => {
                           <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
                         )}
                         {inv.status === 'PAID' && <span className="text-[12px] text-zinc-600">Cerrada</span>}
+                        {inv.status === 'DELETE_REQUESTED' && (
+                          <button onClick={(e) => { e.stopPropagation(); handleRejectDeletion(inv); }} className="w-[34px] h-[34px] border border-amber-500/20 rounded flex items-center justify-center text-amber-400/60 hover:text-amber-400 hover:bg-amber-400/10">
+                            <RotateCcw size={14} strokeWidth={1.5} />
+                          </button>
+                        )}
                         {(inv.status === 'PENDING' || inv.status === 'APPROVED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
                           <button onClick={(e) => { e.stopPropagation(); handleTrashClick(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
                             <Trash2 size={14} strokeWidth={1.5} />
@@ -709,6 +721,11 @@ const SupplierDetail = () => {
                       )}
                       {inv.status === 'PAID' && (
                         <span className="text-[13px] text-zinc-600 px-2.5 py-1">Cerrada</span>
+                      )}
+                      {inv.status === 'DELETE_REQUESTED' && (
+                        <button onClick={(e) => { e.stopPropagation(); handleRejectDeletion(inv); }} className="w-[34px] h-[34px] border border-amber-500/20 rounded flex items-center justify-center text-amber-400/60 hover:text-amber-400 hover:bg-amber-400/10 transition-colors flex-shrink-0">
+                          <RotateCcw size={15} strokeWidth={1.5} />
+                        </button>
                       )}
                       {(inv.status === 'PENDING' || inv.status === 'APPROVED' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
                         <button onClick={(e) => { e.stopPropagation(); handleTrashClick(inv); }} className="w-[34px] h-[34px] border border-red-400/20 rounded flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors flex-shrink-0">
