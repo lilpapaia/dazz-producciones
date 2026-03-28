@@ -5,6 +5,7 @@ Prefijo: /portal
 
 import os
 import asyncio
+import logging
 import tempfile
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query
 from fastapi.responses import JSONResponse
@@ -43,6 +44,9 @@ from app.services.validators import validate_pdf_bytes, sanitize_filename, valid
 from app.services.supplier_ai import format_date_for_response
 
 from app.services.rate_limit import limiter
+import cloudinary.uploader
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portal", tags=["Supplier Portal"])
 
@@ -517,7 +521,7 @@ async def upload_invoice(
         else:
             invoice_status = InvoiceStatus.PENDING
 
-        # Create invoice record (file_pages not in ORM — saved via raw SQL after)
+        # BUG-24: Single atomic commit — invoice + file_pages + date_parsed + notifications
         invoice = SupplierInvoice(
             supplier_id=supplier.id,
             invoice_number=extracted.get("invoice_number", ""),
@@ -540,29 +544,16 @@ async def upload_invoice(
             ia_validation_result=json.dumps(validation, default=str),
         )
         db.add(invoice)
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
-            # LOGIC-M4: Si falla el commit a BD, limpiar archivos ya subidos a Cloudinary
-            try:
-                from app.services.supplier_storage import delete_invoice_pdf
-                delete_invoice_pdf(upload_result["url"])
-            except Exception:
-                pass
-            raise
-        db.refresh(invoice)
+        db.flush()  # Generate invoice.id without committing
 
-        # M-16: Atomic commit — file_pages + date_parsed + notifications together
         if upload_result.get("pages"):
             invoice.file_pages = json.dumps(upload_result["pages"])
 
-        # LOGIC-M2: Store parsed date via ORM (column now mapped)
         date_parsed = validation.get("date_parsed")
         if date_parsed:
             invoice.date_parsed = date_parsed
 
-        # Notifications (same transaction as file_pages + date_parsed)
+        # Notifications use invoice.id from flush
         if invoice_status == InvoiceStatus.OC_PENDING:
             _notify(db, NotificationRecipientType.ADMIN, 0,
                     NotificationEventType.NEW_INVOICE, "New Invoice — OC Required",
@@ -582,7 +573,25 @@ async def upload_invoice(
                     f"Invoice {invoice.invoice_number} submitted successfully",
                     invoice_id=invoice.id, supplier_id=supplier.id)
 
-        db.commit()  # Atomic: file_pages + date_parsed + notifications
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            # BUG-24: Cleanup Cloudinary — PDF + all page images
+            try:
+                from app.services.supplier_storage import delete_invoice_pdf
+                delete_invoice_pdf(upload_result["url"])
+            except Exception as cleanup_err:
+                logger.error(f"Cloudinary PDF cleanup failed — orphan: {upload_result['url']}: {cleanup_err}")
+            for page_url in upload_result.get("pages", []):
+                try:
+                    from app.services.cloudinary_service import extract_public_id_from_url
+                    pid = extract_public_id_from_url(page_url)
+                    if pid:
+                        cloudinary.uploader.destroy(pid, resource_type="image")
+                except Exception as page_err:
+                    logger.error(f"Cloudinary page cleanup failed — orphan: {page_url}: {page_err}")
+            raise
 
     finally:
         # Always clean up temp file
