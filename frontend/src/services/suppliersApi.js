@@ -26,8 +26,10 @@ export const deleteInvoice = (id, reason) => api.delete(`/suppliers/invoices/${i
 export const rejectInvoiceDeletion = (id, reason) => api.post(`/suppliers/invoices/${id}/reject-deletion`, { reason });
 export const assignInvoiceOC = (invoiceId, ocNumber) => api.patch(`/suppliers/invoices/${invoiceId}/assign-oc`, { oc_number: ocNumber });
 
-// OC autocomplete
+// OC autocomplete + prefixes
 export const getOCSuggestions = (q) => api.get('/suppliers/oc-suggestions', { params: { q } });
+export const getOCPrefixes = (permanentOnly = false) => api.get('/suppliers/ocs/prefixes', { params: { permanent_only: permanentOnly } });
+export const validateOC = (oc) => api.get('/suppliers/ocs/validate-oc', { params: { oc } });
 
 // Autoinvoice
 export const getNextInvoiceNumber = (companyId) => api.get('/suppliers/autoinvoice/next-number', { params: { company_id: companyId } });

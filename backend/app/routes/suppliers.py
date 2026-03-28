@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 from config.database import get_db
-from app.models.database import User, Company, Project, ProjectStatus, Ticket, TicketType
+from app.models.database import User, Company, Project, ProjectStatus, Ticket, TicketType, OCPrefix
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierOC, SupplierNotification,
     SupplierInvitation, InvoiceStatus, SupplierStatus,
@@ -106,6 +106,45 @@ async def check_oc_nif(
         func.upper(SupplierOC.nif_cif) == nif.strip().upper()
     ).first()
     return {"exists": existing is not None, "oc_number": existing.oc_number if existing else None}
+
+
+@router.get("/ocs/prefixes")
+async def list_oc_prefixes(
+    permanent_only: bool = Query(False),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """List active OC prefixes with company info."""
+    query = db.query(OCPrefix).options(
+        joinedload(OCPrefix.company), joinedload(OCPrefix.billing_company)
+    ).filter(OCPrefix.active == True)
+    if permanent_only:
+        query = query.filter(OCPrefix.permanent_oc == True)
+    prefixes = query.order_by(OCPrefix.prefix).all()
+    return [{
+        "id": p.id, "prefix": p.prefix,
+        "company_id": p.company_id, "company_name": p.company.name if p.company else None,
+        "billing_company_id": p.billing_company_id, "billing_company_name": p.billing_company.name if p.billing_company else None,
+        "description": p.description, "number_digits": p.number_digits,
+        "year_format": p.year_format, "permanent_oc": p.permanent_oc,
+    } for p in prefixes]
+
+
+@router.get("/ocs/validate-oc")
+async def validate_oc(
+    oc: str = Query(..., min_length=3, max_length=50),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Check if an OC already exists in supplier_ocs or projects."""
+    oc = oc.strip()
+    in_ocs = db.query(SupplierOC).filter(SupplierOC.oc_number.ilike(oc)).first()
+    if in_ocs:
+        return {"valid": False, "exists": True, "message": f"OC ya existe como OC permanente (talent: {in_ocs.talent_name})"}
+    in_project = db.query(Project).filter(Project.creative_code.ilike(oc)).first()
+    if in_project:
+        return {"valid": False, "exists": True, "message": f"OC ya existe como proyecto ({in_project.description})"}
+    return {"valid": True, "exists": False, "message": "OC disponible"}
 
 
 @router.get("/oc-suggestions")

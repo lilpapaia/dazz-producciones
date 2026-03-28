@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Send } from 'lucide-react';
 import { getCompanies } from '../../services/api';
+import OCSelector from '../../components/OCSelector';
 import { getNextInvoiceNumber, searchSuppliersForAutoinvoice, generateAutoinvoice, previewAutoinvoice } from '../../services/suppliersApi';
 import { showSuccess, showError } from '../../utils/toast';
 import useClickOutside from '../../hooks/useClickOutside';
@@ -215,7 +216,9 @@ const AutoInvoice = () => {
               </div>
               <div><label className={labelCls}>Fecha *</label><input value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} /></div>
               <div><label className={labelCls}>Nº Factura *</label><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className={`${inputCls} font-mono`} /></div>
-              <div><label className={labelCls}>OC *</label><input value={ocNumber} onChange={e => setOcNumber(e.target.value)} placeholder="OC-MGMTINT2026001" className={`${inputCls} font-mono`} /></div>
+              <div><label className={labelCls}>OC *</label>
+                <OCSelector companyId={companyId ? parseInt(companyId) : null} onSelect={oc => setOcNumber(oc)} onClear={() => setOcNumber('')} />
+              </div>
             </div>
           </div>
         </div>

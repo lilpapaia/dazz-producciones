@@ -4,6 +4,7 @@ import { createProject, getCompanies } from '../services/api';
 import { ArrowLeft, Save, Building2 } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
 import UserAutocomplete from '../components/UserAutocomplete';
+import OCSelector from '../components/OCSelector';
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
@@ -150,14 +151,10 @@ const ProjectCreate = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">CÓDIGO CREATIVO (OC) *</label>
-              <input
-                type="text"
-                name="creative_code"
-                value={formData.creative_code}
-                onChange={handleChange}
-                placeholder="OC-PROD202600XXX"
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                required
+              <OCSelector
+                companyId={formData.owner_company_id ? parseInt(formData.owner_company_id) : null}
+                onSelect={oc => setFormData(prev => ({ ...prev, creative_code: oc }))}
+                onClear={() => setFormData(prev => ({ ...prev, creative_code: '' }))}
               />
             </div>
 

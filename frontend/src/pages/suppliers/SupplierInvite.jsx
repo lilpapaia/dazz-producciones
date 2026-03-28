@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, CheckCircle, Shield, AlertTriangle } from 'lucide-react';
 import { inviteSupplier, createOC, checkOcNif } from '../../services/suppliersApi';
+import OCSelector from '../../components/OCSelector';
 import { getCompanies } from '../../services/api';
 
 const SupplierInvite = () => {
@@ -179,7 +180,7 @@ const SupplierInvite = () => {
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2.5 mb-3">
             <div>
               <label className={labelCls}>Código OC <span className="text-amber-500">*</span></label>
-              <input value={talentOC} onChange={e => setTalentOC(e.target.value)} placeholder="OC-MGMTINT2026047" className={`${inputCls} font-mono`} />
+              <OCSelector permanentOnly onSelect={oc => setTalentOC(oc)} onClear={() => setTalentOC('')} />
             </div>
             {talentNif && talentOC && (
               <div className="flex items-end pb-0.5">
