@@ -313,7 +313,7 @@ const InvoicesList = () => {
                         )}
                         {inv.status === 'DELETE_REQUESTED' && (
                           <button onClick={(e) => { e.stopPropagation(); setActionModal({ invoice: inv, action: 'reject_delete' }); }}
-                            className="text-[13px] text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded hover:bg-amber-400/10 transition-colors">Rechazar borrado</button>
+                            className="text-[13px] text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded hover:bg-amber-400/10 transition-colors">↩ Rechazar</button>
                         )}
                         {inv.status === 'PAID' && <span className="text-[13px] text-zinc-600">Cerrada</span>}
                       </td>
