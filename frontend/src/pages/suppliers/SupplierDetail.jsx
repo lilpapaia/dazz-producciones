@@ -55,6 +55,7 @@ const SupplierDetail = () => {
 
   // Confirm deactivate/reactivate
   const [confirmAction, setConfirmAction] = useState(null);
+  const [invoiceActing, setInvoiceActing] = useState(null);
 
   // Pending actions
   const [pendingActions, setPendingActions] = useState([]);
@@ -146,10 +147,12 @@ const SupplierDetail = () => {
   };
 
   const handleInvoiceAction = async (invoiceId, status) => {
+    setInvoiceActing(invoiceId);
     try {
       await updateInvoiceStatus(invoiceId, { status });
       load();
     } catch (e) { showError(e.response?.data?.detail || 'Error'); }
+    setInvoiceActing(null);
   };
 
   const handleDeleteInvoice = async (invoiceOverride, reasonOverride) => {
@@ -650,10 +653,10 @@ const SupplierDetail = () => {
                             className="text-[12px] text-blue-400 border border-blue-400/30 px-2.5 py-1 rounded hover:bg-blue-400/10">Asignar OC →</button>
                         )}
                         {inv.status === 'PENDING' && (
-                          <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400">Aprobar</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} disabled={invoiceActing === inv.id} className="text-[12px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 disabled:opacity-50">Aprobar</button>
                         )}
                         {inv.status === 'APPROVED' && (
-                          <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800">Pagar</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} disabled={invoiceActing === inv.id} className="text-[12px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 disabled:opacity-50">Pagar</button>
                         )}
                         {inv.status === 'PAID' && <span className="text-[12px] text-zinc-600">Cerrada</span>}
                         {inv.status === 'DELETE_REQUESTED' && (
@@ -714,10 +717,10 @@ const SupplierDetail = () => {
                           className="text-[13px] text-blue-400 border border-blue-400/30 px-2.5 py-1 rounded hover:bg-blue-400/10 transition-colors">Asignar OC →</button>
                       )}
                       {inv.status === 'PENDING' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} className="text-[13px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors">Aprobar</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'APPROVED'); }} disabled={invoiceActing === inv.id} className="text-[13px] bg-amber-500 text-zinc-950 font-semibold px-2.5 py-1 rounded hover:bg-amber-400 transition-colors disabled:opacity-50">Aprobar</button>
                       )}
                       {inv.status === 'APPROVED' && (
-                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} className="text-[13px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">Marcar pagada</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleInvoiceAction(inv.id, 'PAID'); }} disabled={invoiceActing === inv.id} className="text-[13px] text-zinc-400 border border-zinc-700 px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors disabled:opacity-50">Marcar pagada</button>
                       )}
                       {inv.status === 'PAID' && (
                         <span className="text-[13px] text-zinc-600 px-2.5 py-1">Cerrada</span>

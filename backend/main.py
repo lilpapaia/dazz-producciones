@@ -117,7 +117,6 @@ async def root(request: Request):
         "message": "Dazz Creative - API Sistema Gestión Gastos",
         "version": "2.0.0",
         "status": "running",
-        "environment": ENVIRONMENT
     }
 
 @app.get("/health")
@@ -255,6 +254,11 @@ async def startup_event():
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_company_id ON supplier_invoices (company_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_updated_at ON supplier_invoices (updated_at)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_related_supplier ON supplier_notifications (related_supplier_id)"))
+            # #42: Widen file_hash for SHA-256 (64 chars vs MD5 32)
+            conn.execute(text("ALTER TABLE tickets ALTER COLUMN file_hash TYPE VARCHAR(64)"))
+            # #44: Geo indexes for statistics queries
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_is_foreign ON tickets (is_foreign)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_geo_classification ON tickets (geo_classification)"))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")

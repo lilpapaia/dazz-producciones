@@ -40,7 +40,9 @@ api.interceptors.response.use(
       isRefreshing = true;
       const refreshToken = localStorage.getItem('supplier_refresh_token');
       if (!refreshToken) {
-        localStorage.clear();
+        localStorage.removeItem('supplier_token');
+        localStorage.removeItem('supplier_refresh_token');
+        localStorage.removeItem('supplier_data');
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -52,7 +54,9 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         processQueue(error);
-        localStorage.clear();
+        localStorage.removeItem('supplier_token');
+        localStorage.removeItem('supplier_refresh_token');
+        localStorage.removeItem('supplier_data');
         window.location.href = '/login';
         return Promise.reject(error);
       } finally {

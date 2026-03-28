@@ -3,6 +3,7 @@ import hashlib
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import update
 from typing import List
 import asyncio
 import os, shutil, json
@@ -46,7 +47,7 @@ async def upload_ticket(
 
     # Leer contenido para hash + guardar temp
     file_contents = await file.read()
-    file_hash = hashlib.md5(file_contents).hexdigest()
+    file_hash = hashlib.sha256(file_contents).hexdigest()
     await file.seek(0)
 
     # 1. Detección duplicado por hash — BLOQUEA (antes de IA = ahorra tokens)
@@ -187,8 +188,10 @@ async def upload_ticket(
             )
 
         db.add(ticket)
-        project.tickets_count += 1
-        project.total_amount += ticket.final_total
+        db.execute(update(Project).where(Project.id == project_id).values(
+            tickets_count=Project.tickets_count + 1,
+            total_amount=Project.total_amount + ticket.final_total,
+        ))
         try:
             db.commit()
         except Exception:
@@ -254,7 +257,10 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
     for key, value in update_data.items():
         setattr(ticket, key, value)
     if "final_total" in update_data:
-        project.total_amount = project.total_amount - old_total + ticket.final_total
+        diff = ticket.final_total - old_total
+        db.execute(update(Project).where(Project.id == ticket.project_id).values(
+            total_amount=Project.total_amount + diff,
+        ))
     db.commit()
     db.refresh(ticket)
     return ticket
@@ -279,8 +285,10 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
         # Continuar aunque falle (evitar bloqueo)
 
     # 2. BORRAR DE BASE DE DATOS
-    project.tickets_count -= 1
-    project.total_amount -= ticket.final_total
+    db.execute(update(Project).where(Project.id == ticket.project_id).values(
+        tickets_count=Project.tickets_count - 1,
+        total_amount=Project.total_amount - ticket.final_total,
+    ))
     db.delete(ticket)
     db.commit()
     return None

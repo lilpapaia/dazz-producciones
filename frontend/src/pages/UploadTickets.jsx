@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket } from '../services/api';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
 import { showWarning } from '../utils/toast';
-import imageCompression from 'browser-image-compression';
 import { getCurrencySymbol } from '../utils/currency';
 
 const UploadTickets = () => {
@@ -18,23 +17,16 @@ const UploadTickets = () => {
   const [failedFiles, setFailedFiles] = useState([]);
 
   const compressImageIfNeeded = async (file) => {
-    if (!file.type.startsWith('image/')) return file;
-
-    const triggerSize = 3 * 1024 * 1024;
-    if (file.size < triggerSize) return file;
-
-    console.log(`🔄 Comprimiendo ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)...`);
+    if (!file.type.startsWith('image/') || file.size < 3 * 1024 * 1024) return file;
 
     try {
-      const options = {
+      const { default: imageCompression } = await import('browser-image-compression');
+      const compressedFile = await imageCompression(file, {
         maxSizeMB: 3,
         maxWidthOrHeight: 1920,
         useWebWorker: true,
-        fileType: file.type
-      };
-
-      const compressedFile = await imageCompression(file, options);
-      console.log(`✅ ${file.name}: ${(file.size/1024/1024).toFixed(2)}MB → ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
+        fileType: file.type,
+      });
       return compressedFile;
     } catch (error) {
       console.error('Error al comprimir:', error);
