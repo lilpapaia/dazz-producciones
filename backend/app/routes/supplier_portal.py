@@ -7,7 +7,7 @@ import os
 import asyncio
 import logging
 import tempfile
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
@@ -74,6 +74,7 @@ def _notify(db: Session, recipient_type, recipient_id: int, event_type,
 @limiter.limit("10/minute")
 async def validate_invitation_token(
     request: Request,
+    response: Response,
     token: str,
     db: Session = Depends(get_db),
 ):
@@ -94,6 +95,7 @@ async def validate_invitation_token(
 @limiter.limit("5/hour")
 async def register_supplier(
     request: Request,
+    response: Response,
     body: RegisterRequest,
     db: Session = Depends(get_db),
 ):
@@ -200,6 +202,7 @@ async def register_supplier(
 @limiter.limit("5/minute")
 async def login_supplier(
     request: Request,
+    response: Response,
     body: LoginRequest,
     db: Session = Depends(get_db),
 ):
@@ -353,6 +356,7 @@ async def get_my_bank_cert_url(
 @limiter.limit("5/hour")
 async def validate_bank_cert_iban(
     request: Request,
+    response: Response,
     iban: str = Query(..., min_length=10, max_length=50),
     nif_cif: Optional[str] = Query(None, max_length=50),
     token: str = Query(..., min_length=1, description="Invitation token for auth during registration"),
@@ -459,6 +463,7 @@ async def validate_bank_cert_iban(
 @limiter.limit("10/hour")
 async def upload_invoice(
     request: Request,
+    response: Response,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     supplier: Supplier = Depends(get_current_active_supplier),

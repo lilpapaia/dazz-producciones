@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime, timezone
 import secrets
@@ -202,6 +202,7 @@ async def register(
 @limiter.limit("5/minute")
 async def login(
     request: Request,
+    response: Response,
     user_credentials: schemas.UserLogin,
     db: Session = Depends(get_db)
 ):
@@ -328,6 +329,7 @@ async def logout(
 @limiter.limit("5/minute")
 async def set_password(
     request: Request,
+    response: Response,
     payload: schemas.SetPasswordRequest,
     db: Session = Depends(get_db)
 ):
@@ -390,6 +392,7 @@ async def set_password(
 @limiter.limit("3/hour")
 async def forgot_password(
     request: Request,
+    response: Response,
     payload: schemas.ForgotPasswordRequest,
     db: Session = Depends(get_db)
 ):
@@ -455,6 +458,7 @@ if ENVIRONMENT != "production":
     @limiter.limit("3/hour")
     async def register_first_admin(
         request: Request,
+        response: Response,
         user: schemas.UserCreate,
         db: Session = Depends(get_db)
     ):
