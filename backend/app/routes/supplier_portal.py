@@ -29,7 +29,7 @@ from app.models.suppliers import (
     NotificationRecipientType, NotificationEventType, PENDING_TITLES,
 )
 from app.services.supplier_auth import (
-    get_password_hash, verify_password,
+    get_password_hash, verify_password, _DUMMY_HASH,
     create_supplier_access_token, create_supplier_refresh_token,
     validate_supplier_refresh_token, revoke_supplier_refresh_token,
     get_current_active_supplier,
@@ -208,7 +208,10 @@ async def login_supplier(
 ):
     supplier = db.query(Supplier).filter(Supplier.email == body.email).first()
 
-    if not supplier or not verify_password(body.password, supplier.hashed_password):
+    if not supplier:
+        verify_password(body.password, _DUMMY_HASH)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+    if not verify_password(body.password, supplier.hashed_password):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
     if not supplier.is_active:

@@ -6,7 +6,7 @@ from typing import List
 from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, Company, UserCompany, UserRole
-from app.services.auth import get_current_admin_user, get_current_active_user, get_password_hash
+from app.services.auth import get_current_admin_user, get_current_active_user, get_password_hash, revoke_all_user_refresh_tokens
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_user_deleted, log_role_changed
@@ -129,11 +129,12 @@ async def update_user(
     
     # Actualizar datos básicos
     user.name = user_update.name
-    user.email = user_update.email
+    user.email = user_update.email.lower()
     user.role = user_update.role
-    
+
     if user_update.password:
         user.hashed_password = get_password_hash(user_update.password)
+        revoke_all_user_refresh_tokens(db, user_id)
     
     # Actualizar empresas asignadas
     # 1. Borrar todas las relaciones actuales
