@@ -1,9 +1,9 @@
 # TODO - Dazz Producciones
 
-> **Auditoría exhaustiva completada:** 2026-03-18
-> **Sesión de fixes completada:** 2026-03-18
-> **Issues resueltos en esta sesión:** 44 de 50 (6 CRITICAL seg, 13 HIGH, 19 MEDIUM, 8 LOW) — quedan 5 RGPD aparcados + pendientes futuros
-> **Archivos modificados:** ~40 backend + ~20 frontend
+> **Auditoría exhaustiva v1:** 2026-03-18 (44 de 50 resueltos)
+> **Auditoría exhaustiva v2:** 2026-03-28 (7 agentes, 53 hallazgos nuevos → 41 resueltos)
+> **Sistema OCs:** 2026-03-28 (tabla oc_prefixes + OCSelector componente)
+> **Última actualización:** 2026-03-29
 
 ---
 
@@ -163,6 +163,77 @@
 - [x] **M-16:** Atomicidad: file_pages + date_parsed + notificaciones en 1 commit atómico (2026-03-23)
 - [x] **M-17:** DELETE_REQUESTED en transition table + mensajes claros por estado terminal (2026-03-23)
 
+## ✅ Sesión 2026-03-28/29 — Auditoría v2 + Sistema OCs (23 commits)
+
+### ✅ Bugs y features pre-auditoría
+- [x] **BUG-24:** Upload atómico + cleanup Cloudinary mejorado (PDF + páginas)
+- [x] **BUG-27:** Reject deletion request — endpoint + UI en 3 sitios + botón "↩ Rechazar"
+- [x] **BUG-28:** Media type normalization completa para IA (JPEG/JPG/HEIC/WebP)
+- [x] **ADM-1:** Smart notification routing + delete sin modal + "Limpiar leídas"
+- [x] Pending bank cert PDF visible en card IBAN change
+- [x] Response param añadido a todos los endpoints rate-limited
+
+### ✅ Auditoría v2 — Seguridad (corregidos 2026-03-28)
+- [x] **#1:** Rate limiter auth.py usaba get_remote_address (IP proxy) → importa shared limiter
+- [x] **#4:** Timing attack login proveedor → _DUMMY_HASH implementado
+- [x] **#6:** Email usuario no normalizado al actualizar → .lower()
+- [x] **#7:** Refresh tokens no revocados al cambiar password vía admin → revoke implementado
+- [x] **#17:** Log login fallido con IP proxy → get_real_client_ip(request)
+- [x] **#18:** Email proveedor no normalizado al registrarse → .lower()
+- [x] **#20:** Password Temporal123! hardcodeada → backend genera secrets.token_urlsafe(16)
+- [x] **#31:** WORKER can_modify_project sin check empresa → company_ids check añadido
+- [x] **#41:** ENVIRONMENT expuesto en endpoint / público → eliminado
+- [x] **#43:** IBAN completo en lista proveedores → _mask_iban() primeros 4 + últimos 4
+- [x] **#1-stats:** BOSS veía stats de todas empresas en 3 endpoints → filtro company añadido
+- [x] **#8-stats:** Usuario sin empresa podía crearse → company_ids obligatorio en UI
+
+### ✅ Auditoría v2 — Rendimiento (corregidos 2026-03-28)
+- [x] **#2:** ProjectCard/SearchAndFilters dentro de Dashboard → movidos fuera (evita remount)
+- [x] **#8/#9:** 9 índices faltantes en Projects, Tickets, SupplierInvoices, Notifications
+- [x] **#10:** N+1 en tickets GET/PUT/DELETE → joinedload(Ticket.project)
+- [x] **#11:** N+1 en OC suggestions → joinedload(SupplierOC.company, Project.owner_company)
+- [x] **#13:** Sin lazy loading portal proveedores → React.lazy() en 6 páginas
+- [x] **#14:** Modelo Claude inconsistente → CLAUDE_MODEL constante unificada
+- [x] **#15:** Registro usuario 3 commits → flush() + un commit atómico
+- [x] **#22:** AuthContext value sin useMemo → useMemo([user, loading])
+- [x] **#23:** Dashboard filtros sin memoización → useMemo en filteredProjects, allStats
+- [x] **#24:** Navbar JSON.parse(localStorage) → useAuth() + logout revoca tokens
+- [x] **#25:** SuppliersLayout polling por pathname → [] con interval 30s
+- [x] **#26:** beforeunload listener cada keystroke → useRef estable con []
+- [x] **#36:** Read-modify-write tickets_count/total_amount → SQL atómico con update()
+- [x] **#38:** handleInvoiceAction sin loading guard → invoiceActing state + disabled
+- [x] **#42:** MD5 para file hash → SHA-256 + columna String(64)
+- [x] **#44:** geo_classification e is_foreign sin índice → index=True añadido
+- [x] **#45:** browser-image-compression siempre en bundle → dynamic import
+
+### ✅ Auditoría v2 — Calidad (corregidos 2026-03-28)
+- [x] **#19:** 9 console.log en ReviewTicket.jsx → eliminados + esbuild drop debugger
+- [x] **#27:** _notify() duplicado en 2 archivos → notifications.py compartido (28 callers)
+- [x] **#28:** _generate_token() cuadruplicado → canónica en services/auth.py
+- [x] **#29:** Markdown stripping triplicado → strip_markdown_json() compartido
+- [x] **#30:** Migraciones silencian errores → logger.warning()
+- [x] **#33/#34/#35:** Dead code eliminado — companies_service (3 funciones), validators (1), supplier_ai (1)
+- [x] **#46:** Statistics.jsx.old backup commiteado → eliminado
+- [x] **#48:** localStorage.clear() agresivo → removeItem selectivo
+- [x] **#49/#50/#51:** Imports/exports no usados → closeProject, closeProjectWithDownload, useEffect
+- [x] **#52:** Ternarias currency inline → getCurrencySymbol() ya importado
+- [x] **#4-q/#7-q/#9-11-q/#12-q:** except Exception: pass → logger.error/warning en 4 archivos
+- [x] **Imports unused** tras refactor: string en auth.py, secrets+string en suppliers.py y supplier_auth.py
+
+### ✅ Sistema OCs completo (2026-03-28/29)
+- [x] **OC-1:** Tabla oc_prefixes en BD — 13 prefijos con company_id, billing_company_id, number_digits, year_format, permanent_oc
+- [x] **OC-2:** OC_PREFIX_MAP hardcodeado eliminado → query BD con longest-prefix-match
+- [x] **OC-3:** oc-suggestions ya devuelve company_name (sin cambios necesarios)
+- [x] **OC-4:** SupplierInvite → OCSelector permanentOnly (solo MGMTINT, campo número)
+- [x] **OC-5:** InvoiceDetail → eliminado "Crear nuevo OC", solo buscar existentes
+- [x] **OC-6:** ProjectCreate → OCSelector vinculado a empresa del proyecto
+- [x] **OC-AUTO:** AutoInvoice → OCSelector 3 pasos reemplaza input libre
+- [x] **OCSelector.jsx:** Componente compartido — 3 pasos, props estilo, permanentOnly
+- [x] **Endpoints nuevos:** GET /ocs/prefixes + GET /ocs/validate-oc
+- [x] **OC-fixes:** permanentOnly autoselecciona, estilos consistentes, label empresa renombrado
+
+---
+
 ## 🔵 Fixes LOW proveedores pendientes
 
 - [ ] **L-19:** onupdate lambda: incluir updated_at explícito en bulk updates
@@ -294,12 +365,25 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ---
 
+## 🔧 Bugs pendientes (de auditoría v2)
+
+- [ ] **BUG-25:** IA rechaza OCs válidos — normalizar prefijo OC- antes de validar
+- [ ] **Race condition autofactura:** Número secuencial sin lock — SELECT FOR UPDATE o DB sequence
+- [ ] **Cloudinary síncrono autoinvoice:** `cloudinary.uploader.upload` sin asyncio.to_thread
+- [ ] **register_supplier() 3 commits:** Flush + un solo commit atómico
+- [ ] **generate_autoinvoice() 2 commits:** Flush + un solo commit atómico
+- [ ] **Rate limiting storage memory://:** No se comparte entre workers gunicorn — necesita Redis
+
+---
+
 ## 💡 Sprint 3: Features Nuevas (3-4 semanas)
 
 - [ ] **Notificaciones PWA push** (Firebase o OneSignal)
 - [ ] **Dashboard analytics** (métricas uso, engagement, performance)
 - [ ] **Búsqueda avanzada global** (proyectos, tickets, proveedores)
-- [ ] **Componentes reutilizables frontend** (FormField wrapper, useVoiceSearch compartido)
+- [ ] **Filtro por año / archivado proyectos**
+- [ ] **INT-1:** Facturas aprobadas → proyectos DAZZ (integración tickets)
+- [ ] **FUT-1:** WebSockets notificaciones (reemplazar polling)
 
 ---
 
@@ -339,14 +423,14 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 - Queries BD: <50ms promedio ✅ MEJORADO + SQL aggregations
 - Código duplicado: centralizado ✅ LOGRADO
 
-**Auditoría seguridad — COMPLETADO 2026-03-18:**
-- 4 CRITICAL seguridad: ✅ RESUELTOS
-- 6 HIGH seguridad: ✅ RESUELTOS
-- 5 MEDIUM seguridad: ✅ RESUELTOS
-- 2 LOW seguridad: ✅ RESUELTOS
-- Account lockout: ✅ IMPLEMENTADO (5 intentos → 15 min bloqueo)
-- Token TTL: ✅ REDUCIDO (24h → 30min + refresh 7d)
-- PII en logs: ✅ HASHEADO
+**Auditoría seguridad v1 — COMPLETADO 2026-03-18:**
+- 4 CRITICAL + 6 HIGH + 5 MEDIUM + 2 LOW: ✅ TODOS RESUELTOS
+
+**Auditoría seguridad v2 — COMPLETADO 2026-03-28:**
+- 53 hallazgos nuevos (7 agentes paralelos)
+- 41 resueltos en sesión, 12 pendientes (6 bugs + 6 LOW)
+- Sistema OCs: tabla BD + componente UI + 2 endpoints nuevos
+- Limpieza: -1080 líneas dead code, 5 funciones duplicadas unificadas
 
 **Sprint 2 (Testing):**
 - Backend coverage: 70%+ (actual: tests existen, cobertura por verificar)
