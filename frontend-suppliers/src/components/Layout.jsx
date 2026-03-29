@@ -33,12 +33,12 @@ const Layout = ({ children }) => {
   return (
     <div className="flex min-h-screen">
       {/* ═══ SIDEBAR — desktop only ═══ */}
-      <aside className="hidden lg:flex flex-col w-[196px] bg-[#18181b] border-r border-zinc-800 flex-shrink-0">
-        <div className="flex items-center gap-2 px-4 py-3">
-          <DazzLogo size={18} className="text-amber-500" />
+      <aside className="hidden lg:flex flex-col w-[220px] bg-[#18181b] border-r border-zinc-800 flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-5 py-4">
+          <DazzLogo size={22} className="text-amber-500" />
           <div>
-            <div className="font-['Bebas_Neue'] text-[14px] tracking-wide text-zinc-100 leading-tight">DAZZ</div>
-            <div className="text-[8px] text-zinc-500">Supplier Portal</div>
+            <div className="font-['Bebas_Neue'] text-[18px] tracking-wide text-zinc-100 leading-tight">DAZZ</div>
+            <div className="text-[9px] text-zinc-500">Supplier Portal</div>
           </div>
         </div>
 
@@ -47,12 +47,12 @@ const Layout = ({ children }) => {
             const active = isActive(item.path);
             return (
               <Link key={item.path} to={item.path}
-                className={`flex items-center gap-2 px-2 py-[7px] rounded-[5px] mb-[1px] text-[11px] transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-[5px] mb-[2px] text-[13px] transition-colors ${
                   active
-                    ? 'bg-amber-500/[.08] border-l-2 border-amber-500 pl-[6px] text-amber-400'
+                    ? 'bg-amber-500/[.08] border-l-2 border-amber-500 pl-[10px] text-amber-400'
                     : 'text-zinc-400 hover:bg-zinc-800'
                 }`}>
-                <item.icon size={13} strokeWidth={1.5} />
+                <item.icon size={15} strokeWidth={1.5} />
                 {item.label}
                 {item.path === '/notifications' && unread > 0 && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-amber-500" />
@@ -64,15 +64,15 @@ const Layout = ({ children }) => {
 
         <div className="mt-auto pt-2 border-t border-zinc-800 px-2 pb-3">
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="w-[26px] h-[26px] rounded-full bg-amber-500 flex items-center justify-center text-[9px] font-bold text-zinc-950 font-['Bebas_Neue'] flex-shrink-0">
+            <div className="w-[30px] h-[30px] rounded-full bg-amber-500 flex items-center justify-center text-[10px] font-bold text-zinc-950 font-['Bebas_Neue'] flex-shrink-0">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold text-zinc-300 truncate">{supplier?.name || '—'}</div>
-              <div className="text-[9px] text-zinc-500 truncate">{supplier?.email || ''}</div>
+              <div className="text-[12px] font-semibold text-zinc-300 truncate">{supplier?.name || '—'}</div>
+              <div className="text-[10px] text-zinc-500 truncate">{supplier?.email || ''}</div>
             </div>
             <button onClick={handleLogout} className="text-zinc-600 hover:text-red-400 transition-colors p-1" title="Logout">
-              <LogOut size={13} strokeWidth={1.5} />
+              <LogOut size={14} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -81,8 +81,8 @@ const Layout = ({ children }) => {
       {/* ═══ MAIN AREA ═══ */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Topbar — desktop */}
-        <header className="hidden lg:flex h-[46px] border-b border-zinc-800 items-center justify-between px-4 flex-shrink-0">
-          <div className="font-['Bebas_Neue'] text-[17px] text-zinc-100">
+        <header className="hidden lg:flex h-[52px] border-b border-zinc-800 items-center justify-between px-6 flex-shrink-0">
+          <div className="font-['Bebas_Neue'] text-[22px] text-zinc-100">
             {NAV_ITEMS.find(i => isActive(i.path))?.label || 'Home'}
           </div>
           <button onClick={() => navigate('/notifications')} className="w-7 h-7 bg-zinc-800 rounded-[7px] flex items-center justify-center relative">
