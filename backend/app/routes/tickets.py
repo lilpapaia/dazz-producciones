@@ -43,6 +43,7 @@ async def upload_ticket(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     # VULN-004/005: Usar validate_file_upload en lugar de validación manual de content_type
+    logger.info(f"Upload ticket: filename='{file.filename}', content_type='{file.content_type}', size={file.size}")
     await validate_file_upload(file)
 
     # Leer contenido para hash + guardar temp

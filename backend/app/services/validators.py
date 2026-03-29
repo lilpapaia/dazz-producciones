@@ -276,18 +276,31 @@ async def validate_file_upload(
             detail="Archivo es requerido"
         )
     
-    # Validar extensión
+    # Validar extensión (con fallback a content_type si filename no tiene extensión)
     if allowed_extensions is None:
         allowed_extensions = ALLOWED_EXTENSIONS
-    
+
     file_ext = Path(file.filename).suffix.lower()
-    
+
+    # Fallback: si no hay extensión, inferir del content_type
+    if not file_ext:
+        _MIME_TO_EXT = {
+            'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/pjpeg': '.jpg', 'image/x-jpeg': '.jpg',
+            'image/png': '.png', 'image/x-png': '.png',
+            'image/heic': '.heic', 'image/heif': '.heif',
+            'image/webp': '.webp',
+            'application/pdf': '.pdf',
+        }
+        inferred = _MIME_TO_EXT.get((file.content_type or "").lower())
+        if inferred:
+            file_ext = inferred
+
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Extensión {file_ext} no permitida. Permitidas: {', '.join(allowed_extensions)}"
+            detail=f"Extensión '{file_ext or '(ninguna)'}' no permitida. Permitidas: {', '.join(sorted(allowed_extensions))}"
         )
-    
+
     # Validar MIME type (normalizar a lowercase — algunos dispositivos envían Image/Jpeg)
     content_type = (file.content_type or "").lower()
     if content_type not in ALLOWED_MIME_TYPES:
