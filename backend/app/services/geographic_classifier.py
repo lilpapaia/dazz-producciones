@@ -186,50 +186,5 @@ def is_iva_reclamable(country_code: str) -> bool:
     return classification != 'NACIONAL'
 
 
-def get_geo_badge_color(country_code: str) -> str:
-    """
-    Retorna clase CSS para el badge según clasificación
-    
-    Args:
-        country_code: Código ISO de 2 letras
-        
-    Returns:
-        str: Clase CSS (badge-nacional, badge-ue, badge-internacional)
-    """
-    
-    classification = classify_geography(country_code)
-    
-    if classification == 'NACIONAL':
-        return 'badge-nacional'  # Verde
-    elif classification == 'UE':
-        return 'badge-ue'  # Azul
-    else:
-        return 'badge-internacional'  # Morado
-
-
-# Test de ejemplo
-if __name__ == "__main__":
-    print("\n🧪 Testing geographic classifier...\n")
-    
-    test_countries = [
-        ('ES', 'España peninsular'),
-        ('IC', 'Canarias'),
-        ('FR', 'Francia'),
-        ('DE', 'Alemania'),
-        ('US', 'Estados Unidos'),
-        ('GB', 'Reino Unido'),
-        ('CH', 'Suiza'),
-        ('JP', 'Japón'),
-    ]
-    
-    print("País\t\tClasificación\tReclamable\tNombre")
-    print("-" * 70)
-    
-    for code, description in test_countries:
-        classification = classify_geography(code)
-        reclamable = "✅ Sí" if is_iva_reclamable(code) else "❌ No"
-        name = get_country_name(code)
-        
-        print(f"{code}\t\t{classification}\t\t{reclamable}\t\t{name}")
     
     print("\n✅ Tests completados")

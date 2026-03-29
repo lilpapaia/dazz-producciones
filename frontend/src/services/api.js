@@ -194,28 +194,6 @@ export const deleteUser = (id) => api.delete(`/users/${id}`);
 
 export const getAvailableYears = () => api.get('/statistics/available-years');
 
-export const getStatisticsOverview = (year, quarter = null, geoFilter = null) => {
-  const params = { year };
-  if (quarter) params.quarter = quarter;
-  if (geoFilter) params.geo_filter = geoFilter;
-  return api.get('/statistics/overview', { params });
-};
-
-export const getMonthlyEvolution = (year) =>
-  api.get('/statistics/monthly-evolution', { params: { year } });
-
-export const getCurrencyDistribution = (year, quarter = null) => {
-  const params = { year };
-  if (quarter) params.quarter = quarter;
-  return api.get('/statistics/currency-distribution', { params });
-};
-
-export const getForeignBreakdown = (year, quarter = null) => {
-  const params = { year };
-  if (quarter) params.quarter = quarter;
-  return api.get('/statistics/foreign-breakdown', { params });
-};
-
 export const getCompleteStatistics = (year, quarter = null, geoFilter = null, companyId = null) => {
   const params = { year };
   if (quarter) params.quarter = quarter;

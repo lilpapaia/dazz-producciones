@@ -12,6 +12,3 @@ export const showError = (message) =>
 
 export const showWarning = (message) =>
   toast.warning(message, { duration: 4000 });
-
-export const showInfo = (message) =>
-  toast.info(message, { duration: 3000 });

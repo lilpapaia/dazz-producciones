@@ -1,13 +1,11 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { uploadInvoice, getProfile } from '../services/api';
 import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User } from 'lucide-react';
 import { useEffect } from 'react';
 
 const UploadPage = () => {
   const navigate = useNavigate();
-  const { supplier } = useAuth();
   const fileRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -61,18 +59,18 @@ const UploadPage = () => {
   const errorCount = files.filter(f => f.status === 'error').length;
 
   return (
-    <div className="max-w-2xl mx-auto pt-4 lg:pt-0">
+    <div className="max-w-2xl lg:max-w-4xl mx-auto pt-4 lg:pt-6 lg:px-6">
       {/* Header */}
-      <div className="px-4 mb-4 flex items-center gap-3">
-        <button onClick={() => navigate('/')} className="w-8 h-8 bg-[#27272a] rounded-lg flex items-center justify-center">
+      <div className="px-4 lg:px-0 mb-4 flex items-center gap-3">
+        <button onClick={() => navigate('/')} className="lg:hidden w-8 h-8 bg-[#27272a] rounded-lg flex items-center justify-center">
           <ChevronLeft size={16} className="text-zinc-300" strokeWidth={1.5} />
         </button>
-        <h1 className="font-['Bebas_Neue'] text-[16px] tracking-wider text-zinc-300">Upload invoice</h1>
+        <h1 className="font-['Bebas_Neue'] text-[16px] lg:text-[22px] tracking-wider text-zinc-300">Upload invoice</h1>
       </div>
 
       {/* No IBAN — block upload */}
       {profile && !profile.iban_masked && (
-        <div className="mx-4 bg-amber-500/[.06] border border-amber-500/[.12] rounded-xl p-6 text-center mb-4">
+        <div className="mx-4 lg:mx-0 bg-amber-500/[.06] border border-amber-500/[.12] rounded-xl p-6 text-center mb-4">
           <AlertCircle size={28} className="text-amber-400 mx-auto mb-3" strokeWidth={1.5} />
           <p className="text-sm font-medium text-zinc-200 mb-2">Payment method required</p>
           <p className="text-[12px] text-zinc-400 leading-relaxed">
@@ -90,7 +88,7 @@ const UploadPage = () => {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => { if (!uploading) fileRef.current?.click(); }}
-          className={`mx-4 border-2 border-dashed rounded-xl p-7 text-center transition-all mb-3 ${
+          className={`mx-4 lg:mx-0 border-2 border-dashed rounded-xl p-7 lg:p-14 text-center transition-all mb-3 ${
             uploading ? 'border-zinc-800 bg-zinc-900/50 cursor-not-allowed opacity-50' :
             dragOver ? 'border-amber-500 bg-amber-500/[.03] cursor-pointer' : 'border-zinc-700 bg-white/[.01] active:border-amber-500 cursor-pointer'
           }`}
@@ -103,9 +101,9 @@ const UploadPage = () => {
             </>
           ) : (
             <>
-              <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2" strokeWidth={1.5} />
-              <p className="text-sm font-medium text-zinc-300 mb-1">Select your invoice</p>
-              <p className="text-[11px] text-zinc-500">PDF only · Max 10MB · Multiple files allowed</p>
+              <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2 lg:mb-3 lg:w-10 lg:h-10" strokeWidth={1.5} />
+              <p className="text-sm lg:text-base font-medium text-zinc-300 mb-1">Select your invoice</p>
+              <p className="text-[11px] lg:text-[13px] text-zinc-500">PDF only · Max 10MB · Multiple files allowed</p>
               <p className="text-[10px] text-zinc-600 mt-2 bg-[#27272a] inline-block px-2.5 py-1 rounded-md">
                 AI will extract and verify all data automatically
               </p>
@@ -117,7 +115,7 @@ const UploadPage = () => {
 
       {/* Rejected files feedback */}
       {rejected && (
-        <div className="mx-4 mb-3 bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-[12px] flex items-center gap-2">
+        <div className="mx-4 lg:mx-0 mb-3 bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-[12px] flex items-center gap-2">
           <AlertCircle size={13} className="flex-shrink-0" strokeWidth={1.5} />
           {rejected}
         </div>
@@ -125,7 +123,7 @@ const UploadPage = () => {
 
       {/* OC info warning */}
       {!allDone && (!profile || profile.iban_masked) && (
-        <div className="mx-4 mb-3 rounded-lg p-2.5 text-[11px] flex items-start gap-2 bg-amber-500/[.06] text-amber-400 border border-amber-500/[.12] leading-relaxed">
+        <div className="mx-4 lg:mx-0 mb-3 rounded-lg p-2.5 text-[11px] flex items-start gap-2 bg-amber-500/[.06] text-amber-400 border border-amber-500/[.12] leading-relaxed">
           <AlertCircle size={13} className="flex-shrink-0 mt-0.5" strokeWidth={1.5} />
           Make sure your invoice includes the correct OC. AI will identify the project and company automatically.
         </div>
@@ -133,7 +131,7 @@ const UploadPage = () => {
 
       {/* OC permanente (si tiene asignado) */}
       {!allDone && profile?.oc_number && (
-        <div className="mx-4 mb-4">
+        <div className="mx-4 lg:mx-0 mb-4">
           <div className="text-[9px] text-zinc-400 tracking-widest uppercase mb-2">Your permanent OC</div>
           <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 flex items-center gap-3">
             <User size={16} className="text-purple-400 flex-shrink-0" strokeWidth={1.5} />
@@ -147,9 +145,9 @@ const UploadPage = () => {
 
       {/* File list */}
       {files.length > 0 && (
-        <div className="px-4 space-y-2 mb-3">
+        <div className="px-4 lg:px-0 space-y-2 lg:space-y-3 mb-3">
           {files.map((f, i) => (
-            <div key={i} className={`bg-[#18181b] border rounded-[10px] p-3 flex items-center gap-3 ${
+            <div key={i} className={`bg-[#18181b] border rounded-[10px] p-3 lg:p-4 flex items-center gap-3 ${
               f.status === 'success' ? 'border-green-400/20' :
               f.status === 'error' ? 'border-red-400/20' :
               f.status === 'uploading' ? 'border-amber-500/30' :
@@ -188,7 +186,7 @@ const UploadPage = () => {
 
       {/* Action */}
       {pendingCount > 0 && !uploading && (
-        <div className="px-4 mb-4">
+        <div className="px-4 lg:px-0 mb-4">
           <button onClick={handleUploadAll} className="w-full bg-amber-500 text-zinc-950 font-bold text-sm py-3.5 rounded-[10px] active:bg-amber-400 transition-colors">
             Upload {pendingCount} invoice{pendingCount !== 1 ? 's' : ''} and verify with AI
           </button>
@@ -196,7 +194,7 @@ const UploadPage = () => {
       )}
 
       {allDone && (
-        <div className="px-4">
+        <div className="px-4 lg:px-0">
           <div className="text-center text-xs text-zinc-400 mb-3">
             {successCount > 0 && <span className="text-green-400">{successCount} uploaded</span>}
             {successCount > 0 && errorCount > 0 && ' · '}

@@ -17,9 +17,3 @@ const CURRENCY_SYMBOLS = {
 };
 
 export const getCurrencySymbol = (code) => CURRENCY_SYMBOLS[code] || code || '€';
-
-export const formatAmount = (amount, currency) => {
-  const symbol = getCurrencySymbol(currency);
-  const value = typeof amount === 'number' ? amount.toFixed(2) : '0.00';
-  return `${value}${symbol}`;
-};

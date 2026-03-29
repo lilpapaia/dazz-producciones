@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import update
 from typing import List
 import asyncio
-import os, shutil, json
+import os, json
 from pathlib import Path
 from datetime import datetime
 

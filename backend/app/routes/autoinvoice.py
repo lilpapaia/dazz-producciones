@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 from datetime import datetime, timezone
-from io import BytesIO
 
 from config.database import get_db
 from app.models.database import User, Company, Project, OCPrefix, ProjectStatus

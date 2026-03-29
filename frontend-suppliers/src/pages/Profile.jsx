@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, getBankCertUrl } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import { ExternalLink, Edit3, CreditCard, UserMinus, Info } from 'lucide-react';
 
 const STATUS_MAP = {
@@ -12,7 +11,6 @@ const STATUS_MAP = {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { supplier } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [certError, setCertError] = useState('');
@@ -39,20 +37,20 @@ const Profile = () => {
   const initials = profile.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="max-w-2xl mx-auto pt-4 lg:pt-0">
+    <div className="max-w-2xl lg:max-w-4xl mx-auto pt-4 lg:pt-6">
       {/* Desktop: 2-column grid / Mobile: single column */}
-      <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-3.5 px-4">
+      <div className="lg:grid lg:grid-cols-[320px_1fr] lg:gap-5 px-4 lg:px-6">
 
         {/* ═══ LEFT: Profile data ═══ */}
         <div>
-          <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 mb-3">
+          <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 lg:p-5 mb-3">
             {/* Avatar + name */}
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-12 h-12 bg-amber-500 rounded-[10px] flex items-center justify-center font-['Bebas_Neue'] text-[20px] text-zinc-950 flex-shrink-0">
+            <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
+              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-amber-500 rounded-[10px] flex items-center justify-center font-['Bebas_Neue'] text-[20px] lg:text-[26px] text-zinc-950 flex-shrink-0">
                 {initials}
               </div>
               <div>
-                <div className="font-['Bebas_Neue'] text-[18px] tracking-wide text-zinc-100 leading-tight">
+                <div className="font-['Bebas_Neue'] text-[18px] lg:text-[22px] tracking-wide text-zinc-100 leading-tight">
                   {profile.name?.toUpperCase()}
                 </div>
                 <div className="mt-1">
@@ -124,19 +122,19 @@ const Profile = () => {
           )}
 
           {/* Account actions */}
-          <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 mb-3">
+          <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 lg:p-5 mb-3">
             <div className="text-[11px] font-semibold text-zinc-400 tracking-widest uppercase mb-3">Account actions</div>
             <div className="flex flex-col gap-[7px]">
               <button onClick={() => navigate('/profile/edit-data')}
-                className="w-full text-left bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2.5 text-[13px] text-zinc-300 hover:bg-zinc-700 transition-colors flex items-center gap-2">
+                className="w-full text-left bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2.5 lg:py-3 text-[13px] text-zinc-300 hover:bg-zinc-700 transition-colors flex items-center gap-2">
                 <Edit3 size={13} strokeWidth={1.5} /> Edit my data
               </button>
               <button onClick={() => navigate('/profile/change-iban')}
-                className="w-full text-left bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2.5 text-[13px] text-zinc-300 hover:bg-zinc-700 transition-colors flex items-center gap-2">
+                className="w-full text-left bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2.5 lg:py-3 text-[13px] text-zinc-300 hover:bg-zinc-700 transition-colors flex items-center gap-2">
                 <CreditCard size={13} strokeWidth={1.5} /> Change IBAN & bank certificate
               </button>
               <button onClick={() => navigate('/profile/deactivation')}
-                className="w-full text-left bg-red-400/10 border border-red-400/25 rounded-lg px-3.5 py-2.5 text-[13px] text-red-400 hover:bg-red-400/20 transition-colors flex items-center gap-2">
+                className="w-full text-left bg-red-400/10 border border-red-400/25 rounded-lg px-3.5 py-2.5 lg:py-3 text-[13px] text-red-400 hover:bg-red-400/20 transition-colors flex items-center gap-2">
                 <UserMinus size={13} strokeWidth={1.5} /> Request account deactivation
               </button>
             </div>

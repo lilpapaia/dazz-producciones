@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 from typing import List, Optional
 from datetime import datetime, timezone
-from io import BytesIO
 from pydantic import BaseModel, EmailStr
 
 from config.database import get_db
