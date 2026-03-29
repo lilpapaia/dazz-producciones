@@ -2,8 +2,10 @@
 
 > **Auditoría exhaustiva v1:** 2026-03-18 (44 de 50 resueltos)
 > **Auditoría exhaustiva v2:** 2026-03-28 (7 agentes, 53 hallazgos nuevos → 41 resueltos)
+> **Auditoría exhaustiva v3:** 2026-03-29 (4 agentes, post-OC/autofactura — 4 hallazgos → 4 resueltos)
+> **Auditoría calidad v4:** 2026-03-29 (4 agentes, dead code + calidad + consistencia)
 > **Sistema OCs:** 2026-03-28 (tabla oc_prefixes + OCSelector componente)
-> **Última actualización:** 2026-03-29
+> **Última actualización:** 2026-03-30
 
 ---
 
@@ -232,6 +234,65 @@
 - [x] **Endpoints nuevos:** GET /ocs/prefixes + GET /ocs/validate-oc
 - [x] **OC-fixes:** permanentOnly autoselecciona, estilos consistentes, label empresa renombrado
 
+### ✅ Sesión 2026-03-29/30 — Autofactura + Auditorías v3/v4 + Portal UI
+
+#### Autofactura completa
+- [x] **Lightbox preview PDF** en AutoInvoice (iframe blob URL + X + "Generar y enviar")
+- [x] **Pantalla confirmación** tras generar (proveedor, OC, total, descarga PDF, nueva autofactura)
+- [x] **Auto-proyecto MGMTINT** para prefijos permanent_oc=True
+- [x] **Error 400** para OC no-permanente sin proyecto existente
+- [x] **Duplicate check** invoice_number con SELECT FOR UPDATE → 409
+- [x] **Cloudinary async** autoinvoice con asyncio.to_thread
+- [x] **Transacción atómica** flush + único commit (invoice + notificaciones + proyecto)
+- [x] **Response ampliado** con supplier_name, oc_number, invoice_number
+- [x] **Hint última factura** registrada solo cuando prefix es permanent_oc
+- [x] **allowExisting** prop en OCSelector para autofactura (OC permanente existente = válido)
+
+#### Validaciones IA tickets (T1/T2/T3/T5)
+- [x] **T1:** Math check base+IVA-IRPF ≈ total (±MATH_TOLERANCE)
+- [x] **T2:** Confidence < MIN_AI_CONFIDENCE → warning
+- [x] **T3:** Campos obligatorios (provider, date, final_total) → warning
+- [x] **T5:** Error tickets no suman a proyecto (ni count ni total)
+- [x] **Badge ⚠️** en ProjectView junto al tipo cuando ticket.notes tiene contenido
+- [x] **Banner warnings** en ReviewTicket (azul→amber con lista de warnings)
+
+#### UI Portal desktop + móvil
+- [x] **ProjectCreate:** empresa izquierda, OC derecha
+- [x] **Portal márgenes:** pt-4 lg:pt-0 en 7 páginas (Home, Upload, Notifications, Profile, ChangeIban, EditData, RequestDeactivation)
+- [x] **Notificaciones punto** sin número en sidebar, topbar y bottom nav
+
+#### Auditoría v3 (post-OC/autofactura) — 4 fixes
+- [x] **Race condition registro:** with_for_update() en query invitación
+- [x] **Imports muertos autoinvoice:** save_invoice_pdf, resolve_company_from_oc eliminados
+- [x] **Registro atómico:** 2 commits → flush + 1 commit
+- [x] **Console.logs PWA:** 3 eliminados
+
+#### Auditoría calidad v4 — refactors
+- [x] **Q1:** Notificaciones inline → _notify() en autoinvoice.py (2) + projects.py (1)
+- [x] **Q2:** Constantes centralizadas en config/constants.py (MATH_TOLERANCE, MIN_AI_CONFIDENCE, MAX_SUPPLIER_PDF_SIZE)
+- [x] **Q7:** Status labels centralizados en constants/invoiceStatus.js (INVOICE_PILL + INVOICE_LABEL)
+- [x] **Dead code:** JSONResponse import + logging_config.py (300 líneas) eliminados
+
+#### Bug fixes
+- [x] **Claude list response:** isinstance(list) check en claude_ai.py (BUG-1)
+- [x] **Extensiones/MIME types:** +6 MIME types, +3 extensiones, lowercase normalize (BUG-2)
+- [x] **Cloudinary subfolders:** tickets en /pdfs/, /pages/, /images/ (BUG-3)
+- [x] **Cloudinary folder structure:** folder como parámetro explícito, OC como nombre carpeta, uuid para unicidad
+- [x] **Proveedores folder:** nombre proveedor como slug en vez de ID
+- [x] **LIM-5:** extra_data en NotificationResponse schema
+- [x] **O-1:** Autofactura cleanup Cloudinary si commit falla
+- [x] **O-2:** Cert bancario cleanup R2 si commit falla
+- [x] **Extension fallback:** inferir extensión de content_type cuando filename no tiene extensión
+
+#### Dead code cleanup masivo (23 items)
+- [x] 4 imports backend (BytesIO x2, shutil, extract)
+- [x] 7 funciones validators.py nunca llamadas
+- [x] 1 función geographic_classifier.py (get_geo_badge_color)
+- [x] 4 exports api.js (stats legacy reemplazadas por getCompleteStatistics)
+- [x] 2 utils (showInfo, formatAmount)
+- [x] 2 archivos portal (Navbar.jsx, BottomNav.jsx)
+- [x] 3 imports portal (Link, supplier x2)
+
 ---
 
 ## 🔵 Fixes LOW proveedores pendientes
@@ -365,14 +426,25 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ---
 
-## 🔧 Bugs pendientes (de auditoría v2)
+## 🔧 Bugs pendientes
 
-- [ ] **BUG-25:** IA rechaza OCs válidos — normalizar prefijo OC- antes de validar
-- [ ] **Race condition autofactura:** Número secuencial sin lock — SELECT FOR UPDATE o DB sequence
-- [ ] **Cloudinary síncrono autoinvoice:** `cloudinary.uploader.upload` sin asyncio.to_thread
-- [ ] **register_supplier() 3 commits:** Flush + un solo commit atómico
-- [ ] **generate_autoinvoice() 2 commits:** Flush + un solo commit atómico
+- [x] **BUG-25:** IA rechaza OCs válidos → allowExisting prop en OCSelector (2026-03-30)
+- [x] **Race condition autofactura:** SELECT FOR UPDATE en invoice_number (2026-03-29)
+- [x] **Cloudinary síncrono autoinvoice:** asyncio.to_thread (2026-03-29)
+- [x] **register_supplier() 3 commits:** flush + 1 commit atómico (2026-03-29)
+- [x] **generate_autoinvoice() 2 commits:** flush + 1 commit atómico (2026-03-29)
 - [ ] **Rate limiting storage memory://:** No se comparte entre workers gunicorn — necesita Redis
+
+---
+
+## 🔧 Calidad pendiente (de auditoría v4)
+
+- [ ] **Q3:** Company name → prefix hardcodeado en autoinvoice.py:63-72 → mover a BD o config
+- [ ] **Q4:** window.confirm → ConfirmDialog en ProjectView, Users, ProjectCloseReview (3 sitios)
+- [ ] **Q5:** Error messages mezclados EN/ES en backend → estandarizar a inglés
+- [ ] **Q6:** Password validation duplicada en schemas.py y supplier_schemas.py → unificar
+- [ ] **Q9:** AutoInvoice fecha en-GB → cambiar a es-ES (consistencia frontend principal)
+- [ ] **Q10:** Email addresses hardcodeadas en email.py y supplier_email.py → env vars
 
 ---
 
