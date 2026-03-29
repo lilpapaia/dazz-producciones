@@ -38,6 +38,7 @@ ALLOWED_MIME_TYPES = {
     'image/jpeg',
     'image/jpg',        # Algunas apps usan image/jpg
     'image/pjpeg',      # Progressive JPEG (IE, dispositivos antiguos)
+    'image/x-jpeg',     # Variante JPEG (algunos dispositivos Android)
     'image/png',
     'image/x-png',      # Variante PNG (navegadores antiguos)
     'image/heic',       # iPhone fotos modernas
