@@ -79,7 +79,6 @@ const Profile = () => {
 
             {/* Data rows */}
             {[
-              ['Company', profile.company_name || 'All'],
               ['NIF/CIF', profile.nif_cif, true],
               ['Email', profile.email, false, true],
               ['Phone', profile.phone],

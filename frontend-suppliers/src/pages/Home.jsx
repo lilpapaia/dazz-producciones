@@ -81,20 +81,20 @@ const Home = () => {
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-2 lg:gap-4 px-4 lg:px-0 mb-4 lg:mb-6">
         <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3 lg:p-6 border-l-2 border-l-amber-500">
-          <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Pending payment</div>
-          <div className="font-['Bebas_Neue'] text-[24px] lg:text-[36px] text-amber-500 leading-none tracking-wide">
+          <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Pending payment</div>
+          <div className="font-['Bebas_Neue'] text-[30px] lg:text-[36px] text-amber-500 leading-none tracking-wide">
             {Math.round(summary?.pending_amount || 0).toLocaleString()}<span className="text-zinc-500 text-sm ml-0.5">EUR</span>
           </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5 lg:mt-1">
+          <div className="text-[11px] text-zinc-500 mt-0.5 lg:mt-1">
             {invoices.filter(i => i.status === 'PENDING' || i.status === 'APPROVED').length} invoice(s)
           </div>
         </div>
         <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3 lg:p-6">
-          <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Paid this month</div>
-          <div className="font-['Bebas_Neue'] text-[24px] lg:text-[36px] text-green-400 leading-none tracking-wide">
+          <div className="text-[11px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Paid this month</div>
+          <div className="font-['Bebas_Neue'] text-[30px] lg:text-[36px] text-green-400 leading-none tracking-wide">
             {Math.round(summary?.paid_this_month || 0).toLocaleString()}<span className="text-zinc-500 text-sm ml-0.5">EUR</span>
           </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5 lg:mt-1">{summary?.total_invoices || 0} total</div>
+          <div className="text-[11px] text-zinc-500 mt-0.5 lg:mt-1">{summary?.total_invoices || 0} total</div>
         </div>
       </div>
 
@@ -301,12 +301,18 @@ const Home = () => {
                 <div className="flex items-center gap-3">
                   {filtered.length > 1 && (
                     <button onClick={() => setViewer(filtered[viewerIdx - 1])} disabled={viewerIdx <= 0}
-                      className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">← Previous</button>
+                      className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">
+                      <span className="lg:hidden">←</span>
+                      <span className="hidden lg:inline">← Previous</span>
+                    </button>
                   )}
                   <span className="text-sm text-zinc-200 font-mono">{viewer.invoice_number}</span>
                   {filtered.length > 1 && (
                     <button onClick={() => setViewer(filtered[viewerIdx + 1])} disabled={viewerIdx >= filtered.length - 1}
-                      className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">Next →</button>
+                      className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">
+                      <span className="lg:hidden">→</span>
+                      <span className="hidden lg:inline">Next →</span>
+                    </button>
                   )}
                 </div>
                 {filtered.length > 1 && (
@@ -323,7 +329,7 @@ const Home = () => {
                 src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewer.file_url)}&embedded=true`}
                 className="w-full h-full bg-white" title="Invoice PDF" />
             </div>
-            <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-4 space-y-3 text-center">
+            <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4 space-y-3 text-center">
               <div className="flex items-center justify-center gap-4">
                 <span className="font-mono text-[13px] text-zinc-400">{viewer.invoice_number}</span>
                 <span className="text-[18px] font-semibold text-zinc-100 font-mono">{viewer.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR</span>

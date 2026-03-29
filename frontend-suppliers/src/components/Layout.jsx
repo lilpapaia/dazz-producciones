@@ -93,11 +93,11 @@ const Layout = ({ children }) => {
 
         {/* Mobile header */}
         <header className="lg:hidden px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
-          <div className="font-['Bebas_Neue'] text-[17px] tracking-[.07em] text-amber-500">DAZZ</div>
+          <div className="font-['Bebas_Neue'] text-[26px] tracking-[.07em] text-amber-500">DAZZ</div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/notifications')} className="w-7 h-7 bg-zinc-800 rounded-[7px] flex items-center justify-center relative">
-              <Bell size={13} className="text-zinc-400" strokeWidth={1.5} />
-              {unread > 0 && <div className="absolute top-[5px] right-[5px] w-[6px] h-[6px] bg-amber-500 rounded-full border-2 border-[#09090b]" />}
+            <button onClick={() => navigate('/notifications')} className="w-9 h-9 bg-zinc-800 rounded-[7px] flex items-center justify-center relative">
+              <Bell size={18} className="text-zinc-400" strokeWidth={1.5} />
+              {unread > 0 && <div className="absolute top-[6px] right-[6px] w-[7px] h-[7px] bg-amber-500 rounded-full border-2 border-[#09090b]" />}
             </button>
           </div>
         </header>
