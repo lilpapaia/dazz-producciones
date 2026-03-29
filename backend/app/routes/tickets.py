@@ -150,9 +150,35 @@ async def upload_ticket(
                 date="", provider="Error en extracción",
                 base_amount=0.0, iva_amount=0.0, iva_percentage=0.0,
                 total_with_iva=0.0, final_total=0.0,
+                notes="Error en extracción IA",
                 type="ticket", is_reviewed=False, is_foreign=False, currency="EUR"
             )
         else:
+            # T1/T2/T3: Validaciones post-IA
+            ai_warnings = []
+
+            # T1: Validación matemática (±0.02€)
+            base = extracted_data.get("base_amount", 0.0) or 0.0
+            iva = extracted_data.get("iva_amount", 0.0) or 0.0
+            irpf = extracted_data.get("irpf_amount", 0.0) or 0.0
+            final = extracted_data.get("final_total", 0.0) or 0.0
+            expected = round(base + iva - irpf, 2)
+            if final > 0 and abs(expected - final) > 0.02:
+                ai_warnings.append(f"Incoherencia matemática: base({base}) + IVA({iva}) - IRPF({irpf}) = {expected}, pero total = {final}")
+
+            # T2: Confidence threshold
+            confidence = extracted_data.get("confidence", 1.0) or 1.0
+            if confidence < 0.5:
+                ai_warnings.append(f"Baja confianza IA: {confidence:.0%}")
+
+            # T3: Campos obligatorios
+            if not extracted_data.get("provider"):
+                ai_warnings.append("Proveedor no detectado")
+            if not extracted_data.get("date"):
+                ai_warnings.append("Fecha no detectada")
+            if not extracted_data.get("final_total"):
+                ai_warnings.append("Total no detectado")
+
             ticket = Ticket(
                 project_id=project_id,
                 file_path=cloudinary_result["url"],
@@ -184,14 +210,17 @@ async def upload_ticket(
                 foreign_tax_eur=foreign_tax_eur,
                 exchange_rate=exchange_rate,
                 exchange_rate_date=exchange_rate_date,
+                notes="\n".join(ai_warnings) if ai_warnings else None,
                 is_reviewed=False
             )
 
         db.add(ticket)
-        db.execute(update(Project).where(Project.id == project_id).values(
-            tickets_count=Project.tickets_count + 1,
-            total_amount=Project.total_amount + ticket.final_total,
-        ))
+        # T5: Error de IA (final_total=0) → no sumar al proyecto
+        if "error" not in extracted_data:
+            db.execute(update(Project).where(Project.id == project_id).values(
+                tickets_count=Project.tickets_count + 1,
+                total_amount=Project.total_amount + ticket.final_total,
+            ))
         try:
             db.commit()
         except Exception:
@@ -253,12 +282,16 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     old_total = ticket.final_total
+    was_error = (ticket.provider == "Error en extracción" and old_total == 0.0)
     update_data = ticket_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(ticket, key, value)
     if "final_total" in update_data:
         diff = ticket.final_total - old_total
+        # T5: Si era ticket de error (no sumado al proyecto), sumar count + total completo
+        count_diff = 1 if was_error and ticket.final_total > 0 else 0
         db.execute(update(Project).where(Project.id == ticket.project_id).values(
+            tickets_count=Project.tickets_count + count_diff,
             total_amount=Project.total_amount + diff,
         ))
     db.commit()
@@ -285,8 +318,10 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
         # Continuar aunque falle (evitar bloqueo)
 
     # 2. BORRAR DE BASE DE DATOS
+    # T5: Si era ticket de error (nunca se sumó), no restar count
+    is_error_ticket = (ticket.provider == "Error en extracción" and ticket.final_total == 0.0)
     db.execute(update(Project).where(Project.id == ticket.project_id).values(
-        tickets_count=Project.tickets_count - 1,
+        tickets_count=Project.tickets_count - (0 if is_error_ticket else 1),
         total_amount=Project.total_amount - ticket.final_total,
     ))
     db.delete(ticket)
