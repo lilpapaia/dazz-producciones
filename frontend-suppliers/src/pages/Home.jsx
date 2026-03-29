@@ -294,8 +294,8 @@ const Home = () => {
       {viewer && (() => {
         const viewerIdx = filtered.findIndex(i => i.id === viewer.id);
         return (
-          <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col"
-            style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="fixed inset-0 bg-zinc-950 z-[60] flex flex-col"
+            style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
             <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-800">
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-3">
