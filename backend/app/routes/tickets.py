@@ -1,7 +1,6 @@
 import logging
 import hashlib
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import update
 from typing import List
@@ -11,6 +10,7 @@ from pathlib import Path
 from datetime import datetime
 
 from config.database import get_db
+from config.constants import MATH_TOLERANCE, MIN_AI_CONFIDENCE
 from app.models import schemas
 from app.models.database import User, Project, Ticket
 from app.services.auth import get_current_active_user
@@ -164,12 +164,12 @@ async def upload_ticket(
             irpf = extracted_data.get("irpf_amount", 0.0) or 0.0
             final = extracted_data.get("final_total", 0.0) or 0.0
             expected = round(base + iva - irpf, 2)
-            if final > 0 and abs(expected - final) > 0.02:
+            if final > 0 and abs(expected - final) > MATH_TOLERANCE:
                 ai_warnings.append(f"Incoherencia matemática: base({base}) + IVA({iva}) - IRPF({irpf}) = {expected}, pero total = {final}")
 
             # T2: Confidence threshold
             confidence = extracted_data.get("confidence", 1.0) or 1.0
-            if confidence < 0.5:
+            if confidence < MIN_AI_CONFIDENCE:
                 ai_warnings.append(f"Baja confianza IA: {confidence:.0%}")
 
             # T3: Campos obligatorios

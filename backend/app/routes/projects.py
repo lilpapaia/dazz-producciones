@@ -89,7 +89,8 @@ async def create_project(
 
     # Legacy auto-link: handle any existing OC_PENDING invoices (new invoices require OC to exist)
     try:
-        from app.models.suppliers import SupplierInvoice, InvoiceStatus, NotificationRecipientType, NotificationEventType, SupplierNotification
+        from app.models.suppliers import SupplierInvoice, InvoiceStatus, NotificationRecipientType, NotificationEventType
+        from app.services.notifications import create_notification as _notify
         pending_invoices = db.query(SupplierInvoice).filter(
             SupplierInvoice.oc_number.ilike(db_project.creative_code),
             SupplierInvoice.status == InvoiceStatus.OC_PENDING,
@@ -98,17 +99,10 @@ async def create_project(
             inv.project_id = db_project.id
             inv.company_id = db_project.owner_company_id
             inv.status = InvoiceStatus.PENDING
-            # Notify admin
-            notif = SupplierNotification(
-                recipient_type=NotificationRecipientType.ADMIN,
-                recipient_id=0,
-                event_type=NotificationEventType.OC_LINKED,
-                title="OC Linked",
-                message=f"Invoice {inv.invoice_number} linked to project {db_project.creative_code}",
-                related_invoice_id=inv.id,
-                related_supplier_id=inv.supplier_id,
-            )
-            db.add(notif)
+            _notify(db, NotificationRecipientType.ADMIN, 0,
+                    NotificationEventType.OC_LINKED, "OC Linked",
+                    f"Invoice {inv.invoice_number} linked to project {db_project.creative_code}",
+                    invoice_id=inv.id, supplier_id=inv.supplier_id)
         if pending_invoices:
             db.commit()
             logger.info(f"Auto-linked {len(pending_invoices)} OC_PENDING invoices to project {db_project.creative_code}")

@@ -7,6 +7,7 @@ import { showError } from '../../utils/toast';
 import useVoiceSearch from '../../hooks/useVoiceSearch';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useClickOutside from '../../hooks/useClickOutside';
+import { INVOICE_PILL } from '../../constants/invoiceStatus';
 
 const getPageNumbers = (current, total) => {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i);
@@ -21,13 +22,7 @@ const getPageNumbers = (current, total) => {
   return result;
 };
 
-const PILL = {
-  PENDING: { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-500' },
-  OC_PENDING: { cls: 'bg-blue-400/10 text-blue-400 border-blue-400/20', dot: 'bg-blue-400' },
-  APPROVED: { cls: 'bg-green-400/10 text-green-400 border-green-400/20', dot: 'bg-green-400' },
-  PAID: { cls: 'bg-green-300/10 text-green-300 border-green-300/20', dot: 'bg-green-300' },
-  DELETE_REQUESTED: { cls: 'bg-red-300/10 text-red-300 border-red-300/20', dot: 'bg-red-300' },
-};
+const PILL = INVOICE_PILL;
 
 const PAGE_SIZE = 20;
 

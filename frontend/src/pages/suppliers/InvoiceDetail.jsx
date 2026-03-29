@@ -4,18 +4,10 @@ import { ChevronLeft, ChevronRight, Check, AlertTriangle, ExternalLink, X, ZoomI
 import { getInvoice, getAllInvoices, updateInvoiceStatus, assignInvoiceOC, getOCSuggestions, deleteInvoice, rejectInvoiceDeletion } from '../../services/suppliersApi';
 import { showError, showSuccess } from '../../utils/toast';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import { INVOICE_PILL, INVOICE_LABEL } from '../../constants/invoiceStatus';
 
-const PILL = {
-  PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  OC_PENDING: 'bg-blue-400/10 text-blue-400 border-blue-400/20',
-  APPROVED: 'bg-green-400/10 text-green-400 border-green-400/20',
-  PAID: 'bg-green-300/10 text-green-300 border-green-300/20',
-  DELETE_REQUESTED: 'bg-red-300/10 text-red-300 border-red-300/20',
-};
-const PILL_LABEL = {
-  PENDING: 'Pendiente', OC_PENDING: 'OC pendiente', APPROVED: 'Aprobada',
-  PAID: 'Pagada', DELETE_REQUESTED: 'Borrado solicitado',
-};
+const PILL = Object.fromEntries(Object.entries(INVOICE_PILL).map(([k, v]) => [k, v.cls]));
+const PILL_LABEL = INVOICE_LABEL;
 
 const InvoiceDetail = () => {
   const { invoiceId } = useParams();

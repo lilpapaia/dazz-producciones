@@ -42,6 +42,7 @@ from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_
 from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.validators import validate_pdf_bytes, sanitize_filename, validate_iban_format
 from app.services.supplier_ai import format_date_for_response
+from config.constants import MAX_SUPPLIER_PDF_SIZE
 
 from app.services.rate_limit import limiter
 from app.services.notifications import create_notification as _notify
@@ -318,7 +319,7 @@ async def upload_bank_cert(
 ):
     """Upload bank certificate PDF (required after registration)."""
     contents = await file.read()
-    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
+    validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
 
     # PERF-M1: Offload upload R2 síncrono al thread pool para no bloquear event loop
     cert_key = await asyncio.to_thread(
@@ -372,7 +373,7 @@ async def validate_bank_cert_iban(
     import uuid as _uuid
 
     contents = await file.read()
-    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
+    validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
 
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     temp_path = tmp.name
@@ -471,7 +472,7 @@ async def upload_invoice(
 
     # Validate file (magic bytes + size)
     contents = await file.read()
-    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
+    validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
 
     # Save to temp file for AI extraction (Cloudinary upload happens AFTER validation)
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
@@ -849,7 +850,7 @@ async def request_iban_change(
 ):
     """Request IBAN change with new bank certificate. Admin must approve. SEC-1: IBAN in body, not URL."""
     contents = await file.read()
-    validate_pdf_bytes(contents, max_size=10 * 1024 * 1024)
+    validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
 
     # Validate + normalize IBAN format
     new_iban = validate_iban_format(new_iban)

@@ -28,6 +28,7 @@ from app.models.database import Company, Project, OCPrefix
 from app.models.suppliers import Supplier, SupplierOC, SupplierInvoice
 from app.services.encryption import decrypt_iban
 from app.services.claude_ai import strip_markdown_json
+from config.constants import MATH_TOLERANCE, MIN_AI_CONFIDENCE
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +40,6 @@ if not ANTHROPIC_API_KEY:
     _logging.getLogger(__name__).warning("ANTHROPIC_API_KEY not set — AI features will fail")
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
-
-MATH_TOLERANCE = 0.02  # 2 céntimos de tolerancia en validación matemática
 
 
 # ============================================
@@ -256,7 +255,7 @@ def validate_supplier_invoice(
 
     # --- 1. PDF legible ---
     confidence = extracted_data.get("confidence", 0.0)
-    if confidence < 0.5:
+    if confidence < MIN_AI_CONFIDENCE:
         errors.append(
             f"PDF no legible o datos insuficientes (confianza: {confidence:.0%})"
         )
