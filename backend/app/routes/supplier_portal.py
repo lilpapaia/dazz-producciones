@@ -91,7 +91,7 @@ async def register_supplier(
         SupplierInvitation.token == body.token,
         SupplierInvitation.used_at == None,
         SupplierInvitation.expires_at > datetime.now(timezone.utc),
-    ).first()
+    ).with_for_update().first()
 
     if not invitation:
         raise HTTPException(400, "Invalid, expired, or already used invitation token")
@@ -153,14 +153,9 @@ async def register_supplier(
         ia_cert_verified=not body.has_cert_warnings,
     )
     db.add(supplier)
-    db.commit()
-    db.refresh(supplier)
+    db.flush()
 
-    # Create tokens
-    access_token = create_supplier_access_token(supplier.id, supplier.email)
-    refresh_token = create_supplier_refresh_token(db, supplier.id)
-
-    # Notifications
+    # Notifications (before commit — atomic with supplier creation)
     if body.iban:
         _notify(db, NotificationRecipientType.ADMIN, 0, NotificationEventType.REGISTRATION,
                 "New Supplier Registered", f"{supplier.name} ({supplier.email})",
@@ -171,6 +166,11 @@ async def register_supplier(
                 f"{supplier.name} ({supplier.email}) — registered without IBAN, payment method pending",
                 supplier_id=supplier.id)
     db.commit()
+    db.refresh(supplier)
+
+    # Create tokens (after commit — supplier.id is now available)
+    access_token = create_supplier_access_token(supplier.id, supplier.email)
+    refresh_token = create_supplier_refresh_token(db, supplier.id)
 
     return RegisterResponse(
         message="Registration successful",

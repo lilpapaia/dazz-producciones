@@ -21,9 +21,7 @@ from app.models.supplier_schemas import AutoInvoiceRequest
 from app.services.auth import get_current_admin_user
 from app.services.encryption import decrypt_iban
 from app.services.autoinvoice_pdf import generate_autoinvoice_pdf
-from app.services.supplier_storage import save_invoice_pdf
 from app.services.supplier_email import send_autoinvoice_notification
-from app.services.supplier_ai import resolve_company_from_oc
 
 logger = logging.getLogger(__name__)
 

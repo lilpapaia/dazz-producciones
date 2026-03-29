@@ -13,12 +13,8 @@ export function PWAUpdatePrompt() {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(r) {
-      console.log('✅ Service Worker registrado:', r);
-    },
-    onRegisterError(error) {
-      console.error('❌ Error registrando SW:', error);
-    },
+    onRegistered() {},
+    onRegisterError() {},
   });
 
   useEffect(() => {
@@ -161,8 +157,6 @@ export function PWAInstallPrompt() {
 
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
-    console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
     
     setDeferredPrompt(null);
     setShowInstall(false);
