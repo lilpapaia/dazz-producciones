@@ -101,11 +101,11 @@ const Home = () => {
       {/* Tab bar */}
       <div className="flex border-b border-zinc-800 mx-4 lg:mx-0 mb-3.5">
         <button onClick={() => setActiveTab('mine')}
-          className={`flex-1 py-2.5 text-center text-[12px] border-b-2 transition-colors ${activeTab === 'mine' ? 'text-amber-400 border-amber-500 font-semibold' : 'text-zinc-500 border-transparent'}`}>
+          className={`flex-1 py-2.5 lg:py-3.5 text-center text-[12px] lg:text-[14px] border-b-2 transition-colors ${activeTab === 'mine' ? 'text-amber-400 border-amber-500 font-semibold' : 'text-zinc-500 border-transparent'}`}>
           My invoices ({invoices.length})
         </button>
         <button onClick={() => setActiveTab('received')}
-          className={`flex-1 py-2.5 text-center text-[12px] border-b-2 transition-colors ${activeTab === 'received' ? 'text-amber-400 border-amber-500 font-semibold' : 'text-zinc-500 border-transparent'}`}>
+          className={`flex-1 py-2.5 lg:py-3.5 text-center text-[12px] lg:text-[14px] border-b-2 transition-colors ${activeTab === 'received' ? 'text-amber-400 border-amber-500 font-semibold' : 'text-zinc-500 border-transparent'}`}>
           Received{receivedInvoices.length > 0 ? ` (${receivedInvoices.length})` : ''}
         </button>
       </div>

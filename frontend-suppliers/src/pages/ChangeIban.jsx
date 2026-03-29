@@ -31,13 +31,13 @@ const ChangeIban = () => {
   const labelCls = "text-[10px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
 
   return (
-    <div className="max-w-[500px] mx-auto px-4 pt-4 lg:pt-0">
+    <div className="max-w-[500px] lg:max-w-[640px] mx-auto px-4 pt-4 lg:pt-6 lg:px-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
         <button onClick={() => navigate('/profile')} className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center lg:hidden">
           <ChevronLeft size={14} className="text-zinc-300" />
         </button>
-        <h1 className="font-['Bebas_Neue'] text-[18px] tracking-wider text-zinc-100">Change IBAN & bank certificate</h1>
+        <h1 className="font-['Bebas_Neue'] text-[18px] lg:text-[22px] tracking-wider text-zinc-100">Change IBAN & bank certificate</h1>
       </div>
       <p className="text-[12px] text-zinc-500 mb-4">For security, changes require admin approval</p>
 

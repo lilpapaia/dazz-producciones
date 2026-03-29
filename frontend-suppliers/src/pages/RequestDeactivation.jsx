@@ -23,13 +23,13 @@ const RequestDeactivation = () => {
   };
 
   return (
-    <div className="max-w-[480px] mx-auto px-4 pt-4 lg:pt-0">
+    <div className="max-w-[480px] lg:max-w-[640px] mx-auto px-4 pt-4 lg:pt-6 lg:px-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <button onClick={() => navigate('/profile')} className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center lg:hidden">
           <ChevronLeft size={14} className="text-zinc-300" />
         </button>
-        <h1 className="font-['Bebas_Neue'] text-[18px] tracking-wider text-zinc-100">Request account deactivation</h1>
+        <h1 className="font-['Bebas_Neue'] text-[18px] lg:text-[22px] tracking-wider text-zinc-100">Request account deactivation</h1>
       </div>
 
       {/* Warning */}

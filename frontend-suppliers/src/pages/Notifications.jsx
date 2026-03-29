@@ -72,10 +72,10 @@ const Notifications = () => {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-4 lg:pt-0">
+    <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="font-['Bebas_Neue'] text-[18px] tracking-wider text-zinc-100">Notifications</h1>
+      <div className="flex items-center justify-between mb-3 lg:mb-5">
+        <h1 className="font-['Bebas_Neue'] text-[18px] lg:text-[22px] tracking-wider text-zinc-100">Notifications</h1>
         {unreadCount > 0 && (
           <button onClick={handleMarkAllRead}
             className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors">
@@ -107,24 +107,24 @@ const Notifications = () => {
       {displayed.length === 0 ? (
         <div className="text-center py-16 text-xs text-zinc-600">No notifications</div>
       ) : (
-        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] px-3.5">
+        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] px-3.5 lg:px-5">
           {displayed.map(n => {
             const ev = EVENT_ICON[n.event_type] || EVENT_ICON.REGISTRATION;
             const Icon = ev.icon;
             return (
               <div key={n.id}
                 onClick={() => !n.is_read && handleMarkRead(n.id)}
-                className={`flex items-start gap-2 py-3 border-b border-white/[.04] last:border-0 ${!n.is_read ? 'bg-amber-500/[.02] cursor-pointer' : ''}`}>
+                className={`flex items-start gap-2 py-3 lg:py-4 border-b border-white/[.04] last:border-0 ${!n.is_read ? 'bg-amber-500/[.02] cursor-pointer' : ''}`}>
                 {!n.is_read ? (
                   <div className="w-[7px] h-[7px] rounded-full bg-amber-500 flex-shrink-0 mt-[5px]" />
                 ) : (
                   <div className="w-[7px] flex-shrink-0" />
                 )}
-                <div className={`w-7 h-7 rounded-[7px] flex items-center justify-center flex-shrink-0 ${ev.cls}`}>
+                <div className={`w-7 h-7 lg:w-8 lg:h-8 rounded-[7px] flex items-center justify-center flex-shrink-0 ${ev.cls}`}>
                   <Icon size={12} className={ev.stroke} strokeWidth={1.8} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-zinc-300">
+                  <div className="text-[13px] lg:text-[14px] text-zinc-300">
                     <b>{n.title}</b>{n.message ? ` — ${n.message}` : ''}
                   </div>
                   <div className="text-[11px] text-zinc-600 mt-0.5">{timeAgo(n.created_at)}</div>
