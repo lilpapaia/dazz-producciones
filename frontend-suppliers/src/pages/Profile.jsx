@@ -39,7 +39,7 @@ const Profile = () => {
   const initials = profile.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pt-4 lg:pt-0">
       {/* Desktop: 2-column grid / Mobile: single column */}
       <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-3.5 px-4">
 

@@ -55,9 +55,7 @@ const Layout = ({ children }) => {
                 <item.icon size={13} strokeWidth={1.5} />
                 {item.label}
                 {item.path === '/notifications' && unread > 0 && (
-                  <span className="ml-auto min-w-[16px] h-[16px] bg-amber-500 rounded-[8px] text-[8px] font-bold text-zinc-950 flex items-center justify-center px-[3px] font-['IBM_Plex_Mono']">
-                    {unread}
-                  </span>
+                  <span className="ml-auto w-2 h-2 rounded-full bg-amber-500" />
                 )}
               </Link>
             );
@@ -118,9 +116,7 @@ const Layout = ({ children }) => {
                 <item.icon size={20} className={active ? 'text-amber-500' : 'text-zinc-600'} strokeWidth={1.5} />
                 <span className={`text-[9px] ${active ? 'text-amber-400' : 'text-zinc-600'}`}>{item.label === 'Upload invoice' ? 'Upload' : item.label === 'My profile' ? 'Profile' : item.label}</span>
                 {item.path === '/notifications' && unread > 0 && (
-                  <span className="absolute top-[2px] right-[6px] min-w-[14px] h-[14px] bg-amber-500 rounded-[7px] text-[7px] font-bold text-zinc-950 flex items-center justify-center px-[3px]">
-                    {unread}
-                  </span>
+                  <span className="absolute top-[2px] right-[6px] w-2 h-2 rounded-full bg-amber-500" />
                 )}
               </Link>
             );

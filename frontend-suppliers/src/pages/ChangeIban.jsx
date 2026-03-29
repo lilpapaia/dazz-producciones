@@ -31,7 +31,7 @@ const ChangeIban = () => {
   const labelCls = "text-[10px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
 
   return (
-    <div className="max-w-[500px] mx-auto px-4">
+    <div className="max-w-[500px] mx-auto px-4 pt-4 lg:pt-0">
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
         <button onClick={() => navigate('/profile')} className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center lg:hidden">

@@ -73,7 +73,7 @@ const Home = () => {
   );
 
   return (
-    <div className="relative max-w-2xl mx-auto">
+    <div className="relative max-w-2xl mx-auto pt-4 lg:pt-0">
       {error && (
         <div className="mx-4 mb-3 bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-[12px]">{error}</div>
       )}

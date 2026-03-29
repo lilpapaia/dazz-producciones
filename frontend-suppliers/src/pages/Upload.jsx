@@ -61,7 +61,7 @@ const UploadPage = () => {
   const errorCount = files.filter(f => f.status === 'error').length;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pt-4 lg:pt-0">
       {/* Header */}
       <div className="px-4 mb-4 flex items-center gap-3">
         <button onClick={() => navigate('/')} className="w-8 h-8 bg-[#27272a] rounded-lg flex items-center justify-center">

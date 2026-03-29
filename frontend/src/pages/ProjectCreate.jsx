@@ -147,31 +147,14 @@ const ProjectCreate = () => {
             </div>
           </div>
 
-          {/* Código OC y Empresa */}
+          {/* Empresa y Código OC */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">CÓDIGO CREATIVO (OC) *</label>
-              {formData.owner_company_id ? (
-                <OCSelector
-                  companyId={parseInt(formData.owner_company_id)}
-                  onSelect={oc => setFormData(prev => ({ ...prev, creative_code: oc }))}
-                  onClear={() => setFormData(prev => ({ ...prev, creative_code: '' }))}
-                  inputClassName="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-                  labelClassName="block text-xs font-mono text-zinc-400 mb-2 tracking-wider"
-                />
-              ) : (
-                <div className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-500 text-sm">
-                  Selecciona una empresa primero
-                </div>
-              )}
-            </div>
-
-            {/* ← NUEVO: Dropdown de empresas */}
+            {/* Dropdown de empresas */}
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">
                 EMPRESA *
               </label>
-              
+
               {loadingCompanies ? (
                 <div className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-500">
                   Cargando empresas...
@@ -185,7 +168,7 @@ const ProjectCreate = () => {
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
                     <Building2 size={18} />
                   </div>
-                  
+
                   <select
                     name="owner_company_id"
                     value={formData.owner_company_id}
@@ -200,7 +183,7 @@ const ProjectCreate = () => {
                       </option>
                     ))}
                   </select>
-                  
+
                   {/* Flecha dropdown */}
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,14 +192,31 @@ const ProjectCreate = () => {
                   </div>
                 </div>
               )}
-              
+
               {companies.length > 0 && (
                 <p className="text-xs text-zinc-500 mt-1">
-                  {companies.length === 1 
+                  {companies.length === 1
                     ? 'Solo tienes acceso a una empresa'
                     : `Tienes acceso a ${companies.length} empresas`
                   }
                 </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">CÓDIGO CREATIVO (OC) *</label>
+              {formData.owner_company_id ? (
+                <OCSelector
+                  companyId={parseInt(formData.owner_company_id)}
+                  onSelect={oc => setFormData(prev => ({ ...prev, creative_code: oc }))}
+                  onClear={() => setFormData(prev => ({ ...prev, creative_code: '' }))}
+                  inputClassName="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                  labelClassName="block text-xs font-mono text-zinc-400 mb-2 tracking-wider"
+                />
+              ) : (
+                <div className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-500 text-sm">
+                  Selecciona una empresa primero
+                </div>
               )}
             </div>
           </div>

@@ -72,7 +72,7 @@ const Notifications = () => {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-4">
+    <div className="max-w-2xl mx-auto px-4 pt-4 lg:pt-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h1 className="font-['Bebas_Neue'] text-[18px] tracking-wider text-zinc-100">Notifications</h1>
