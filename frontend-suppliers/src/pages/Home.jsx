@@ -73,28 +73,28 @@ const Home = () => {
   );
 
   return (
-    <div className="relative max-w-2xl lg:max-w-5xl mx-auto pt-4 lg:pt-6 lg:px-6">
+    <div className="relative max-w-2xl lg:max-w-4xl mx-auto pt-4 lg:pt-6 lg:px-6">
       {error && (
         <div className="mx-4 lg:mx-0 mb-3 bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-[12px]">{error}</div>
       )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-2 lg:gap-4 px-4 lg:px-0 mb-4 lg:mb-6">
-        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] lg:rounded-xl p-3 lg:p-6 border-l-2 border-l-amber-500">
-          <div className="text-[9px] lg:text-[10px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Pending payment</div>
+        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3 lg:p-6 border-l-2 border-l-amber-500">
+          <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Pending payment</div>
           <div className="font-['Bebas_Neue'] text-[24px] lg:text-[36px] text-amber-500 leading-none tracking-wide">
             {Math.round(summary?.pending_amount || 0).toLocaleString()}<span className="text-zinc-500 text-sm ml-0.5">EUR</span>
           </div>
-          <div className="text-[10px] lg:text-[11px] text-zinc-500 mt-0.5 lg:mt-1">
+          <div className="text-[10px] text-zinc-500 mt-0.5 lg:mt-1">
             {invoices.filter(i => i.status === 'PENDING' || i.status === 'APPROVED').length} invoice(s)
           </div>
         </div>
-        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] lg:rounded-xl p-3 lg:p-6">
-          <div className="text-[9px] lg:text-[10px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Paid this month</div>
+        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3 lg:p-6">
+          <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-1 lg:mb-2">Paid this month</div>
           <div className="font-['Bebas_Neue'] text-[24px] lg:text-[36px] text-green-400 leading-none tracking-wide">
             {Math.round(summary?.paid_this_month || 0).toLocaleString()}<span className="text-zinc-500 text-sm ml-0.5">EUR</span>
           </div>
-          <div className="text-[10px] lg:text-[11px] text-zinc-500 mt-0.5 lg:mt-1">{summary?.total_invoices || 0} total</div>
+          <div className="text-[10px] text-zinc-500 mt-0.5 lg:mt-1">{summary?.total_invoices || 0} total</div>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ const Home = () => {
       {/* ═══ TAB: My invoices ═══ */}
       {activeTab === 'mine' && (
         <>
-          {/* Filters — mobile: stacked, desktop: inline */}
+          {/* Filters — móvil: apilado, desktop: en línea */}
           <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-3 px-4 lg:px-0 mb-3">
             <span className="text-[11px] font-semibold text-zinc-400 tracking-widest uppercase lg:shrink-0">Invoices</span>
             <div className="relative flex-1">
@@ -140,42 +140,43 @@ const Home = () => {
             </select>
           </div>
 
-          {/* ─── MOBILE: cards ─── */}
-          <div className="lg:hidden px-4 space-y-2 mb-3">
+          {/* Invoice cards */}
+          <div className="px-4 lg:px-0 space-y-2 lg:space-y-3 mb-3">
             {filtered.length === 0 ? (
               <div className="text-center py-12 text-xs text-zinc-600">No invoices</div>
             ) : filtered.map(inv => {
               const pill = PILL[inv.status] || PILL.PENDING;
               return (
                 <div key={inv.id} onClick={() => inv.file_url && setViewer(inv)}
-                  className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 transition-colors active:border-amber-500/50 cursor-pointer">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="font-['IBM_Plex_Mono'] text-xs font-medium text-zinc-200">{inv.invoice_number}</span>
-                    <span className="font-['IBM_Plex_Mono'] text-sm font-semibold text-zinc-100">
+                  className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 lg:p-5 transition-colors active:border-amber-500/50 hover:border-zinc-700 cursor-pointer">
+                  <div className="flex items-start justify-between mb-2 lg:mb-3">
+                    <span className="font-['IBM_Plex_Mono'] text-xs lg:text-sm font-medium text-zinc-200">{inv.invoice_number}</span>
+                    <span className="font-['IBM_Plex_Mono'] text-sm lg:text-base font-semibold text-zinc-100">
                       {inv.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR
                     </span>
                   </div>
                   <div className="flex items-end justify-between">
                     <div>
-                      <div className="text-[10px] text-zinc-500 mb-1.5 flex items-center gap-1.5 flex-wrap">
+                      <div className="text-[10px] lg:text-[11px] text-zinc-500 mb-1.5 flex items-center gap-1.5 flex-wrap">
                         {inv.oc_number && (
-                          <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-semibold font-['IBM_Plex_Mono'] border border-amber-500/15">
+                          <span className="text-[9px] lg:text-[10px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-semibold font-['IBM_Plex_Mono'] border border-amber-500/15">
                             {inv.oc_number}
                           </span>
                         )}
                         {inv.date}
                       </div>
-                      <span className={`text-[10px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 ${pill.cls}`}>
+                      <span className={`text-[10px] lg:text-[11px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 ${pill.cls}`}>
                         <span className={`w-[5px] h-[5px] rounded-full ${pill.dot}`} />{STATUS_LABEL[inv.status] || inv.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {(inv.status === 'PENDING' || inv.status === 'OC_PENDING') ? (
-                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }} className="w-7 h-7 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors">
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }}
+                          className="w-7 h-7 lg:w-8 lg:h-8 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors">
                           <Trash2 size={13} strokeWidth={1.5} />
                         </button>
                       ) : (
-                        <div className="w-7 h-7 flex items-center justify-center">
+                        <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center">
                           <Trash2 size={13} className="text-zinc-800" strokeWidth={1.5} />
                         </div>
                       )}
@@ -184,73 +185,6 @@ const Home = () => {
                 </div>
               );
             })}
-          </div>
-
-          {/* ─── DESKTOP: table ─── */}
-          <div className="hidden lg:block mb-6">
-            {filtered.length === 0 ? (
-              <div className="text-center py-16 text-xs text-zinc-600">No invoices</div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Invoice</th>
-                    <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">OC</th>
-                    <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Date</th>
-                    <th className="text-right text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Total</th>
-                    <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5 pl-4">Status</th>
-                    <th className="text-right text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(inv => {
-                    const pill = PILL[inv.status] || PILL.PENDING;
-                    return (
-                      <tr key={inv.id}
-                        onClick={() => inv.file_url && setViewer(inv)}
-                        className="border-b border-zinc-800/50 hover:bg-zinc-800/30 cursor-pointer transition-colors group">
-                        <td className="py-3 pr-4">
-                          <span className="font-['IBM_Plex_Mono'] text-[13px] text-zinc-200">{inv.invoice_number}</span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          {inv.oc_number ? (
-                            <span className="text-[11px] px-1.5 py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-['IBM_Plex_Mono'] border border-amber-500/15">
-                              {inv.oc_number}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-zinc-600">—</span>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className="text-[13px] text-zinc-400">{inv.date}</span>
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          <span className="font-['IBM_Plex_Mono'] text-[13px] font-semibold text-zinc-100">
-                            {inv.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR
-                          </span>
-                        </td>
-                        <td className="py-3 pl-4 pr-4">
-                          <span className={`text-[11px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1.5 ${pill.cls}`}>
-                            <span className={`w-[5px] h-[5px] rounded-full ${pill.dot}`} />
-                            {STATUS_LABEL[inv.status] || inv.status}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          {(inv.status === 'PENDING' || inv.status === 'OC_PENDING') ? (
-                            <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }}
-                              className="w-7 h-7 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors ml-auto">
-                              <Trash2 size={13} strokeWidth={1.5} />
-                            </button>
-                          ) : (
-                            <div className="w-7 h-7 ml-auto" />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
           </div>
 
           <p className="px-4 lg:px-0 text-[10px] text-zinc-600 mb-20 lg:mb-8">
@@ -286,113 +220,49 @@ const Home = () => {
               <p className="text-[11px] text-zinc-600 mt-1">Invoices generated by DAZZ will appear here</p>
             </div>
           ) : (
-            <>
-              {/* Mobile: cards */}
-              <div className="lg:hidden space-y-2">
-                {receivedInvoices.map(inv => (
-                  <div key={inv.id} className="bg-[#18181b] border border-blue-400/15 bg-blue-400/[.02] rounded-[10px] p-3.5">
-                    <div className="text-[10px] text-blue-400 tracking-widest uppercase mb-1.5 flex items-center gap-1">
-                      <FileText size={10} strokeWidth={2} /> Generated by DAZZ
-                    </div>
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="font-['IBM_Plex_Mono'] text-xs font-medium text-zinc-200">{inv.invoice_number}</span>
-                      <span className="font-['IBM_Plex_Mono'] text-sm font-semibold text-zinc-100">
-                        {inv.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR
-                      </span>
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <div>
-                        {inv.oc_number && (
-                          <span className="text-[9px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-['IBM_Plex_Mono'] border border-amber-500/15 mr-1.5">
-                            {inv.oc_number}
-                          </span>
-                        )}
-                        <span className="text-[11px] text-zinc-500">{inv.date}{inv.company_name ? ` · ${inv.company_name}` : ''}</span>
-                        <div className="mt-1.5">
-                          <span className="text-[10px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 bg-blue-400/10 text-blue-400 border-blue-400/20">
-                            <span className="w-[5px] h-[5px] rounded-full bg-blue-400" />Received
-                          </span>
-                        </div>
-                      </div>
-                      {inv.file_url && (
-                        <button onClick={async () => {
-                          const res = await fetch(inv.file_url);
-                          const blob = await res.blob();
-                          const a = document.createElement('a');
-                          a.href = URL.createObjectURL(blob);
-                          a.download = `${inv.invoice_number}.pdf`;
-                          document.body.appendChild(a); a.click(); a.remove();
-                          URL.revokeObjectURL(a.href);
-                        }} className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors flex items-center gap-1.5">
-                          <Download size={12} strokeWidth={1.5} /> Download PDF
-                        </button>
-                      )}
-                    </div>
+            <div className="space-y-2 lg:space-y-3">
+              {receivedInvoices.map(inv => (
+                <div key={inv.id} className="bg-[#18181b] border border-blue-400/15 bg-blue-400/[.02] rounded-[10px] p-3.5 lg:p-5">
+                  <div className="text-[10px] text-blue-400 tracking-widest uppercase mb-1.5 flex items-center gap-1">
+                    <FileText size={10} strokeWidth={2} /> Generated by DAZZ
                   </div>
-                ))}
-              </div>
-
-              {/* Desktop: table */}
-              <div className="hidden lg:block">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-800">
-                      <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Invoice</th>
-                      <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">OC</th>
-                      <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Date</th>
-                      <th className="text-left text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Company</th>
-                      <th className="text-right text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5">Total</th>
-                      <th className="text-right text-[10px] font-semibold text-zinc-500 tracking-widest uppercase pb-2.5"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {receivedInvoices.map(inv => (
-                      <tr key={inv.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] text-blue-400 tracking-widest uppercase">DAZZ</span>
-                            <span className="font-['IBM_Plex_Mono'] text-[13px] text-zinc-200">{inv.invoice_number}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4">
-                          {inv.oc_number ? (
-                            <span className="text-[11px] px-1.5 py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-['IBM_Plex_Mono'] border border-amber-500/15">
-                              {inv.oc_number}
-                            </span>
-                          ) : <span className="text-zinc-600">—</span>}
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className="text-[13px] text-zinc-400">{inv.date}</span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className="text-[13px] text-zinc-400">{inv.company_name || '—'}</span>
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          <span className="font-['IBM_Plex_Mono'] text-[13px] font-semibold text-zinc-100">
-                            {inv.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          {inv.file_url && (
-                            <button onClick={async () => {
-                              const res = await fetch(inv.file_url);
-                              const blob = await res.blob();
-                              const a = document.createElement('a');
-                              a.href = URL.createObjectURL(blob);
-                              a.download = `${inv.invoice_number}.pdf`;
-                              document.body.appendChild(a); a.click(); a.remove();
-                              URL.revokeObjectURL(a.href);
-                            }} className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors inline-flex items-center gap-1.5 ml-auto">
-                              <Download size={12} strokeWidth={1.5} /> Download
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  <div className="flex items-start justify-between mb-2 lg:mb-3">
+                    <span className="font-['IBM_Plex_Mono'] text-xs lg:text-sm font-medium text-zinc-200">{inv.invoice_number}</span>
+                    <span className="font-['IBM_Plex_Mono'] text-sm lg:text-base font-semibold text-zinc-100">
+                      {inv.final_total?.toLocaleString('en', { minimumFractionDigits: 2 })} EUR
+                    </span>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      {inv.oc_number && (
+                        <span className="text-[9px] lg:text-[10px] px-1.5 py-[1px] rounded bg-amber-500/[.08] text-amber-400 font-['IBM_Plex_Mono'] border border-amber-500/15 mr-1.5">
+                          {inv.oc_number}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-zinc-500">{inv.date}{inv.company_name ? ` · ${inv.company_name}` : ''}</span>
+                      <div className="mt-1.5">
+                        <span className="text-[10px] lg:text-[11px] font-medium px-2 py-[3px] rounded-full border inline-flex items-center gap-1 bg-blue-400/10 text-blue-400 border-blue-400/20">
+                          <span className="w-[5px] h-[5px] rounded-full bg-blue-400" />Received
+                        </span>
+                      </div>
+                    </div>
+                    {inv.file_url && (
+                      <button onClick={async () => {
+                        const res = await fetch(inv.file_url);
+                        const blob = await res.blob();
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `${inv.invoice_number}.pdf`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                        URL.revokeObjectURL(a.href);
+                      }} className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors flex items-center gap-1.5">
+                        <Download size={12} strokeWidth={1.5} /> Download PDF
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -426,7 +296,6 @@ const Home = () => {
         return (
           <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col"
             style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            {/* Header */}
             <div className="relative flex items-center justify-center px-6 py-4 border-b border-zinc-800">
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-3">
@@ -449,15 +318,11 @@ const Home = () => {
                 <X size={20} />
               </button>
             </div>
-
-            {/* PDF iframe */}
             <div className="flex-1 min-h-0">
               <iframe
                 src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewer.file_url)}&embedded=true`}
                 className="w-full h-full bg-white" title="Invoice PDF" />
             </div>
-
-            {/* Footer info */}
             <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-4 space-y-3 text-center">
               <div className="flex items-center justify-center gap-4">
                 <span className="font-mono text-[13px] text-zinc-400">{viewer.invoice_number}</span>
