@@ -267,7 +267,7 @@ const AutoInvoice = () => {
               <div><label className={labelCls}>Fecha *</label><input value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} /></div>
               <div><label className={labelCls}>Nº Factura *</label><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className={`${inputCls} font-mono`} /></div>
               <div><label className={labelCls}>OC *</label>
-                <OCSelector companyId={companyId ? parseInt(companyId) : null} onSelect={(oc, prefixData) => { setOcNumber(oc); setSelectedPrefixPermanent(!!prefixData?.permanent_oc); }} onClear={() => { setOcNumber(''); setSelectedPrefixPermanent(false); }} />
+                <OCSelector companyId={companyId ? parseInt(companyId) : null} allowExisting onSelect={(oc, prefixData) => { setOcNumber(oc); setSelectedPrefixPermanent(!!prefixData?.permanent_oc); }} onClear={() => { setOcNumber(''); setSelectedPrefixPermanent(false); }} />
               </div>
             </div>
             {selectedPrefixPermanent && selectedSupplier?.last_invoice_number && (

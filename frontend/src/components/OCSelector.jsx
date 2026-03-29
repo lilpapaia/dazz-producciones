@@ -17,7 +17,7 @@ const defaultInputCls = 'w-full bg-zinc-800 border border-zinc-700 text-zinc-100
  *   inputClassName  — override input/select CSS classes
  *   labelClassName  — override label CSS classes
  */
-const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSelect, onClear, inputClassName, labelClassName }) => {
+const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, allowExisting = false, onSelect, onClear, inputClassName, labelClassName }) => {
   const labelCls = labelClassName || defaultLabelCls;
   const inputCls = inputClassName || defaultInputCls;
   const [companies, setCompanies] = useState([]);
@@ -72,7 +72,8 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
       validateOC(oc)
         .then(r => {
           setValidation(r.data);
-          if (r.data.valid) onSelect?.(oc, prefixData);
+          const isAccepted = r.data.valid || (allowExisting && r.data.exists);
+          if (isAccepted) onSelect?.(oc, prefixData);
         })
         .catch(() => setValidation(null))
         .finally(() => setValidating(false));
@@ -140,14 +141,16 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
             <div className="text-[11px] text-zinc-500 mt-1">Introduce {numberDigits} dígitos ({ocDigits.length}/{numberDigits})</div>
           )}
           {validating && <span className="text-[11px] text-zinc-500 mt-1">Verificando...</span>}
-          {validation && !validation.valid && (
+          {validation && !validation.valid && !(allowExisting && validation.exists) && (
             <div className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
               <AlertTriangle size={11} /> {validation.message}
             </div>
           )}
-          {validation && validation.valid && (
+          {validation && (validation.valid || (allowExisting && validation.exists)) && (
             <div className="text-[11px] text-green-400 mt-1 flex items-center gap-1">
-              <Check size={11} /> {fullOC} disponible
+              <Check size={11} /> {allowExisting && validation.exists
+                ? `${fullOC} — ${validation.message}`
+                : `${fullOC} disponible`}
             </div>
           )}
         </div>
