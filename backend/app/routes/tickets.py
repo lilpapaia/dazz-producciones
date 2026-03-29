@@ -73,7 +73,7 @@ async def upload_ticket(
 
     try:
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
-        cloudinary_result = await asyncio.to_thread(upload_ticket_file, str(temp_path), file.filename, project_id)
+        cloudinary_result = await asyncio.to_thread(upload_ticket_file, str(temp_path), file.filename, project_id, project.creative_code)
 
         # 2. Extraer datos con Claude AI (usando primera página/imagen)
         ai_file_path = str(temp_path)

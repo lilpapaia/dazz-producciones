@@ -17,8 +17,18 @@ from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
+import re
+
 from app.services.validators import sanitize_filename
 from app.services.cloudinary_service import compress_if_needed
+
+
+def _slugify(name: str) -> str:
+    """Convierte nombre a slug seguro para paths: 'María García S.L.' → 'maria_garcia_sl'"""
+    slug = name.lower().strip()
+    slug = re.sub(r'[^a-z0-9]+', '_', slug)
+    slug = slug.strip('_')[:60]
+    return slug or "unknown"
 
 import cloudinary
 import cloudinary.uploader
@@ -44,7 +54,7 @@ CLOUDINARY_FOLDER = "dazz-suppliers/invoices"
 PAGES_FOLDER = "dazz-suppliers/pages"
 
 
-def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None) -> Dict[str, Any]:
+def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None, supplier_name: str = None) -> Dict[str, Any]:
     """
     Upload supplier invoice PDF to Cloudinary (public) + generate page images.
 
@@ -57,6 +67,7 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
         file: FastAPI UploadFile (PDF)
         supplier_id: Supplier ID for folder organization
         contents: Pre-read bytes (avoids consuming file stream twice)
+        supplier_name: Supplier name for human-readable folder slug
 
     Returns:
         dict: {"public_id", "url", "pages": [url1, ...], "page_count": int}
@@ -65,8 +76,9 @@ def save_invoice_pdf(file: UploadFile, supplier_id: int, contents: bytes = None)
     short_id = uuid.uuid4().hex[:8]
     clean_name = os.path.splitext(sanitize_filename(file.filename or "invoice"))[0][:40]
     file_name = f"{clean_name}_{timestamp}_{short_id}"
-    folder = f"{CLOUDINARY_FOLDER}/{supplier_id}"
-    pages_folder = f"{PAGES_FOLDER}/{supplier_id}"
+    slug = _slugify(supplier_name) if supplier_name else str(supplier_id)
+    folder = f"{CLOUDINARY_FOLDER}/{slug}"
+    pages_folder = f"{PAGES_FOLDER}/{slug}"
 
     temp_path = os.path.join(UPLOAD_DIR, f"tmp_{short_id}.pdf")
     temp_files = []

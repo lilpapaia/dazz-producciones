@@ -136,6 +136,7 @@ class NotificationResponse(BaseModel):
     message: str
     related_invoice_id: Optional[int] = None
     related_supplier_id: Optional[int] = None
+    extra_data: Optional[str] = None
     is_read: bool
     created_at: datetime
 

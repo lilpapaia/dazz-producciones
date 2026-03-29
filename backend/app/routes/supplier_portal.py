@@ -38,7 +38,7 @@ from app.services.supplier_ai import (
     extract_supplier_invoice, validate_supplier_invoice, resolve_company_from_oc,
     extract_bank_cert_data, _normalize_iban, _normalize_nif,
 )
-from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url
+from app.services.supplier_storage import save_invoice_pdf, save_bank_cert, get_invoice_pdf_url, get_bank_cert_url, delete_bank_cert
 from app.services.encryption import encrypt_iban, decrypt_iban
 from app.services.validators import validate_pdf_bytes, sanitize_filename, validate_iban_format
 from app.services.supplier_ai import format_date_for_response
@@ -326,7 +326,15 @@ async def upload_bank_cert(
         nif_cif=supplier.nif_cif, tipo="initial"
     )
     supplier.bank_cert_url = cert_key
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            delete_bank_cert(cert_key)
+        except Exception as e:
+            logger.error(f"R2 cleanup failed — orphan cert: {cert_key}: {e}")
+        raise
 
     return {"message": "Bank certificate uploaded", "key": cert_key}
 
@@ -507,7 +515,7 @@ async def upload_invoice(
             )
 
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
-        upload_result = await asyncio.to_thread(save_invoice_pdf, file, supplier.id, contents)
+        upload_result = await asyncio.to_thread(save_invoice_pdf, file, supplier.id, contents, supplier_name=supplier.name)
 
         # Invoices without OC start as OC_PENDING for admin to assign manually
         if validation.get("oc_status") == "NO_OC":

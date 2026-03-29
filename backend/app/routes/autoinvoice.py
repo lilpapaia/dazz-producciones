@@ -4,6 +4,7 @@ Prefix: /suppliers/autoinvoice
 """
 
 import logging
+import re
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -190,7 +191,8 @@ async def generate_autoinvoice(
 
     try:
         import cloudinary.uploader
-        folder = f"dazz-suppliers/autoinvoices/{supplier.id}"
+        slug = re.sub(r'[^a-z0-9]+', '_', supplier.name.lower().strip()).strip('_')[:60] or "unknown"
+        folder = f"dazz-suppliers/autoinvoices/{slug}"
         result = await asyncio.to_thread(
             cloudinary.uploader.upload,
             temp_path,
@@ -299,7 +301,16 @@ async def generate_autoinvoice(
         related_supplier_id=supplier.id,
     )
     db.add(admin_notif)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            from app.services.supplier_storage import delete_invoice_pdf
+            delete_invoice_pdf(file_url)
+        except Exception as e:
+            logger.error(f"Cloudinary cleanup failed after rollback — orphan: {file_url}: {e}")
+        raise
 
     # Send email (non-blocking)
     try:

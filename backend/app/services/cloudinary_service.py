@@ -90,74 +90,81 @@ def compress_if_needed(image_path: str, max_size_mb: float = 2.0) -> str:
     return compressed_path
 
 
-def upload_image(file_path: str, public_id: str) -> dict:
+def upload_image(file_path: str, public_id: str, folder: str = None) -> dict:
     """
     Sube imagen a Cloudinary con MEJORAS AUTOMÁTICAS
-    
+
     Transformaciones aplicadas:
     - Mejora de nitidez (sharpen)
     - Auto-contraste
     - Auto-rotación (tickets torcidos)
     - Compresión WebP inteligente
     """
-    result = cloudinary.uploader.upload(
-        file_path,
+    upload_kwargs = dict(
         public_id=public_id,
         resource_type="image",
         format="webp",
         transformation=[
-            # Limitar tamaño máximo
             {"width": 2048, "height": 2048, "crop": "limit"},
-            # MEJORAS AUTOMÁTICAS DE CALIDAD
-            {"effect": "sharpen:100"},           # Aumenta nitidez
-            {"effect": "auto_contrast"},         # Mejora contraste automáticamente
-            {"angle": "auto"},                   # Auto-rotar tickets torcidos
-            {"quality": "auto:best"}             # Mejor calidad posible
+            {"effect": "sharpen:100"},
+            {"effect": "auto_contrast"},
+            {"angle": "auto"},
+            {"quality": "auto:best"}
         ],
         access_mode="public",
-        overwrite=True
+        overwrite=True,
     )
-    
+    if folder:
+        upload_kwargs["folder"] = folder
+
+    result = cloudinary.uploader.upload(file_path, **upload_kwargs)
+
     logger.info("Imagen mejorada automáticamente (nitidez + contraste + rotación)")
-    
+
     return {"url": result["secure_url"], "public_id": result["public_id"]}
 
 
-def upload_pdf_original(file_path: str, public_id: str) -> dict:
+def upload_pdf_original(file_path: str, public_id: str, folder: str = None) -> dict:
     """Sube PDF original para descarga (solo si <9MB)"""
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-    
+
     if file_size_mb > 9:
         logger.warning(f"PDF muy grande ({file_size_mb:.2f}MB), no se subirá el original")
         return None
-    
-    result = cloudinary.uploader.upload(
-        file_path,
+
+    upload_kwargs = dict(
         public_id=public_id + "_original",
         resource_type="auto",
         access_mode="public",
-        overwrite=True
+        overwrite=True,
     )
+    if folder:
+        upload_kwargs["folder"] = folder
+
+    result = cloudinary.uploader.upload(file_path, **upload_kwargs)
     return {"url": result["secure_url"], "public_id": result["public_id"]}
 
 
-def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
+def upload_ticket_file(file_path: str, file_name: str, project_id: int, project_oc: str = None) -> dict:
     """
     Procesa y sube un archivo a Cloudinary.
-    
+
     - Imágenes JPG/PNG → WebP en Cloudinary CON MEJORAS AUTOMÁTICAS
     - PDFs → convierte cada página a WebP + guarda PDF original
-    
+
     Returns dict con:
       - url: URL de la primera imagen (o única)
       - pages: lista de URLs de todas las páginas (para PDFs multipágina)
       - pdf_url: URL del PDF original para descarga (solo PDFs)
     """
+    import uuid as _uuid
     file_ext = Path(file_name).suffix.lower()
     is_pdf = file_ext == '.pdf'
-    folder = f"dazz-producciones/project_{project_id}"
+    oc_slug = (project_oc or f"project_{project_id}").replace(' ', '_')
+    folder = f"dazz-producciones/{oc_slug}"
+    short_id = _uuid.uuid4().hex[:8]
     clean_name = Path(file_name).stem.replace(' ', '_')[:50]
-    public_id = f"{folder}/{clean_name}"
+    public_id = f"{clean_name}_{short_id}"
 
     if is_pdf:
         logger.info(f"Procesando PDF: {file_name}")
@@ -189,7 +196,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
                     temp_files.append(final_path)
                 
                 # Subir página a Cloudinary como WebP CON MEJORAS
-                result = upload_image(final_path, f"{public_id}_page_{i+1}")
+                result = upload_image(final_path, f"{public_id}_page_{i+1}", folder=folder)
                 page_urls.append(result["url"])
                 logger.info(f"Página {i+1}/{len(pages)} subida y mejorada")
             except Exception as e:
@@ -205,7 +212,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
                 logger.warning(f"Temp file cleanup failed: {e}")
 
         # 2. Subir PDF original para descarga (si no es muy grande)
-        pdf_result = upload_pdf_original(file_path, public_id)
+        pdf_result = upload_pdf_original(file_path, public_id, folder=folder)
         pdf_url = pdf_result["url"] if pdf_result else None
         
         return {
@@ -225,7 +232,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int) -> dict:
         temp_compressed = final_path if final_path != file_path else None
         
         try:
-            result = upload_image(final_path, public_id)
+            result = upload_image(final_path, public_id, folder=folder)
             logger.info("Imagen subida y mejorada")
             
             return {
