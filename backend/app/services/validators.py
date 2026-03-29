@@ -22,7 +22,7 @@ from pathlib import Path
 # ============================================
 
 # Extensiones permitidas para uploads (compatible con sistema actual)
-ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png'}
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.heic', '.heif', '.webp'}
 ALLOWED_DOCUMENT_EXTENSIONS = {'.pdf'}
 ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_DOCUMENT_EXTENSIONS
 
@@ -33,11 +33,18 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10MB para imágenes (después de compresi�
 MAX_PDF_SIZE = 30 * 1024 * 1024     # 30MB para PDFs (sin compresión)
 
 # MIME types permitidos (compatible con sistema actual)
+# Incluye variantes de dispositivos móviles y navegadores antiguos
 ALLOWED_MIME_TYPES = {
     'image/jpeg',
-    'image/jpg',      # Algunas apps usan image/jpg
+    'image/jpg',        # Algunas apps usan image/jpg
+    'image/pjpeg',      # Progressive JPEG (IE, dispositivos antiguos)
     'image/png',
-    'application/pdf'
+    'image/x-png',      # Variante PNG (navegadores antiguos)
+    'image/heic',       # iPhone fotos modernas
+    'image/heif',       # iPhone fotos modernas (variante)
+    'image/webp',       # Capturas Chrome/Android
+    'application/pdf',
+    'application/octet-stream',  # Fallback genérico de algunos dispositivos
 }
 
 # Patrones de validación
@@ -280,8 +287,9 @@ async def validate_file_upload(
             detail=f"Extensión {file_ext} no permitida. Permitidas: {', '.join(allowed_extensions)}"
         )
     
-    # Validar MIME type
-    if file.content_type not in ALLOWED_MIME_TYPES:
+    # Validar MIME type (normalizar a lowercase — algunos dispositivos envían Image/Jpeg)
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Tipo de archivo {file.content_type} no permitido"

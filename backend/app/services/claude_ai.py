@@ -298,6 +298,9 @@ Ejemplo 3 - Factura Canarias (EUR con IGIC):
     # Parse JSON
     try:
         extracted_data = json.loads(response_text)
+        # Claude sometimes wraps the result in an array
+        if isinstance(extracted_data, list):
+            extracted_data = extracted_data[0] if extracted_data else {}
         return extracted_data
     except json.JSONDecodeError as e:
         # If JSON parsing fails, return error

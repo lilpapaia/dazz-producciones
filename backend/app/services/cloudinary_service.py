@@ -196,7 +196,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int, project_
                     temp_files.append(final_path)
                 
                 # Subir página a Cloudinary como WebP CON MEJORAS
-                result = upload_image(final_path, f"{public_id}_page_{i+1}", folder=folder)
+                result = upload_image(final_path, f"{public_id}_page_{i+1}", folder=f"{folder}/pages")
                 page_urls.append(result["url"])
                 logger.info(f"Página {i+1}/{len(pages)} subida y mejorada")
             except Exception as e:
@@ -212,7 +212,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int, project_
                 logger.warning(f"Temp file cleanup failed: {e}")
 
         # 2. Subir PDF original para descarga (si no es muy grande)
-        pdf_result = upload_pdf_original(file_path, public_id, folder=folder)
+        pdf_result = upload_pdf_original(file_path, public_id, folder=f"{folder}/pdfs")
         pdf_url = pdf_result["url"] if pdf_result else None
         
         return {
@@ -232,7 +232,7 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int, project_
         temp_compressed = final_path if final_path != file_path else None
         
         try:
-            result = upload_image(final_path, public_id, folder=folder)
+            result = upload_image(final_path, public_id, folder=f"{folder}/images")
             logger.info("Imagen subida y mejorada")
             
             return {
