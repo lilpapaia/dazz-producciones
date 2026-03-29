@@ -3,7 +3,7 @@ import { Search, FileText, Send, Download, Check, X } from 'lucide-react';
 import { getCompanies } from '../../services/api';
 import OCSelector from '../../components/OCSelector';
 import { getNextInvoiceNumber, searchSuppliersForAutoinvoice, generateAutoinvoice, previewAutoinvoice } from '../../services/suppliersApi';
-import { showSuccess, showError } from '../../utils/toast';
+import { showError } from '../../utils/toast';
 import useClickOutside from '../../hooks/useClickOutside';
 
 const AutoInvoice = () => {

@@ -12,7 +12,7 @@ const defaultInputCls = 'w-full bg-zinc-800 border border-zinc-700 text-zinc-100
  * Props:
  *   companyId       — pre-selected company ID (skips step 1 if set)
  *   permanentOnly   — only show permanent_oc=true prefixes (for SupplierInvite)
- *   onSelect(oc)    — called with the full OC string when valid
+ *   onSelect(oc, prefixData) — called with the full OC string and prefix metadata when valid
  *   onClear()       — called when selection is reset
  *   inputClassName  — override input/select CSS classes
  *   labelClassName  — override label CSS classes
