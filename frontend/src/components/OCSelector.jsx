@@ -72,7 +72,7 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, onSel
       validateOC(oc)
         .then(r => {
           setValidation(r.data);
-          if (r.data.valid) onSelect?.(oc);
+          if (r.data.valid) onSelect?.(oc, prefixData);
         })
         .catch(() => setValidation(null))
         .finally(() => setValidating(false));

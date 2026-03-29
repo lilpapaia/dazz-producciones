@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, FileText, Send } from 'lucide-react';
+import { Search, FileText, Send, Download, Check, X } from 'lucide-react';
 import { getCompanies } from '../../services/api';
 import OCSelector from '../../components/OCSelector';
 import { getNextInvoiceNumber, searchSuppliersForAutoinvoice, generateAutoinvoice, previewAutoinvoice } from '../../services/suppliersApi';
@@ -35,6 +35,10 @@ const AutoInvoice = () => {
 
   const [sending, setSending] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
+  const [selectedPrefixPermanent, setSelectedPrefixPermanent] = useState(false);
 
   useEffect(() => {
     getCompanies().then(r => setCompanies(r.data)).catch(() => {});
@@ -97,8 +101,8 @@ const AutoInvoice = () => {
       const res = await previewAutoinvoice(buildPayload());
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setPreviewUrl(url);
+      setShowPreview(true);
     } catch (e) { showError(e.response?.data?.detail || 'Error generating preview'); }
     setPreviewing(false);
   };
@@ -108,14 +112,25 @@ const AutoInvoice = () => {
     setSending(true);
     try {
       const { data } = await generateAutoinvoice(buildPayload());
-      showSuccess(`Invoice ${invoiceNumber} generated and sent to ${selectedSupplier.email}`);
-      // Reset form
-      setSelectedSupplier(null); setSupplierSearch(''); setSupplierName(''); setSupplierNif('');
-      setSupplierAddress(''); setSupplierIban(''); setConcept(''); setBaseAmount(''); setOcNumber('');
-      // Refresh invoice number
-      if (companyId) getNextInvoiceNumber(companyId).then(r => setInvoiceNumber(r.data.invoice_number)).catch(() => {});
+      setShowPreview(false);
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+      setConfirmation({
+        supplierName: data.supplier_name,
+        ocNumber: data.oc_number,
+        pdfUrl: data.file_url,
+        invoiceNumber: data.invoice_number,
+        finalTotal: data.final_total,
+      });
     } catch (e) { showError(e.response?.data?.detail || 'Error generating invoice'); }
     setSending(false);
+  };
+
+  const resetForm = () => {
+    setConfirmation(null);
+    setSelectedSupplier(null); setSupplierSearch(''); setSupplierName(''); setSupplierNif('');
+    setSupplierAddress(''); setSupplierIban(''); setConcept(''); setBaseAmount(''); setOcNumber('');
+    setSelectedPrefixPermanent(false);
+    if (companyId) getNextInvoiceNumber(companyId).then(r => setInvoiceNumber(r.data.invoice_number)).catch(() => {});
   };
 
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2.5 rounded focus:border-amber-500 outline-none";
@@ -123,6 +138,41 @@ const AutoInvoice = () => {
 
   return (
     <div>
+      {confirmation ? (
+        <div className="max-w-[500px] mx-auto mt-8">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-md p-8 text-center">
+            <div className="w-14 h-14 bg-green-400/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check size={28} className="text-green-400" />
+            </div>
+            <h2 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 mb-1">Autofactura generada</h2>
+            <div className="text-[13px] text-zinc-400 mb-4">
+              <div>{confirmation.supplierName}</div>
+              <div className="font-mono text-amber-400 mt-1">{confirmation.ocNumber}</div>
+              <div className="font-mono text-zinc-300 text-[15px] mt-2">{confirmation.invoiceNumber} · {confirmation.finalTotal?.toFixed(2)} EUR</div>
+            </div>
+            <div className="flex flex-col gap-2 max-w-[280px] mx-auto">
+              <button onClick={async () => {
+                try {
+                  const res = await fetch(confirmation.pdfUrl);
+                  const blob = await res.blob();
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `${confirmation.invoiceNumber}.pdf`;
+                  document.body.appendChild(a); a.click(); a.remove();
+                  URL.revokeObjectURL(a.href);
+                } catch { showError('Error descargando PDF'); }
+              }} className="w-full text-[13px] bg-zinc-800 border border-zinc-700 text-zinc-300 py-2.5 rounded hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2">
+                <Download size={14} /> Descargar PDF
+              </button>
+              <button onClick={resetForm}
+                className="w-full text-[13px] bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-2.5 rounded transition-colors flex items-center justify-center gap-2">
+                ← Nueva autofactura
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 mb-3">Nueva autofactura</h1>
 
       <div className="bg-green-400/[.06] text-green-400 border border-green-400/[.12] rounded p-2.5 text-[13px] mb-4 flex items-start gap-2 max-w-[700px]">
@@ -131,7 +181,7 @@ const AutoInvoice = () => {
       </div>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-3.5 max-w-[900px]">
-        {/* ═══ LEFT: Form ═══ */}
+        {/* LEFT: Form */}
         <div className="space-y-3">
           {/* Empresa emisora */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
@@ -217,13 +267,18 @@ const AutoInvoice = () => {
               <div><label className={labelCls}>Fecha *</label><input value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} /></div>
               <div><label className={labelCls}>Nº Factura *</label><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className={`${inputCls} font-mono`} /></div>
               <div><label className={labelCls}>OC *</label>
-                <OCSelector companyId={companyId ? parseInt(companyId) : null} onSelect={oc => setOcNumber(oc)} onClear={() => setOcNumber('')} />
+                <OCSelector companyId={companyId ? parseInt(companyId) : null} onSelect={(oc, prefixData) => { setOcNumber(oc); setSelectedPrefixPermanent(!!prefixData?.permanent_oc); }} onClear={() => { setOcNumber(''); setSelectedPrefixPermanent(false); }} />
               </div>
             </div>
+            {selectedPrefixPermanent && selectedSupplier?.last_invoice_number && (
+              <div className="text-[11px] text-zinc-500 mt-2 flex items-center gap-1">
+                <span>💡</span> Última registrada: <span className="font-mono text-zinc-400">{selectedSupplier.last_invoice_number}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ═══ RIGHT: Summary ═══ */}
+        {/* RIGHT: Summary */}
         <div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Resumen</div>
@@ -262,6 +317,32 @@ const AutoInvoice = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
+
+      {/* Preview lightbox */}
+      {showPreview && previewUrl && (
+        <div className="fixed inset-0 bg-black z-50 flex flex-col"
+          style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+            <span className="text-sm text-zinc-300 font-mono">{invoiceNumber}</span>
+            <button onClick={() => { setShowPreview(false); URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+              className="text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <iframe src={previewUrl} className="w-full h-full bg-white" title="Preview autofactura" />
+          </div>
+          <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-4 flex items-center justify-center">
+            <button onClick={handleGenerate} disabled={sending}
+              className="text-[13px] bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-8 py-2.5 rounded transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+              <Send size={13} />
+              {sending ? 'Generating...' : 'Generar y enviar →'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

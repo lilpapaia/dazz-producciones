@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 
 from config.database import get_db
-from app.models.database import User, Company, Project
+from app.models.database import User, Company, Project, OCPrefix, ProjectStatus
 from app.models.suppliers import (
     Supplier, SupplierInvoice, SupplierNotification, InvoiceStatus,
     NotificationRecipientType, NotificationEventType,
@@ -99,6 +99,22 @@ async def search_suppliers_for_autoinvoice(
         (Supplier.name.ilike(f"%{term}%") | Supplier.nif_cif.ilike(f"%{term}%")),
     ).limit(8).all()
 
+    # Batch query: last invoice number per supplier
+    supplier_ids = [s.id for s in suppliers]
+    last_invoices = {}
+    if supplier_ids:
+        subq = db.query(
+            SupplierInvoice.supplier_id,
+            func.max(SupplierInvoice.id).label("max_id"),
+        ).filter(
+            SupplierInvoice.supplier_id.in_(supplier_ids)
+        ).group_by(SupplierInvoice.supplier_id).subquery()
+
+        rows = db.query(SupplierInvoice.supplier_id, SupplierInvoice.invoice_number).join(
+            subq, SupplierInvoice.id == subq.c.max_id
+        ).all()
+        last_invoices = {r[0]: r[1] for r in rows}
+
     results = []
     for s in suppliers:
         iban = None
@@ -112,6 +128,7 @@ async def search_suppliers_for_autoinvoice(
             "nif_cif": s.nif_cif,
             "address": s.address,
             "iban": iban,
+            "last_invoice_number": last_invoices.get(s.id),
         })
 
     return results
@@ -176,7 +193,8 @@ async def generate_autoinvoice(
     try:
         import cloudinary.uploader
         folder = f"dazz-suppliers/autoinvoices/{supplier.id}"
-        result = cloudinary.uploader.upload(
+        result = await asyncio.to_thread(
+            cloudinary.uploader.upload,
             temp_path,
             public_id=body.invoice_number.replace("/", "_").replace(" ", "_"),
             folder=folder,
@@ -197,6 +215,42 @@ async def generate_autoinvoice(
     ).first()
     if project:
         project_id = project.id
+    else:
+        # Check if OC belongs to a permanent prefix → auto-create project
+        oc_lower = body.oc_number.lower()
+        oc_prefix = None
+        if oc_lower.startswith("oc-"):
+            active_prefixes = db.query(OCPrefix).filter(OCPrefix.active == True).all()
+            for p in active_prefixes:
+                if oc_lower.startswith(f"oc-{p.prefix.lower()}"):
+                    oc_prefix = p
+                    break
+
+        if oc_prefix and oc_prefix.permanent_oc:
+            project = Project(
+                year=oc_prefix.year_format,
+                send_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                creative_code=body.oc_number,
+                owner_company_id=oc_prefix.company_id,
+                owner_id=admin.id,
+                responsible=admin.username,
+                invoice_type=f"PRODUCCION{oc_prefix.year_format}",
+                description=supplier.name,
+                status=ProjectStatus.EN_CURSO,
+            )
+            db.add(project)
+            db.flush()
+            project_id = project.id
+            logger.info(f"Auto-created project {project_id} for permanent OC {body.oc_number}")
+        elif oc_prefix and not oc_prefix.permanent_oc:
+            raise HTTPException(400, f"No existe proyecto con OC '{body.oc_number}'. Créalo primero.")
+
+    # Duplicate invoice number check (SELECT FOR UPDATE on PostgreSQL)
+    existing = db.query(SupplierInvoice.id).filter(
+        SupplierInvoice.invoice_number == body.invoice_number,
+    ).with_for_update().first()
+    if existing:
+        raise HTTPException(409, f"El número de factura '{body.invoice_number}' ya está registrado en el sistema.")
 
     # Create invoice record
     invoice = SupplierInvoice(
@@ -223,8 +277,7 @@ async def generate_autoinvoice(
         ia_validation_result=None,
     )
     db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
+    db.flush()
 
     # Notify supplier
     notif = SupplierNotification(
@@ -264,6 +317,9 @@ async def generate_autoinvoice(
         "invoice_id": invoice.id,
         "file_url": file_url,
         "final_total": final_total,
+        "invoice_number": body.invoice_number,
+        "supplier_name": supplier.name,
+        "oc_number": body.oc_number,
     }
 
 
