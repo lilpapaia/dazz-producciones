@@ -4,6 +4,7 @@
 > **Auditoría exhaustiva v2:** 2026-03-28 (7 agentes, 53 hallazgos nuevos → 41 resueltos)
 > **Auditoría exhaustiva v3:** 2026-03-29 (4 agentes, post-OC/autofactura — 4 hallazgos → 4 resueltos)
 > **Auditoría calidad v4:** 2026-03-29 (4 agentes, dead code + calidad + consistencia)
+> **Plan QA exhaustivo:** 2026-03-30 (172 test cases, 210+ salidas, 15 hallazgos UX)
 > **Sistema OCs:** 2026-03-28 (tabla oc_prefixes + OCSelector componente)
 > **Última actualización:** 2026-03-30
 
@@ -403,9 +404,13 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ---
 
-## 🧪 Sprint 2: Testing & Quality (2-3 semanas)
+## 🧪 Sprint 2: Testing & Quality (SIGUIENTE FASE)
 
-### Backend tests (parcialmente hecho)
+### Plan QA generado
+- [x] **docs/DAZZ_QA_Testing_Plan.html** — 172 test cases, 32 flujos, 210+ salidas posibles
+- [x] Cubre las 3 apps: DAZZ Producciones (70), Admin Proveedores (45), Portal (35), Seguridad (22)
+
+### Backend tests (pytest)
 - [x] Setup pytest + conftest.py + fixtures (11 archivos en `backend/tests/`)
 - [ ] **Verificar cobertura real y ejecutar tests** (Esfuerzo: 🔨 2h | ROI: ⭐⭐⭐⭐⭐)
 - [ ] **Auth:** login, JWT, refresh tokens, permisos
@@ -415,14 +420,17 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 - [ ] **Companies:** permisos multi-tenant
 - [ ] Target: 70%+ coverage crítico
 
-### Frontend tests (0% - no existe)
-- [ ] **Tests E2E frontend** (Esfuerzo: 🔨🔨🔨🔨 8-10h | ROI: ⭐⭐⭐)
+### Frontend tests (Playwright)
+- [ ] **Tests E2E** — Seguir plan en DAZZ_QA_Testing_Plan.html
   - Playwright setup: `npm install -D @playwright/test`
-  - Flujo completo: Login → Crear proyecto → Upload ticket → Review → Cerrar
-  - Flujo estadísticas: Filtros → Gráficos → Export PDF
-  - Flujo multi-empresa: ADMIN ve todas, BOSS solo suya
-  - Flujo móvil PWA: Instalar → Cámara → Upload
-  - CI/CD: GitHub Actions integration
+  - App 1: DAZZ Producciones (T-001 a T-070)
+  - App 2: Admin Proveedores (T-071 a T-115)
+  - App 3: Portal Proveedores (T-116 a T-150)
+  - Security cross-app (T-151 a T-172)
+
+### Testing manual
+- [ ] Ejecutar plan QA por app: DAZZ → Admin → Portal
+- [ ] Documentar resultados en checklist
 
 ---
 
@@ -437,24 +445,49 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ---
 
-## 🔧 Calidad pendiente (de auditoría v4)
+## ✅ Calidad completada (auditoría v4 — 2026-03-30)
 
-- [ ] **Q3:** Company name → prefix hardcodeado en autoinvoice.py:63-72 → mover a BD o config
-- [ ] **Q4:** window.confirm → ConfirmDialog en ProjectView, Users, ProjectCloseReview (3 sitios)
-- [ ] **Q5:** Error messages mezclados EN/ES en backend → estandarizar a inglés
-- [ ] **Q6:** Password validation duplicada en schemas.py y supplier_schemas.py → unificar
-- [ ] **Q9:** AutoInvoice fecha en-GB → cambiar a es-ES (consistencia frontend principal)
-- [ ] **Q10:** Email addresses hardcodeadas en email.py y supplier_email.py → env vars
+- [x] **Q1:** _notify() unificado en autoinvoice.py + projects.py
+- [x] **Q2:** Constantes centralizadas (MATH_TOLERANCE, MIN_AI_CONFIDENCE, MAX_SUPPLIER_PDF_SIZE)
+- [x] **Q3:** Company invoice_prefix en BD (columna + migración startup + seed idempotente) — reemplaza if/elif hardcodeado
+- [x] **Q4:** window.confirm → ConfirmDialog en Users.jsx (eliminar usuario)
+- [x] **Q5:** ~~Error messages EN/ES~~ — Investigado: admin=ES, portal=EN, ya correctamente separados
+- [x] **Q6:** Password validation DRY — password_validator.py compartido con lang="es"/"en"
+- [x] **Q7:** Status labels centralizados en constants/invoiceStatus.js
+- [x] **Q9:** AutoInvoice fecha en-GB → es-ES
+- [x] **Q10:** ~~Emails hardcodeados~~ — Ya usan os.getenv() con defaults, no requiere cambios
+
+## ✅ Hallazgos Plan QA (2026-03-30) — 13 de 15 implementados
+
+### Implementados (3 commits)
+- [x] **F-001:** Ruta 404 catch-all en DAZZ Producciones (NotFound component)
+- [x] **F-002:** Login redirige usuarios ya autenticados a /dashboard
+- [x] **F-003:** Botones Users.jsx con loading state (submitting, disabled, "Guardando...")
+- [x] **F-004:** Drop zone filtra por MIME type al arrastrar (solo JPG/PNG/WebP/HEIC/PDF)
+- [x] **F-005:** EditData portal muestra error en non-401 (antes silenciaba)
+- [x] **F-006:** Notifications portal rollback optimista si API falla (.catch)
+- [x] **F-007:** Dashboard + Layout admin muestran banner error si API falla
+- [x] **F-009:** ReviewTicket beforeunload con tolerancia numérica (0.01€) para floats
+- [x] **F-010:** Login muestra mensaje específico de bloqueo en 429
+- [x] **F-011:** Upload portal sin IBAN → enlace a /profile/change-iban (antes mandaba a email)
+- [x] **F-012:** Home portal distingue error de carga (retry) vs sin facturas
+- [x] **F-013:** OCSelector mensaje cuando no hay prefijos para la empresa
+- [x] **F-015:** ~~Botón autofactura~~ — Ya implementado (sending state existía)
+- [x] **F-016:** Notificaciones IA_REJECTED vinculadas al supplier_id tras registro
+
+### Descartados intencionalmente
+- [ ] **F-008:** ProjectCloseReview window.confirm — Se queda como está (flujo ya tiene validación previa)
+- [ ] **F-014:** Statistics PDF solo exporta internacional — Es el diseño deseado (informe IVA)
 
 ---
 
-## 💡 Sprint 3: Features Nuevas (3-4 semanas)
+## 💡 Sprint 3: Features Nuevas (después de testing)
 
+- [ ] **INT-1:** Facturas aprobadas → proyectos DAZZ (integración completa tickets — AL FINAL)
 - [ ] **Notificaciones PWA push** (Firebase o OneSignal)
 - [ ] **Dashboard analytics** (métricas uso, engagement, performance)
 - [ ] **Búsqueda avanzada global** (proyectos, tickets, proveedores)
 - [ ] **Filtro por año / archivado proyectos**
-- [ ] **INT-1:** Facturas aprobadas → proyectos DAZZ (integración tickets)
 - [ ] **FUT-1:** WebSockets notificaciones (reemplazar polling)
 
 ---
