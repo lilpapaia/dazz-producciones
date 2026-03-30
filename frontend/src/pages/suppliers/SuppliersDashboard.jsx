@@ -19,6 +19,7 @@ const SuppliersDashboard = () => {
   const [stats, setStats] = useState(null);
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -27,7 +28,7 @@ const SuppliersDashboard = () => {
     ]).then(([statsRes, feedRes]) => {
       setStats(statsRes.data);
       setFeed(feedRes.data);
-    }).catch(() => {})
+    }).catch(() => { setError('Error al cargar datos. Comprueba la conexión.'); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -57,6 +58,10 @@ const SuppliersDashboard = () => {
   return (
     <div>
       <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 mb-4">Dashboard</h1>
+
+      {error && (
+        <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-md p-2.5 text-[12px] mb-3">{error}</div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">

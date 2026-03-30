@@ -143,7 +143,17 @@ const Home = () => {
           {/* Invoice cards */}
           <div className="px-4 lg:px-0 space-y-2 lg:space-y-3 mb-3">
             {filtered.length === 0 ? (
-              <div className="text-center py-12 text-xs text-zinc-600">No invoices</div>
+              error ? (
+                <div className="text-center py-12">
+                  <p className="text-xs text-red-400 mb-3">Error loading invoices. Please try again.</p>
+                  <button onClick={() => { setLoading(true); load(); }}
+                    className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-4 py-2 rounded-lg hover:bg-zinc-700 transition-colors">
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-xs text-zinc-600">No invoices</div>
+              )
             ) : filtered.map(inv => {
               const pill = PILL[inv.status] || PILL.PENDING;
               return (

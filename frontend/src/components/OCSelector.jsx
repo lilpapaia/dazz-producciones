@@ -120,6 +120,9 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, allow
               <option key={p.prefix} value={p.prefix}>{p.prefix} — {p.description}</option>
             ))}
           </select>
+          {filteredPrefixes.length === 0 && (
+            <p className="text-[11px] text-amber-400 mt-1">No hay prefijos OC disponibles para esta empresa.</p>
+          )}
         </div>
       )}
 

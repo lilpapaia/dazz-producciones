@@ -15,8 +15,11 @@ const NAV_ITEMS = [
 const SuppliersLayout = () => {
   const location = useLocation();
   const [stats, setStats] = useState({});
+  const [fetchError, setFetchError] = useState(false);
 
-  const fetchStats = () => getSuppliersDashboard().then(r => setStats(r.data)).catch(() => {});
+  const fetchStats = () => getSuppliersDashboard()
+    .then(r => { setStats(r.data); setFetchError(false); })
+    .catch(() => { setFetchError(true); });
 
   useEffect(() => { fetchStats(); }, []);
   useEffect(() => {
@@ -81,6 +84,11 @@ const SuppliersLayout = () => {
 
       {/* Content */}
       <main className="flex-1 p-4 sm:p-5 overflow-y-auto bg-zinc-950 pb-24 lg:pb-5">
+        {fetchError && (
+          <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-md p-2.5 text-[12px] mb-3">
+            Error al cargar datos. Comprueba la conexión.
+          </div>
+        )}
         <Outlet />
       </main>
 

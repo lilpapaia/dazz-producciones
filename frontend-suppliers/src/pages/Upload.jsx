@@ -72,12 +72,14 @@ const UploadPage = () => {
       {profile && !profile.iban_masked && (
         <div className="mx-4 lg:mx-0 bg-amber-500/[.06] border border-amber-500/[.12] rounded-xl p-6 text-center mb-4">
           <AlertCircle size={28} className="text-amber-400 mx-auto mb-3" strokeWidth={1.5} />
-          <p className="text-sm font-medium text-zinc-200 mb-2">Payment method required</p>
-          <p className="text-[12px] text-zinc-400 leading-relaxed">
-            To upload invoices, please contact{' '}
-            <a href="mailto:suppliers@dazzcreative.com" className="text-amber-500 hover:underline">suppliers@dazzcreative.com</a>
-            {' '}to set up your payment method.
+          <p className="text-sm font-medium text-zinc-200 mb-2">IBAN required</p>
+          <p className="text-[12px] text-zinc-400 leading-relaxed mb-3">
+            To upload invoices you need to register your IBAN and bank certificate first.
           </p>
+          <button onClick={() => navigate('/profile/change-iban')}
+            className="bg-amber-500 text-zinc-950 text-[12px] font-bold px-4 py-2 rounded-lg hover:bg-amber-400 transition-colors">
+            Register IBAN
+          </button>
         </div>
       )}
 

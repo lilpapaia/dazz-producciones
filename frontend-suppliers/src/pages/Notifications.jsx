@@ -54,13 +54,22 @@ const Notifications = () => {
   });
 
   const handleMarkRead = async (id) => {
-    await markNotificationRead(id);
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    try {
+      await markNotificationRead(id);
+    } catch {
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
+    }
   };
 
   const handleMarkAllRead = async () => {
-    await markAllNotificationsRead();
+    const snapshot = notifs;
     setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      setNotifs(snapshot);
+    }
   };
 
   const chipCls = (active) => `text-[11px] px-2.5 py-1 rounded-full transition-colors ${active ? 'bg-amber-500 text-zinc-950 font-semibold' : 'border border-zinc-700 text-zinc-400'}`;
