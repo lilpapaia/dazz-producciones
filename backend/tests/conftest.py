@@ -25,6 +25,7 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.models.database import Base, User, Company, UserCompany, Project, Ticket, ProjectStatus
+import app.models.suppliers  # Register supplier tables in Base.metadata for create_all
 from app.services.auth import get_password_hash, create_access_token
 
 
