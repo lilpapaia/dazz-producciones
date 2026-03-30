@@ -1,0 +1,3008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAZZ Producciones — QA Testing Plan</title>
+<style>
+  /* ===== BASE RESET ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ===== VARIABLES ===== */
+  :root {
+    --zinc-950: #09090b;
+    --zinc-900: #18181b;
+    --zinc-800: #27272a;
+    --zinc-700: #3f3f46;
+    --zinc-600: #52525b;
+    --zinc-500: #71717a;
+    --zinc-400: #a1a1aa;
+    --zinc-300: #d4d4d8;
+    --zinc-100: #f4f4f5;
+    --amber-500: #f59e0b;
+    --amber-600: #d97706;
+    --amber-400: #fbbf24;
+    --amber-300: #fcd34d;
+    --amber-200: #fde68a;
+    --amber-100: #fef3c7;
+    --green-500: #22c55e;
+    --green-400: #4ade80;
+    --green-900: #14532d;
+    --red-500: #ef4444;
+    --red-400: #f87171;
+    --red-900: #7f1d1d;
+    --blue-500: #3b82f6;
+    --blue-400: #60a5fa;
+    --blue-900: #1e3a5f;
+    --purple-500: #a855f7;
+    --purple-400: #c084fc;
+    --purple-900: #3b0764;
+    --orange-400: #fb923c;
+    --orange-900: #7c2d12;
+  }
+
+  /* ===== BODY ===== */
+  body {
+    background: var(--zinc-950);
+    color: var(--zinc-100);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    body { background: #fff; color: #111; font-size: 11px; }
+    .cover-page { background: #fff !important; color: #111 !important; border-bottom: 4px solid var(--amber-500); page-break-after: always; }
+    .cover-page h1, .cover-page h2, .cover-page p { color: #111 !important; }
+    .cover-page .accent { color: var(--amber-600) !important; }
+    .section { page-break-before: always; }
+    .no-print { display: none; }
+    table { font-size: 9px; }
+    th { background: #f59e0b !important; color: #000 !important; }
+    tr:nth-child(even) td { background: #f9f9f9 !important; color: #111 !important; }
+    tr:nth-child(odd) td { background: #fff !important; color: #111 !important; }
+    .badge { border: 1px solid #999; }
+    .toc-section, h2, h3, h4 { color: #111 !important; }
+    .finding-card { background: #f9f9f9 !important; border-color: #ccc !important; color: #111 !important; }
+    .flow-block { background: #f9f9f9 !important; border-color: #ccc !important; }
+    .flow-block h4, .flow-block li, .flow-block p { color: #111 !important; }
+    .kpi-card { background: #f9f9f9 !important; border-color: #ccc !important; color: #111 !important; }
+    .kpi-card .kpi-value { color: var(--amber-600) !important; }
+  }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px 32px; }
+
+  /* ===== COVER PAGE ===== */
+  .cover-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(180deg, var(--zinc-950) 0%, #0c0c0e 50%, var(--zinc-950) 100%);
+    border-bottom: 3px solid var(--amber-500);
+    padding: 60px 32px;
+    page-break-after: always;
+  }
+  .cover-page .logo-mark {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: 64px;
+    letter-spacing: 0.15em;
+    color: var(--amber-500);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .cover-page h1 {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: 42px;
+    letter-spacing: 0.08em;
+    color: var(--zinc-100);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    line-height: 1.1;
+  }
+  .cover-page h2 {
+    font-size: 20px;
+    color: var(--zinc-400);
+    font-weight: 400;
+    margin-bottom: 40px;
+    letter-spacing: 0.04em;
+  }
+  .cover-meta {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .cover-meta-item {
+    text-align: center;
+  }
+  .cover-meta-item .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--zinc-500);
+    margin-bottom: 4px;
+  }
+  .cover-meta-item .value {
+    font-size: 16px;
+    color: var(--zinc-100);
+    font-weight: 600;
+  }
+  .cover-meta-item .value.accent { color: var(--amber-500); }
+  .cover-apps {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .cover-app-badge {
+    background: var(--zinc-900);
+    border: 1px solid var(--zinc-700);
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--zinc-300);
+  }
+
+  /* ===== KPI CARDS ===== */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .kpi-card {
+    background: var(--zinc-900);
+    border: 1px solid var(--zinc-800);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+  }
+  .kpi-card .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--zinc-500);
+    margin-bottom: 6px;
+  }
+  .kpi-card .kpi-value {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: 36px;
+    color: var(--amber-500);
+    letter-spacing: 0.05em;
+  }
+
+  /* ===== TOC ===== */
+  .toc-section {
+    page-break-after: always;
+    padding: 48px 0;
+  }
+  .toc-section h2 {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: 32px;
+    letter-spacing: 0.08em;
+    color: var(--amber-500);
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--zinc-800);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .toc-list { list-style: none; }
+  .toc-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--zinc-900);
+  }
+  .toc-list li a {
+    color: var(--zinc-300);
+    text-decoration: none;
+    display: flex;
+    justify-content: space-between;
+    transition: color 0.2s;
+  }
+  .toc-list li a:hover { color: var(--amber-500); }
+  .toc-list li a .toc-page { color: var(--zinc-600); font-size: 12px; }
+  .toc-list .toc-indent { padding-left: 24px; }
+  .toc-list .toc-indent a { color: var(--zinc-400); font-size: 13px; }
+
+  /* ===== SECTIONS ===== */
+  .section { padding: 40px 0; }
+  h2.section-title {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    color: var(--amber-500);
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--zinc-800);
+    padding-bottom: 10px;
+    margin-bottom: 28px;
+  }
+  h3.module-title {
+    font-size: 20px;
+    color: var(--zinc-100);
+    margin: 32px 0 16px;
+    padding-left: 12px;
+    border-left: 3px solid var(--amber-500);
+  }
+  h3.app-title {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    font-size: 24px;
+    letter-spacing: 0.06em;
+    color: var(--amber-400);
+    text-transform: uppercase;
+    margin: 40px 0 12px;
+    padding: 12px 16px;
+    background: var(--zinc-900);
+    border-radius: 4px;
+    border-left: 4px solid var(--amber-500);
+  }
+
+  /* ===== FLOW BLOCKS ===== */
+  .flow-block {
+    background: var(--zinc-900);
+    border: 1px solid var(--zinc-800);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .flow-block h4 {
+    font-size: 16px;
+    color: var(--amber-400);
+    margin-bottom: 10px;
+  }
+  .flow-block .flow-pre {
+    font-size: 12px;
+    color: var(--zinc-400);
+    margin-bottom: 8px;
+  }
+  .flow-block .flow-pre strong { color: var(--zinc-300); }
+  .flow-block .flow-steps {
+    font-size: 13px;
+    color: var(--zinc-300);
+    margin-bottom: 10px;
+  }
+  .flow-block ul {
+    list-style: none;
+    padding: 0;
+  }
+  .flow-block ul li {
+    padding: 4px 0 4px 20px;
+    position: relative;
+    font-size: 13px;
+    color: var(--zinc-300);
+    line-height: 1.5;
+  }
+  .flow-block ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .flow-block ul li.outcome-success::before { background: var(--green-500); }
+  .flow-block ul li.outcome-error::before { background: var(--red-500); }
+  .flow-block ul li.outcome-edge::before { background: var(--amber-500); }
+  .flow-block ul li.outcome-security::before { background: var(--purple-500); }
+
+  /* ===== TEST TABLE ===== */
+  .table-wrapper { overflow-x: auto; margin: 20px 0; }
+  table.test-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.test-table th {
+    background: var(--amber-500);
+    color: var(--zinc-950);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 10px 8px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  table.test-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--zinc-800);
+    vertical-align: top;
+  }
+  table.test-table tr:nth-child(even) td { background: var(--zinc-900); }
+  table.test-table tr:nth-child(odd) td { background: rgba(24,24,27,0.5); }
+  table.test-table tr:hover td { background: rgba(245,158,11,0.05); }
+  table.test-table td:first-child {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--zinc-400);
+    white-space: nowrap;
+  }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-happy { background: rgba(34,197,94,0.15); color: var(--green-400); }
+  .badge-error { background: rgba(239,68,68,0.15); color: var(--red-400); }
+  .badge-edge { background: rgba(245,158,11,0.15); color: var(--amber-400); }
+  .badge-security { background: rgba(168,85,247,0.15); color: var(--purple-400); }
+
+  /* ===== FINDINGS ===== */
+  .finding-card {
+    background: var(--zinc-900);
+    border: 1px solid var(--zinc-800);
+    border-left: 4px solid var(--amber-500);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .finding-card .finding-id {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--amber-500);
+    font-weight: 700;
+  }
+  .finding-card .finding-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--zinc-100);
+    margin: 4px 0;
+  }
+  .finding-card .finding-desc {
+    font-size: 13px;
+    color: var(--zinc-400);
+    line-height: 1.6;
+  }
+  .finding-card .finding-severity {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .sev-high { background: rgba(239,68,68,0.15); color: var(--red-400); border: 1px solid rgba(239,68,68,0.3); }
+  .sev-medium { background: rgba(245,158,11,0.15); color: var(--amber-400); border: 1px solid rgba(245,158,11,0.3); }
+  .sev-low { background: rgba(59,130,246,0.15); color: var(--blue-400); border: 1px solid rgba(59,130,246,0.3); }
+
+  /* ===== FOOTER ===== */
+  .doc-footer {
+    text-align: center;
+    padding: 40px 0;
+    border-top: 1px solid var(--zinc-800);
+    margin-top: 40px;
+    color: var(--zinc-600);
+    font-size: 12px;
+  }
+
+  /* ===== DIVIDER ===== */
+  hr.section-divider {
+    border: none;
+    border-top: 1px solid var(--zinc-800);
+    margin: 40px 0;
+  }
+
+  /* ===== MODULE SEPARATOR (for print) ===== */
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- COVER PAGE                                                    -->
+<!-- ============================================================ -->
+<div class="cover-page">
+  <div class="logo-mark">DAZZ</div>
+  <h1>QA Testing Plan</h1>
+  <h2>Exhaustive Flow Analysis &amp; Test Cases</h2>
+
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="label">Document Version</div>
+      <div class="value">1.0</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Date</div>
+      <div class="value">2026-03-30</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Total Test Cases</div>
+      <div class="value accent">172</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Apps Covered</div>
+      <div class="value">3</div>
+    </div>
+  </div>
+
+  <div class="cover-apps">
+    <div class="cover-app-badge">DAZZ Producciones</div>
+    <div class="cover-app-badge">Admin Proveedores</div>
+    <div class="cover-app-badge">Portal Proveedores</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS                                             -->
+<!-- ============================================================ -->
+<div class="container">
+<div class="toc-section">
+  <h2>Table of Contents</h2>
+  <ul class="toc-list">
+    <li><a href="#section1">Section 1 &mdash; Flow Analysis &amp; All Possible Outcomes <span class="toc-page">3 Apps, 30+ Flows</span></a></li>
+    <li class="toc-indent"><a href="#app1-flows">App 1: DAZZ Producciones <span class="toc-page">Auth, Projects, Tickets, Statistics, Users, Autoinvoice</span></a></li>
+    <li class="toc-indent"><a href="#app2-flows">App 2: Admin Proveedores <span class="toc-page">Dashboard, Suppliers, Invoices, Invitations, Notifications</span></a></li>
+    <li class="toc-indent"><a href="#app3-flows">App 3: Portal Proveedores <span class="toc-page">Registration, Login, Invoices, Upload, Profile, Notifications</span></a></li>
+    <li><a href="#section2">Section 2 &mdash; Test Plan (172 Test Cases) <span class="toc-page">T-001 through T-172</span></a></li>
+    <li class="toc-indent"><a href="#tests-app1">App 1: DAZZ Producciones <span class="toc-page">T-001 &ndash; T-070 (70 tests)</span></a></li>
+    <li class="toc-indent"><a href="#tests-app2">App 2: Admin Proveedores <span class="toc-page">T-071 &ndash; T-115 (45 tests)</span></a></li>
+    <li class="toc-indent"><a href="#tests-app3">App 3: Portal Proveedores <span class="toc-page">T-116 &ndash; T-150 (35 tests)</span></a></li>
+    <li class="toc-indent"><a href="#tests-security">Cross-App Security Tests <span class="toc-page">T-151 &ndash; T-172 (22 tests)</span></a></li>
+    <li><a href="#section3">Section 3 &mdash; Suggestions &amp; Findings <span class="toc-page">15 Findings</span></a></li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 1 — FLOW ANALYSIS                                     -->
+<!-- ============================================================ -->
+<div class="section" id="section1">
+  <h2 class="section-title">Section 1 &mdash; Flow Analysis &amp; All Possible Outcomes</h2>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Flows</div>
+      <div class="kpi-value">32</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Outcomes</div>
+      <div class="kpi-value">210+</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Apps Analyzed</div>
+      <div class="kpi-value">3</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Modules</div>
+      <div class="kpi-value">15</div>
+    </div>
+  </div>
+
+  <!-- ==================== APP 1 ==================== -->
+  <h3 class="app-title" id="app1-flows">App 1: DAZZ Producciones</h3>
+
+  <!-- AUTH MODULE -->
+  <h3 class="module-title">Auth Module</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Login</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User has registered account. App at /login.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Enter username/email + password, click Login.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid credentials &rarr; tokens stored, redirect to /dashboard</li>
+      <li class="outcome-error">Outcome 2: Invalid credentials &rarr; "Incorrect username/email or password" (401)</li>
+      <li class="outcome-security">Outcome 3: Account locked (5+ failed attempts) &rarr; "Account temporarily locked" (429)</li>
+      <li class="outcome-edge">Outcome 4: Lock expired &rarr; counter resets, normal login proceeds</li>
+      <li class="outcome-edge">Outcome 5: Empty fields &rarr; browser native validation blocks submit</li>
+      <li class="outcome-error">Outcome 6: Server error &rarr; generic error shown</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Token Refresh</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User authenticated, access token expired.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Automatic &mdash; triggered by 401 response on any API call.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid refresh token &rarr; new access token, request retried transparently</li>
+      <li class="outcome-error">Outcome 2: Invalid/expired refresh token &rarr; clear storage, redirect to /login</li>
+      <li class="outcome-error">Outcome 3: No refresh token in storage &rarr; immediate redirect to /login</li>
+      <li class="outcome-edge">Outcome 4: Concurrent 401s &rarr; queued, all resolved when refresh completes</li>
+      <li class="outcome-error">Outcome 5: Refresh endpoint down &rarr; all queued requests fail, logout</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Set Password (from email link)</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User received set-password email with valid token.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click email link, enter new password, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid token + valid password &rarr; password set, tokens revoked, success message</li>
+      <li class="outcome-error">Outcome 2: Expired token &rarr; "Token inv&aacute;lido, expirado o ya usado" (400)</li>
+      <li class="outcome-error">Outcome 3: Already used token &rarr; same error (400)</li>
+      <li class="outcome-error">Outcome 4: Password too short (&lt;8) &rarr; Pydantic 422</li>
+      <li class="outcome-error">Outcome 5: Password without uppercase &rarr; 422</li>
+      <li class="outcome-error">Outcome 6: Password without number &rarr; 422</li>
+      <li class="outcome-error">Outcome 7: Password without special char &rarr; 422</li>
+      <li class="outcome-edge">Outcome 8: User deleted between token creation and use &rarr; "Usuario no encontrado" (404)</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Forgot Password</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User at /login, clicks "Forgot password".</div>
+    <div class="flow-steps"><strong>Steps:</strong> Enter email, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Email exists &rarr; reset email sent, generic message shown (no leak)</li>
+      <li class="outcome-security">Outcome 2: Email doesn't exist &rarr; same generic message (security)</li>
+      <li class="outcome-error">Outcome 3: Rate limited (&gt;3/hour) &rarr; 429</li>
+      <li class="outcome-edge">Outcome 4: Email send fails &rarr; silent failure, generic message shown</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Logout</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User authenticated.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click logout button.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid refresh token &rarr; revoked server-side, storage cleared</li>
+      <li class="outcome-edge">Outcome 2: Invalid/already revoked token &rarr; error caught silently, storage cleared anyway</li>
+      <li class="outcome-edge">Outcome 3: Network error &rarr; storage cleared anyway (catches all)</li>
+    </ul>
+  </div>
+
+  <!-- PROJECTS MODULE -->
+  <h3 class="module-title">Projects Module</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Create Project</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User authenticated with at least one company assigned.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to /projects/create, fill name, select company, select responsible, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: All fields valid &rarr; project created, redirect to /projects/:id</li>
+      <li class="outcome-error">Outcome 2: Company not found &rarr; 404</li>
+      <li class="outcome-error">Outcome 3: No permission for company &rarr; 403</li>
+      <li class="outcome-error">Outcome 4: Responsible not in company &rarr; 400 "El responsable X no pertenece a la empresa"</li>
+      <li class="outcome-edge">Outcome 5: No companies assigned to user &rarr; red warning, cannot submit</li>
+      <li class="outcome-edge">Outcome 6: Single company &rarr; auto-selected</li>
+      <li class="outcome-edge">Outcome 7: OC matches existing OC_PENDING invoices &rarr; auto-linked on creation</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: View Project</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Project exists in database.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to /projects/:id.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Authorized &rarr; project + tickets displayed</li>
+      <li class="outcome-error">Outcome 2: Not authorized &rarr; 403 "No tienes permiso"</li>
+      <li class="outcome-error">Outcome 3: Project not found &rarr; 404, redirect to dashboard</li>
+      <li class="outcome-edge">Outcome 4: Closed project &rarr; upload disabled, reopen button shown</li>
+      <li class="outcome-edge">Outcome 5: No tickets &rarr; empty state with upload hint</li>
+      <li class="outcome-edge">Outcome 6: ADMIN/BOSS/owner &rarr; delete button visible</li>
+      <li class="outcome-security">Outcome 7: WORKER not owner &rarr; no delete button</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Upload Tickets (multi-file)</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Project open, user authorized.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Select or drag files, click upload.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid image &lt;10MB &rarr; IA extracts data &rarr; ticket created</li>
+      <li class="outcome-edge">Outcome 2: Image &gt;3MB &rarr; auto-compressed to 3MB before upload</li>
+      <li class="outcome-error">Outcome 3: Image &gt;10MB &rarr; rejected by backend</li>
+      <li class="outcome-success">Outcome 4: PDF file &rarr; accepted, pages extracted</li>
+      <li class="outcome-edge">Outcome 5: Duplicate file (same SHA-256) &rarr; 409 "duplicate_hash" (amber card, NOT retried)</li>
+      <li class="outcome-edge">Outcome 6: Duplicate invoice number (different file) &rarr; warning only, ticket created</li>
+      <li class="outcome-edge">Outcome 7: IA confidence &lt;0.5 &rarr; warning in notes</li>
+      <li class="outcome-edge">Outcome 8: Math incoherence (base+IVA-IRPF != total, &gt;0.02EUR) &rarr; warning in notes</li>
+      <li class="outcome-edge">Outcome 9: Missing required fields (provider/date/total) &rarr; warning in notes</li>
+      <li class="outcome-success">Outcome 10: Foreign invoice &rarr; currency detected, exchange rate fetched, converted to EUR</li>
+      <li class="outcome-error">Outcome 11: Claude AI error &rarr; ticket created with "Error en extracci&oacute;n", total=0</li>
+      <li class="outcome-security">Outcome 12: Forbidden extension &rarr; 400 "Extensi&oacute;n no permitida"</li>
+      <li class="outcome-security">Outcome 13: Dangerous filename (path traversal) &rarr; 400</li>
+      <li class="outcome-edge">Outcome 14: Multiple files &rarr; sequential upload, individual results per file</li>
+      <li class="outcome-edge">Outcome 15: Partial success &rarr; retry button for failed files only (excludes duplicates)</li>
+      <li class="outcome-edge">Outcome 16: No files selected &rarr; toast warning</li>
+      <li class="outcome-edge">Outcome 17: Exchange rate API failure &rarr; graceful fallback (rate=1.0 or error in notes)</li>
+      <li class="outcome-error">Outcome 18: Cloudinary upload fails &rarr; 500</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Review/Edit Ticket</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Ticket exists, user has access to parent project.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to /tickets/:id, edit fields, save.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Edit fields + save &rarr; marked as reviewed, redirect back</li>
+      <li class="outcome-edge">Outcome 2: Change base_amount &rarr; recalculates IVA, total automatically</li>
+      <li class="outcome-success">Outcome 3: Delete ticket &rarr; removes from project, updates totals, cleans Cloudinary</li>
+      <li class="outcome-edge">Outcome 4: Foreign ticket &rarr; international section shown, currency symbol in amounts</li>
+      <li class="outcome-edge">Outcome 5: Duplicate invoice_number warning &rarr; amber banner with link to other ticket</li>
+      <li class="outcome-edge">Outcome 6: Navigate between tickets &rarr; prev/next arrows, URL changes</li>
+      <li class="outcome-edge">Outcome 7: Statistics context (?filter=international) &rarr; back button goes to /statistics</li>
+      <li class="outcome-edge">Outcome 8: Custom payment status &rarr; free-text input mode</li>
+      <li class="outcome-edge">Outcome 9: Unsaved changes + navigate away &rarr; beforeunload warning</li>
+      <li class="outcome-edge">Outcome 10: Error ticket (AI failed) now corrected &rarr; updates project totals correctly</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Close Project</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Project has at least one ticket, user authorized.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click Close, review preview, add recipients, confirm.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid close &rarr; Excel generated, downloaded, email sent, redirect to dashboard</li>
+      <li class="outcome-edge">Outcome 2: Email send fails &rarr; warning toast with reason, Excel still downloaded</li>
+      <li class="outcome-edge">Outcome 3: No tickets &rarr; cannot close (button disabled)</li>
+      <li class="outcome-edge">Outcome 4: No email recipients &rarr; warning toast, blocks</li>
+      <li class="outcome-error">Outcome 5: Project already closed (race condition) &rarr; 409 "Project is already closed"</li>
+      <li class="outcome-security">Outcome 6: Double close prevention &rarr; SELECT FOR UPDATE ensures atomicity</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Reopen Project</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Project is closed, user authorized.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click Reopen button on closed project view.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Success &rarr; status=en_curso, closed_at=null</li>
+      <li class="outcome-error">Outcome 2: Not authorized &rarr; 403</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Delete Project</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User is ADMIN, BOSS of company, or project owner.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click delete, confirm in dialog.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Success &rarr; all tickets deleted (Cloudinary cleanup), project deleted, redirect</li>
+      <li class="outcome-error">Outcome 2: Not authorized &rarr; 403</li>
+      <li class="outcome-edge">Outcome 3: Cloudinary cleanup fails &rarr; logged, project still deleted</li>
+    </ul>
+  </div>
+
+  <!-- STATISTICS MODULE -->
+  <h3 class="module-title">Statistics Module</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View Statistics</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User is ADMIN or BOSS. Company assigned.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to /statistics, select year/quarter/company filters.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Data loaded &rarr; 4 KPI cards, charts, country breakdown</li>
+      <li class="outcome-edge">Outcome 2: No data for year &rarr; empty states per section</li>
+      <li class="outcome-security">Outcome 3: WORKER role &rarr; 403</li>
+      <li class="outcome-error">Outcome 4: BOSS without companies &rarr; 400</li>
+      <li class="outcome-security">Outcome 5: BOSS accessing another company &rarr; 403</li>
+      <li class="outcome-edge">Outcome 6: ADMIN all-companies mode &rarr; company grouping in breakdown</li>
+      <li class="outcome-edge">Outcome 7: Export PDF with no international data &rarr; warning toast</li>
+    </ul>
+  </div>
+
+  <!-- USERS MODULE -->
+  <h3 class="module-title">Users Module</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Create User</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Current user is ADMIN.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click Create User, fill form, assign companies, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid data &rarr; user created, set-password email sent</li>
+      <li class="outcome-error">Outcome 2: Email already registered &rarr; 400</li>
+      <li class="outcome-error">Outcome 3: Username taken &rarr; 400</li>
+      <li class="outcome-error">Outcome 4: Company not found &rarr; 404</li>
+      <li class="outcome-error">Outcome 5: Password too weak &rarr; 422 (if provided)</li>
+      <li class="outcome-edge">Outcome 6: Email send fails &rarr; user still created, warning logged</li>
+      <li class="outcome-edge">Outcome 7: No companies selected &rarr; submit button disabled</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Edit User</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Current user is ADMIN.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click edit on user row, modify fields, save.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid changes &rarr; updated, token revoked if password changed</li>
+      <li class="outcome-edge">Outcome 2: No changes &rarr; submit disabled</li>
+      <li class="outcome-edge">Outcome 3: Empty password &rarr; excluded from payload</li>
+      <li class="outcome-edge">Outcome 4: Role changed &rarr; logged for audit</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Delete User</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Current user is ADMIN.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click delete on user row, confirm dialog.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Success &rarr; user removed with ConfirmDialog</li>
+      <li class="outcome-error">Outcome 2: Self-deletion &rarr; 400 "No puedes borrarte a ti mismo"</li>
+      <li class="outcome-error">Outcome 3: User has projects &rarr; 400 with project list</li>
+      <li class="outcome-security">Outcome 4: Delete button hidden for current user</li>
+    </ul>
+  </div>
+
+  <!-- AUTOINVOICE MODULE -->
+  <h3 class="module-title">Autoinvoice Module</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Generate Autoinvoice</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User is ADMIN or BOSS. Supplier exists with completed profile.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to autoinvoice, select supplier, fill amounts/OC, generate.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid data &rarr; PDF generated, uploaded to Cloudinary, invoice record created, email sent</li>
+      <li class="outcome-error">Outcome 2: Company not found &rarr; 404</li>
+      <li class="outcome-error">Outcome 3: Supplier not found &rarr; 404</li>
+      <li class="outcome-error">Outcome 4: OC non-permanent without project &rarr; 400 "No existe proyecto con OC"</li>
+      <li class="outcome-edge">Outcome 5: OC permanent without project &rarr; auto-creates project</li>
+      <li class="outcome-error">Outcome 6: Duplicate invoice number &rarr; 409</li>
+      <li class="outcome-error">Outcome 7: Cloudinary upload fails &rarr; error, no DB record</li>
+      <li class="outcome-edge">Outcome 8: DB commit fails &rarr; Cloudinary cleanup</li>
+      <li class="outcome-edge">Outcome 9: Email fails &rarr; logged, invoice still created</li>
+      <li class="outcome-success">Outcome 10: Preview &rarr; PDF shown in lightbox, no persistence</li>
+    </ul>
+  </div>
+
+  <!-- ==================== APP 2 ==================== -->
+  <h3 class="app-title" id="app2-flows">App 2: Admin Proveedores</h3>
+
+  <h3 class="module-title">Dashboard</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View Dashboard</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User authenticated as ADMIN.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to /admin/dashboard.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Data loaded &rarr; 4 KPIs, activity feed, status bar chart</li>
+      <li class="outcome-edge">Outcome 2: API fails &rarr; 0 values, empty feed (silent)</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Supplier List</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Browse/Search Suppliers</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> User authenticated as ADMIN.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to supplier list, use filters/search.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Suppliers loaded &rarr; list/cards displayed</li>
+      <li class="outcome-success">Outcome 2: Filter by status &rarr; API reloads</li>
+      <li class="outcome-success">Outcome 3: Search &rarr; client-side filter by name/NIF</li>
+      <li class="outcome-edge">Outcome 4: Empty results &rarr; "No se encontraron proveedores"</li>
+      <li class="outcome-edge">Outcome 5: Pending indicator &rarr; amber dot for pending invoices/actions</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Supplier Detail</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View Supplier Detail</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier exists in database.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click supplier from list to view detail page.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Full data loaded &rarr; card + invoices + history + pending actions</li>
+      <li class="outcome-error">Outcome 2: Load failure &rarr; redirect to supplier list</li>
+      <li class="outcome-edge">Outcome 3: Pending data change &rarr; approve/reject banner</li>
+      <li class="outcome-edge">Outcome 4: Pending IBAN change &rarr; cert viewer + approve/reject</li>
+      <li class="outcome-edge">Outcome 5: Pending deactivation &rarr; confirm/reject</li>
+      <li class="outcome-edge">Outcome 6: Unverified cert &rarr; "Marcar como revisado" button</li>
+      <li class="outcome-success">Outcome 7: Deactivate supplier &rarr; tokens invalidated</li>
+      <li class="outcome-success">Outcome 8: Reactivate supplier &rarr; status restored</li>
+      <li class="outcome-success">Outcome 9: Export Excel &rarr; blob download</li>
+      <li class="outcome-success">Outcome 10: Add note &rarr; appended with timestamp</li>
+      <li class="outcome-success">Outcome 11: Delete note line &rarr; updated</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Invoice Management</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View Invoice Detail</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Invoice exists, ADMIN authenticated.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click invoice from supplier detail or invoice list.</div>
+    <ul>
+      <li class="outcome-edge">Outcome 1: OC_PENDING &rarr; OC assignment UI (autocomplete)</li>
+      <li class="outcome-edge">Outcome 2: PENDING &rarr; Approve button</li>
+      <li class="outcome-edge">Outcome 3: APPROVED &rarr; Mark paid button</li>
+      <li class="outcome-edge">Outcome 4: DELETE_REQUESTED &rarr; Confirm/Reject deletion</li>
+      <li class="outcome-edge">Outcome 5: PAID &rarr; "Factura cerrada" (no actions)</li>
+      <li class="outcome-success">Outcome 6: Approve &rarr; auto-creates DAZZ ticket, notifies supplier</li>
+      <li class="outcome-success">Outcome 7: Mark paid &rarr; notifies supplier, sends email</li>
+      <li class="outcome-success">Outcome 8: Delete &rarr; Cloudinary cleanup, linked ticket voided/deleted</li>
+      <li class="outcome-success">Outcome 9: OC assignment &rarr; resolves project, changes status to PENDING</li>
+      <li class="outcome-error">Outcome 10: Invalid transition &rarr; 400 with allowed transitions</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Assign OC to Invoice</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Invoice in OC_PENDING status.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Open invoice, use OC autocomplete, select OC, confirm.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid OC with project &rarr; assigned, status PENDING</li>
+      <li class="outcome-edge">Outcome 2: Valid OC without project &rarr; OC assigned but no project_id</li>
+      <li class="outcome-edge">Outcome 3: Autocomplete &rarr; debounced search, max 5+5 results</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Invite Supplier</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Invite Without OC</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> ADMIN on invite page.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Enter supplier email, send invitation.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Success &rarr; invitation created (72h), email sent</li>
+      <li class="outcome-error">Outcome 2: Email already exists &rarr; 400</li>
+      <li class="outcome-error">Outcome 3: Active invitation exists &rarr; 400</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Invite With OC (2-step)</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> ADMIN on invite page, OC selected.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Create OC, then send invitation with OC link.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: OC created + invite sent &rarr; two-step success</li>
+      <li class="outcome-error">Outcome 2: OC already exists &rarr; 400</li>
+      <li class="outcome-edge">Outcome 3: NIF already has OC &rarr; amber warning</li>
+      <li class="outcome-edge">Outcome 4: OC created but invite fails &rarr; error shown, OC still exists</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Notifications</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Manage Notifications</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> ADMIN authenticated.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Open notification panel, interact with items.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Mark single as read &rarr; optimistic update</li>
+      <li class="outcome-success">Outcome 2: Mark all as read &rarr; batch update</li>
+      <li class="outcome-success">Outcome 3: Delete single &rarr; optimistic removal</li>
+      <li class="outcome-success">Outcome 4: Delete all read &rarr; batch removal</li>
+      <li class="outcome-success">Outcome 5: Click notification &rarr; navigate to relevant invoice/supplier</li>
+      <li class="outcome-edge">Outcome 6: Polling every 30s &rarr; auto-refreshes</li>
+    </ul>
+  </div>
+
+  <!-- ==================== APP 3 ==================== -->
+  <h3 class="app-title" id="app3-flows">App 3: Portal Proveedores</h3>
+
+  <h3 class="module-title">Registration</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Register</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier received invitation email with valid token.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click email link, fill multi-step form, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid token + all fields &rarr; account created, auto-login</li>
+      <li class="outcome-error">Outcome 2: Invalid/expired token &rarr; dead-end screen</li>
+      <li class="outcome-error">Outcome 3: Token already used &rarr; dead-end screen</li>
+      <li class="outcome-error">Outcome 4: Email already exists &rarr; 400</li>
+      <li class="outcome-error">Outcome 5: NIF already exists &rarr; 400</li>
+      <li class="outcome-edge">Outcome 6: IBAN + cert uploaded &rarr; AI validates, warnings shown, proceeds</li>
+      <li class="outcome-error">Outcome 7: IBAN without cert &rarr; error "Please upload a bank certificate"</li>
+      <li class="outcome-edge">Outcome 8: No IBAN &rarr; skips validation, goes to step 3</li>
+      <li class="outcome-error">Outcome 9: Weak password &rarr; client-side validation blocks</li>
+      <li class="outcome-error">Outcome 10: Passwords don't match &rarr; client-side error</li>
+      <li class="outcome-error">Outcome 11: GDPR not accepted &rarr; error</li>
+      <li class="outcome-edge">Outcome 12: Bank cert upload fails after registration &rarr; retry screen</li>
+      <li class="outcome-edge">Outcome 13: NIF matches existing OC &rarr; auto-assigned on registration</li>
+      <li class="outcome-error">Outcome 14: IBAN format invalid (mod-97) &rarr; 400</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Login</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier account exists.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Enter email + password, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid credentials &rarr; tokens stored, redirect to /</li>
+      <li class="outcome-error">Outcome 2: Invalid credentials &rarr; "Invalid email or password"</li>
+      <li class="outcome-security">Outcome 3: Account deactivated &rarr; "Account deactivated" (403)</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Home / Invoices</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View My Invoices</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to home/invoices page.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Invoices loaded &rarr; cards with status pills</li>
+      <li class="outcome-success">Outcome 2: Filter by status &rarr; API reload</li>
+      <li class="outcome-success">Outcome 3: Search &rarr; client-side by invoice_number/oc_number</li>
+      <li class="outcome-success">Outcome 4: Click card &rarr; PDF viewer lightbox (Google Docs viewer)</li>
+      <li class="outcome-edge">Outcome 5: Empty &rarr; "No invoices"</li>
+      <li class="outcome-success">Outcome 6: Delete PENDING invoice &rarr; modal with required reason &rarr; status=DELETE_REQUESTED</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: View Received Invoices (autoinvoices)</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated, autoinvoices exist.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to received invoices tab.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Autoinvoices loaded &rarr; cards with "Generated by DAZZ" label</li>
+      <li class="outcome-success">Outcome 2: Download PDF &rarr; blob fetch + download trigger</li>
+      <li class="outcome-edge">Outcome 3: Empty &rarr; "No received invoices yet"</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Upload</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: Upload Invoice PDF</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated with IBAN on profile.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to upload, select PDF file(s), submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid PDF &lt;10MB &rarr; AI extracts, invoice created</li>
+      <li class="outcome-error">Outcome 2: Non-PDF file &rarr; rejected client-side</li>
+      <li class="outcome-error">Outcome 3: File &gt;10MB &rarr; rejected client-side</li>
+      <li class="outcome-edge">Outcome 4: No IBAN on profile &rarr; upload blocked (amber warning)</li>
+      <li class="outcome-error">Outcome 5: AI extraction fails &rarr; 422</li>
+      <li class="outcome-error">Outcome 6: AI validation fails &rarr; 422 with errors array</li>
+      <li class="outcome-edge">Outcome 7: Multiple files &rarr; sequential upload</li>
+      <li class="outcome-edge">Outcome 8: OC not detected &rarr; status=OC_PENDING</li>
+      <li class="outcome-edge">Outcome 9: IBAN mismatch on invoice &rarr; warning (non-blocking)</li>
+      <li class="outcome-security">Outcome 10: Rate limited (&gt;10/hour) &rarr; 429</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Profile</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View Profile</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Navigate to /profile.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Profile loaded &rarr; read-only data display</li>
+      <li class="outcome-success">Outcome 2: Bank cert &rarr; "View PDF" opens in new tab via signed URL</li>
+      <li class="outcome-edge">Outcome 3: No bank cert &rarr; 404</li>
+      <li class="outcome-edge">Outcome 4: Pending change &rarr; amber card shown</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Edit Data</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated on profile page.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click edit, modify fields, submit for admin review.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Changes submitted &rarr; admin notified, redirect to profile</li>
+      <li class="outcome-edge">Outcome 2: No changes &rarr; button disabled</li>
+      <li class="outcome-error">Outcome 3: Error &rarr; silently caught (no UI feedback for non-401)</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Change IBAN</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated on profile page.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click Change IBAN, enter new IBAN + upload cert PDF, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Valid IBAN + cert &rarr; submitted for admin review</li>
+      <li class="outcome-error">Outcome 2: Invalid IBAN format &rarr; 400</li>
+      <li class="outcome-error">Outcome 3: Non-PDF file &rarr; client-side error</li>
+      <li class="outcome-error">Outcome 4: File &gt;10MB &rarr; client-side error</li>
+      <li class="outcome-edge">Outcome 5: No file &rarr; button disabled</li>
+      <li class="outcome-edge">Outcome 6: No IBAN &rarr; button disabled</li>
+    </ul>
+  </div>
+
+  <div class="flow-block">
+    <h4>FLOW: Request Deactivation</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated on profile page.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Click Request Deactivation, enter reason, submit.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: Reason provided &rarr; submitted, admin notified</li>
+      <li class="outcome-edge">Outcome 2: Empty reason &rarr; button disabled</li>
+    </ul>
+  </div>
+
+  <h3 class="module-title">Notifications</h3>
+
+  <div class="flow-block">
+    <h4>FLOW: View Notifications</h4>
+    <div class="flow-pre"><strong>Preconditions:</strong> Supplier authenticated.</div>
+    <div class="flow-steps"><strong>Steps:</strong> Open notifications page/panel.</div>
+    <ul>
+      <li class="outcome-success">Outcome 1: List loaded with type filtering (All/Invoices/Account)</li>
+      <li class="outcome-success">Outcome 2: Click unread &rarr; marked as read</li>
+      <li class="outcome-success">Outcome 3: Mark all as read &rarr; batch update</li>
+      <li class="outcome-edge">Outcome 4: Empty &rarr; "No notifications"</li>
+      <li class="outcome-edge">Outcome 5: Read filter &rarr; shows only unread</li>
+    </ul>
+  </div>
+
+</div><!-- end section 1 -->
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<!-- SECTION 2 — TEST PLAN                                         -->
+<!-- ============================================================ -->
+<div class="section page-break" id="section2">
+  <h2 class="section-title">Section 2 &mdash; Test Plan (172 Test Cases)</h2>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Tests</div>
+      <div class="kpi-value">172</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Happy Path</div>
+      <div class="kpi-value">62</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Error Cases</div>
+      <div class="kpi-value">48</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Edge Cases</div>
+      <div class="kpi-value">40</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Security</div>
+      <div class="kpi-value">22</div>
+    </div>
+  </div>
+
+  <!-- ==================== APP 1 TESTS ==================== -->
+  <h3 class="app-title" id="tests-app1">App 1: DAZZ Producciones (T-001 &ndash; T-070)</h3>
+
+  <h3 class="module-title">Auth Module</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-001</td>
+        <td>Auth</td>
+        <td>Login</td>
+        <td>Valid user account exists</td>
+        <td>Enter correct username + password, click Login</td>
+        <td>Tokens stored in localStorage, redirect to /dashboard</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-002</td>
+        <td>Auth</td>
+        <td>Login</td>
+        <td>User account exists</td>
+        <td>Enter wrong password, click Login</td>
+        <td>401 error, message "Incorrect username/email or password"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-003</td>
+        <td>Auth</td>
+        <td>Login</td>
+        <td>5 failed attempts on same account</td>
+        <td>Attempt 6th login with any password</td>
+        <td>429, "Account temporarily locked"</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-004</td>
+        <td>Auth</td>
+        <td>Login</td>
+        <td>Account locked, lock period expired</td>
+        <td>Attempt login with valid credentials</td>
+        <td>Counter reset, login succeeds normally</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-005</td>
+        <td>Auth</td>
+        <td>Login</td>
+        <td>App at /login</td>
+        <td>Leave fields empty, click Login</td>
+        <td>Browser native validation blocks submit</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-006</td>
+        <td>Auth</td>
+        <td>Login</td>
+        <td>Backend unreachable</td>
+        <td>Enter credentials, click Login</td>
+        <td>Generic error message displayed</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-007</td>
+        <td>Auth</td>
+        <td>Token Refresh</td>
+        <td>Access token expired, valid refresh token</td>
+        <td>Make any API call</td>
+        <td>New access token obtained, original request retried transparently</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-008</td>
+        <td>Auth</td>
+        <td>Token Refresh</td>
+        <td>Both tokens expired</td>
+        <td>Make any API call</td>
+        <td>Storage cleared, redirect to /login</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-009</td>
+        <td>Auth</td>
+        <td>Token Refresh</td>
+        <td>Multiple concurrent requests get 401</td>
+        <td>Trigger multiple API calls simultaneously</td>
+        <td>All queued, resolved after single refresh completes</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-010</td>
+        <td>Auth</td>
+        <td>Set Password</td>
+        <td>Valid set-password token from email</td>
+        <td>Click link, enter valid password (8+ chars, upper, number, special)</td>
+        <td>Password set, tokens revoked, success message shown</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-011</td>
+        <td>Auth</td>
+        <td>Set Password</td>
+        <td>Expired token</td>
+        <td>Click expired link, try to set password</td>
+        <td>400 "Token invalido, expirado o ya usado"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-012</td>
+        <td>Auth</td>
+        <td>Set Password</td>
+        <td>Valid token</td>
+        <td>Enter password &lt;8 chars</td>
+        <td>422 Pydantic validation error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-013</td>
+        <td>Auth</td>
+        <td>Set Password</td>
+        <td>Valid token</td>
+        <td>Enter password without uppercase letter</td>
+        <td>422 validation error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-014</td>
+        <td>Auth</td>
+        <td>Forgot Password</td>
+        <td>User at login page</td>
+        <td>Click Forgot Password, enter registered email, submit</td>
+        <td>Generic "check your email" message, reset email sent</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-015</td>
+        <td>Auth</td>
+        <td>Forgot Password</td>
+        <td>User at login page</td>
+        <td>Enter non-existent email, submit</td>
+        <td>Same generic message (no email leak)</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-016</td>
+        <td>Auth</td>
+        <td>Forgot Password</td>
+        <td>3+ reset requests in last hour</td>
+        <td>Submit another forgot password request</td>
+        <td>429 rate limit</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-017</td>
+        <td>Auth</td>
+        <td>Logout</td>
+        <td>User authenticated</td>
+        <td>Click logout</td>
+        <td>Refresh token revoked, storage cleared, redirect to /login</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-018</td>
+        <td>Auth</td>
+        <td>Logout</td>
+        <td>Network error during logout</td>
+        <td>Click logout while offline</td>
+        <td>Storage cleared anyway, redirect to /login</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Projects Module</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-019</td>
+        <td>Projects</td>
+        <td>Create Project</td>
+        <td>User with company assigned</td>
+        <td>Fill name, select company, select responsible, submit</td>
+        <td>Project created, redirect to /projects/:id</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-020</td>
+        <td>Projects</td>
+        <td>Create Project</td>
+        <td>User with no companies</td>
+        <td>Navigate to create project page</td>
+        <td>Red warning shown, submit button disabled</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-021</td>
+        <td>Projects</td>
+        <td>Create Project</td>
+        <td>User with single company</td>
+        <td>Navigate to create project</td>
+        <td>Company auto-selected, no dropdown shown</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-022</td>
+        <td>Projects</td>
+        <td>Create Project</td>
+        <td>Responsible not in selected company</td>
+        <td>Select company A, select user from company B as responsible</td>
+        <td>400 "El responsable X no pertenece a la empresa"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-023</td>
+        <td>Projects</td>
+        <td>Create Project</td>
+        <td>OC_PENDING invoices match new OC</td>
+        <td>Create project with OC matching pending invoices</td>
+        <td>Invoices auto-linked to new project</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-024</td>
+        <td>Projects</td>
+        <td>View Project</td>
+        <td>Authorized user</td>
+        <td>Navigate to /projects/:id</td>
+        <td>Project details + ticket list displayed</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-025</td>
+        <td>Projects</td>
+        <td>View Project</td>
+        <td>WORKER accessing another user's project</td>
+        <td>Navigate to /projects/:otherId</td>
+        <td>403 "No tienes permiso"</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-026</td>
+        <td>Projects</td>
+        <td>View Project</td>
+        <td>Non-existent project ID</td>
+        <td>Navigate to /projects/99999</td>
+        <td>404, redirect to dashboard</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-027</td>
+        <td>Projects</td>
+        <td>View Project</td>
+        <td>Closed project</td>
+        <td>Navigate to closed project</td>
+        <td>Upload button disabled, reopen button shown</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-028</td>
+        <td>Projects</td>
+        <td>View Project</td>
+        <td>Project with zero tickets</td>
+        <td>View empty project</td>
+        <td>Empty state with upload hint displayed</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-029</td>
+        <td>Projects</td>
+        <td>Delete Project</td>
+        <td>ADMIN or project owner</td>
+        <td>Click delete, confirm dialog</td>
+        <td>Tickets deleted (Cloudinary cleanup), project removed, redirect to dashboard</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-030</td>
+        <td>Projects</td>
+        <td>Delete Project</td>
+        <td>WORKER who is not owner</td>
+        <td>View project page</td>
+        <td>Delete button not visible</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-031</td>
+        <td>Projects</td>
+        <td>Reopen Project</td>
+        <td>Project is closed, user authorized</td>
+        <td>Click Reopen button</td>
+        <td>status=en_curso, closed_at=null, upload re-enabled</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Tickets Module</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-032</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project, authorized user</td>
+        <td>Select valid image &lt;3MB, upload</td>
+        <td>AI extracts data, ticket created with provider/date/amounts</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-033</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project</td>
+        <td>Upload image 5MB (between 3-10MB)</td>
+        <td>Auto-compressed to 3MB, then processed normally</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-034</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project</td>
+        <td>Upload image &gt;10MB</td>
+        <td>Rejected by backend, error shown</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-035</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project</td>
+        <td>Upload valid PDF</td>
+        <td>PDF accepted, pages extracted by AI</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-036</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Same file already uploaded to project</td>
+        <td>Re-upload identical file (same SHA-256)</td>
+        <td>409 duplicate_hash, amber card shown, NOT retried</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-037</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Invoice number already exists</td>
+        <td>Upload different file with same invoice number</td>
+        <td>Warning shown, ticket still created</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-038</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>AI low confidence</td>
+        <td>Upload blurry/partial image</td>
+        <td>Ticket created with confidence &lt;0.5 warning in notes</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-039</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Invoice with math error</td>
+        <td>Upload invoice where base+IVA-IRPF != total (&gt;0.02)</td>
+        <td>Ticket created with math incoherence warning in notes</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-040</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Foreign invoice (USD)</td>
+        <td>Upload invoice in US dollars</td>
+        <td>Currency=USD detected, exchange rate fetched, EUR conversion shown</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-041</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Claude AI service down</td>
+        <td>Upload valid image</td>
+        <td>Ticket created with "Error en extraccion", total=0</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-042</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project</td>
+        <td>Upload .exe file</td>
+        <td>400 "Extension no permitida"</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-043</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project</td>
+        <td>Upload file with path traversal name (../../etc/passwd)</td>
+        <td>400, filename sanitized or rejected</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-044</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>Open project</td>
+        <td>Select 5 files, upload</td>
+        <td>Sequential upload, individual results per file</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-045</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>3 of 5 files failed</td>
+        <td>Check retry controls</td>
+        <td>Retry button for failed files only (excludes duplicates)</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-046</td>
+        <td>Tickets</td>
+        <td>Upload</td>
+        <td>No files selected</td>
+        <td>Click upload with empty selection</td>
+        <td>Toast warning "select files"</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-047</td>
+        <td>Tickets</td>
+        <td>Review</td>
+        <td>Ticket exists with AI-extracted data</td>
+        <td>Edit provider name + total, click Save</td>
+        <td>Ticket updated, marked as reviewed, redirect back</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-048</td>
+        <td>Tickets</td>
+        <td>Review</td>
+        <td>Ticket with base_amount</td>
+        <td>Change base_amount value</td>
+        <td>IVA and total recalculated automatically</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-049</td>
+        <td>Tickets</td>
+        <td>Review</td>
+        <td>Ticket exists</td>
+        <td>Click delete ticket, confirm</td>
+        <td>Ticket removed, Cloudinary cleanup, project totals updated</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-050</td>
+        <td>Tickets</td>
+        <td>Review</td>
+        <td>Foreign ticket (GBP)</td>
+        <td>Open ticket review page</td>
+        <td>International section visible with currency symbol, EUR conversion</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-051</td>
+        <td>Tickets</td>
+        <td>Review</td>
+        <td>Duplicate invoice number exists</td>
+        <td>Open ticket with duplicate number</td>
+        <td>Amber banner with link to the other ticket</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-052</td>
+        <td>Tickets</td>
+        <td>Review</td>
+        <td>Unsaved changes on ticket</td>
+        <td>Try to navigate away</td>
+        <td>beforeunload warning dialog shown</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Close Project &amp; Statistics</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-053</td>
+        <td>Close</td>
+        <td>Close Project</td>
+        <td>Project with tickets, recipients added</td>
+        <td>Click Close, review preview, confirm</td>
+        <td>Excel generated + downloaded, email sent, redirect to dashboard</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-054</td>
+        <td>Close</td>
+        <td>Close Project</td>
+        <td>Email service down</td>
+        <td>Close project</td>
+        <td>Warning toast with reason, Excel still downloaded</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-055</td>
+        <td>Close</td>
+        <td>Close Project</td>
+        <td>Project with zero tickets</td>
+        <td>Check close button</td>
+        <td>Button disabled, cannot close</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-056</td>
+        <td>Close</td>
+        <td>Close Project</td>
+        <td>No email recipients entered</td>
+        <td>Try to close</td>
+        <td>Warning toast, blocks close action</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-057</td>
+        <td>Close</td>
+        <td>Close Project</td>
+        <td>Two users close same project simultaneously</td>
+        <td>Both click close at same time</td>
+        <td>First succeeds, second gets 409 "Project is already closed"</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-058</td>
+        <td>Stats</td>
+        <td>View Statistics</td>
+        <td>ADMIN or BOSS user with data</td>
+        <td>Navigate to /statistics</td>
+        <td>4 KPI cards, charts, country breakdown loaded</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-059</td>
+        <td>Stats</td>
+        <td>View Statistics</td>
+        <td>No data for selected year</td>
+        <td>Select year with no tickets</td>
+        <td>Empty states per section shown</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-060</td>
+        <td>Stats</td>
+        <td>View Statistics</td>
+        <td>WORKER user</td>
+        <td>Try to access /statistics</td>
+        <td>403 forbidden</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-061</td>
+        <td>Stats</td>
+        <td>View Statistics</td>
+        <td>BOSS trying to view other company</td>
+        <td>Manipulate company_id parameter</td>
+        <td>403 forbidden</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Users &amp; Autoinvoice Module</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-062</td>
+        <td>Users</td>
+        <td>Create User</td>
+        <td>ADMIN user</td>
+        <td>Fill form with unique email/username, assign company, submit</td>
+        <td>User created, set-password email sent</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-063</td>
+        <td>Users</td>
+        <td>Create User</td>
+        <td>ADMIN user</td>
+        <td>Use existing email address</td>
+        <td>400 "email already registered"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-064</td>
+        <td>Users</td>
+        <td>Delete User</td>
+        <td>ADMIN user, target user has no projects</td>
+        <td>Click delete, confirm</td>
+        <td>User removed, ConfirmDialog dismissed</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-065</td>
+        <td>Users</td>
+        <td>Delete User</td>
+        <td>ADMIN user, target is self</td>
+        <td>Try to delete own account</td>
+        <td>400 "No puedes borrarte a ti mismo"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-066</td>
+        <td>Users</td>
+        <td>Delete User</td>
+        <td>Target user owns projects</td>
+        <td>Click delete, confirm</td>
+        <td>400 with list of projects preventing deletion</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-067</td>
+        <td>AutoInv</td>
+        <td>Generate</td>
+        <td>ADMIN/BOSS, supplier exists, valid OC</td>
+        <td>Select supplier, fill amounts, select OC, generate</td>
+        <td>PDF generated, uploaded to Cloudinary, record created, email sent</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-068</td>
+        <td>AutoInv</td>
+        <td>Generate</td>
+        <td>OC permanent, no project exists</td>
+        <td>Generate autoinvoice with permanent OC</td>
+        <td>Project auto-created, invoice linked</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-069</td>
+        <td>AutoInv</td>
+        <td>Generate</td>
+        <td>Invoice number already exists</td>
+        <td>Generate with duplicate invoice number</td>
+        <td>409 duplicate error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-070</td>
+        <td>AutoInv</td>
+        <td>Preview</td>
+        <td>ADMIN/BOSS, valid form data</td>
+        <td>Click Preview</td>
+        <td>PDF shown in lightbox, no DB record created</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ==================== APP 2 TESTS ==================== -->
+  <h3 class="app-title page-break" id="tests-app2">App 2: Admin Proveedores (T-071 &ndash; T-115)</h3>
+
+  <h3 class="module-title">Dashboard &amp; Supplier List</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-071</td>
+        <td>Dashboard</td>
+        <td>View</td>
+        <td>ADMIN authenticated</td>
+        <td>Navigate to dashboard</td>
+        <td>4 KPIs loaded, activity feed populated, status chart rendered</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-072</td>
+        <td>Dashboard</td>
+        <td>View</td>
+        <td>API unreachable</td>
+        <td>Navigate to dashboard</td>
+        <td>KPIs show 0, feed empty, no error shown (silent)</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-073</td>
+        <td>Suppliers</td>
+        <td>Browse</td>
+        <td>Multiple suppliers exist</td>
+        <td>Navigate to supplier list</td>
+        <td>All suppliers shown in list/card view</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-074</td>
+        <td>Suppliers</td>
+        <td>Filter</td>
+        <td>Suppliers with mixed statuses</td>
+        <td>Select "Active" filter</td>
+        <td>Only active suppliers shown, API reloads</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-075</td>
+        <td>Suppliers</td>
+        <td>Search</td>
+        <td>Suppliers exist</td>
+        <td>Type supplier name in search box</td>
+        <td>Client-side filter by name/NIF, results update</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-076</td>
+        <td>Suppliers</td>
+        <td>Search</td>
+        <td>No matching suppliers</td>
+        <td>Search for non-existent name</td>
+        <td>"No se encontraron proveedores" message</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-077</td>
+        <td>Suppliers</td>
+        <td>Browse</td>
+        <td>Supplier has pending invoices</td>
+        <td>View supplier list</td>
+        <td>Amber dot indicator visible next to supplier</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Supplier Detail</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-078</td>
+        <td>Detail</td>
+        <td>View</td>
+        <td>Supplier exists</td>
+        <td>Click supplier from list</td>
+        <td>Full detail: card + invoices + history + pending actions</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-079</td>
+        <td>Detail</td>
+        <td>View</td>
+        <td>Load failure</td>
+        <td>Navigate to supplier with API error</td>
+        <td>Redirect to supplier list</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-080</td>
+        <td>Detail</td>
+        <td>Pending Data</td>
+        <td>Supplier submitted data change request</td>
+        <td>Open supplier detail</td>
+        <td>Approve/reject banner visible with pending changes</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-081</td>
+        <td>Detail</td>
+        <td>Pending IBAN</td>
+        <td>Supplier submitted IBAN change</td>
+        <td>Open supplier detail</td>
+        <td>Bank cert viewer + approve/reject buttons</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-082</td>
+        <td>Detail</td>
+        <td>Pending Deactivation</td>
+        <td>Supplier requested deactivation</td>
+        <td>Open supplier detail</td>
+        <td>Confirm/reject deactivation banner</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-083</td>
+        <td>Detail</td>
+        <td>Verify Cert</td>
+        <td>Unverified bank certificate</td>
+        <td>Click "Marcar como revisado"</td>
+        <td>Certificate marked as verified</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-084</td>
+        <td>Detail</td>
+        <td>Deactivate</td>
+        <td>Active supplier</td>
+        <td>Click Deactivate, confirm</td>
+        <td>Supplier deactivated, tokens invalidated</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-085</td>
+        <td>Detail</td>
+        <td>Reactivate</td>
+        <td>Deactivated supplier</td>
+        <td>Click Reactivate</td>
+        <td>Supplier status restored to active</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-086</td>
+        <td>Detail</td>
+        <td>Export Excel</td>
+        <td>Supplier with invoices</td>
+        <td>Click Export Excel</td>
+        <td>Blob download triggered with correct data</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-087</td>
+        <td>Detail</td>
+        <td>Add Note</td>
+        <td>Supplier detail open</td>
+        <td>Type note text, submit</td>
+        <td>Note appended with timestamp</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-088</td>
+        <td>Detail</td>
+        <td>Delete Note</td>
+        <td>Note exists on supplier</td>
+        <td>Click delete on note line</td>
+        <td>Note removed, list updated</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Invoice Management</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-089</td>
+        <td>Invoices</td>
+        <td>View OC_PENDING</td>
+        <td>Invoice in OC_PENDING status</td>
+        <td>Open invoice detail</td>
+        <td>OC assignment UI with autocomplete shown</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-090</td>
+        <td>Invoices</td>
+        <td>View PENDING</td>
+        <td>Invoice in PENDING status</td>
+        <td>Open invoice detail</td>
+        <td>Approve button visible</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-091</td>
+        <td>Invoices</td>
+        <td>Approve</td>
+        <td>PENDING invoice</td>
+        <td>Click Approve</td>
+        <td>DAZZ ticket auto-created, supplier notified, status=APPROVED</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-092</td>
+        <td>Invoices</td>
+        <td>Mark Paid</td>
+        <td>APPROVED invoice</td>
+        <td>Click Mark Paid</td>
+        <td>Supplier notified, email sent, status=PAID</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-093</td>
+        <td>Invoices</td>
+        <td>Delete Request</td>
+        <td>Invoice in DELETE_REQUESTED status</td>
+        <td>Click Confirm Deletion</td>
+        <td>Cloudinary cleanup, linked ticket voided/deleted</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-094</td>
+        <td>Invoices</td>
+        <td>View PAID</td>
+        <td>Invoice in PAID status</td>
+        <td>Open invoice detail</td>
+        <td>"Factura cerrada" label, no action buttons</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-095</td>
+        <td>Invoices</td>
+        <td>Invalid Transition</td>
+        <td>Invoice in PAID status</td>
+        <td>Attempt to change status via API</td>
+        <td>400 with allowed transitions list</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-096</td>
+        <td>Invoices</td>
+        <td>Assign OC</td>
+        <td>OC_PENDING invoice</td>
+        <td>Search OC in autocomplete, select, confirm</td>
+        <td>OC assigned, project resolved, status changes to PENDING</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-097</td>
+        <td>Invoices</td>
+        <td>Assign OC</td>
+        <td>OC exists without linked project</td>
+        <td>Assign OC to invoice</td>
+        <td>OC assigned, project_id remains null</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-098</td>
+        <td>Invoices</td>
+        <td>OC Autocomplete</td>
+        <td>Multiple OCs exist</td>
+        <td>Type partial OC number</td>
+        <td>Debounced search, max 5+5 results returned</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Invite Supplier &amp; Notifications</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-099</td>
+        <td>Invite</td>
+        <td>Without OC</td>
+        <td>ADMIN on invite page</td>
+        <td>Enter new email, send invitation</td>
+        <td>Invitation created (72h expiry), email sent</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-100</td>
+        <td>Invite</td>
+        <td>Without OC</td>
+        <td>Email already registered</td>
+        <td>Enter existing supplier email</td>
+        <td>400 error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-101</td>
+        <td>Invite</td>
+        <td>Without OC</td>
+        <td>Active invitation exists for email</td>
+        <td>Send duplicate invitation</td>
+        <td>400 error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-102</td>
+        <td>Invite</td>
+        <td>With OC</td>
+        <td>ADMIN, valid OC data</td>
+        <td>Create OC + send invitation</td>
+        <td>Two-step: OC created, then invitation sent</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-103</td>
+        <td>Invite</td>
+        <td>With OC</td>
+        <td>OC number already exists</td>
+        <td>Create duplicate OC</td>
+        <td>400 error on OC creation step</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-104</td>
+        <td>Invite</td>
+        <td>With OC</td>
+        <td>NIF already has an OC</td>
+        <td>Create OC for existing NIF</td>
+        <td>Amber warning shown (non-blocking)</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-105</td>
+        <td>Invite</td>
+        <td>With OC</td>
+        <td>OC created but email fails</td>
+        <td>Submit invite with broken email</td>
+        <td>Error shown, OC still persists in DB</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-106</td>
+        <td>Notif</td>
+        <td>Mark Read</td>
+        <td>Unread notifications exist</td>
+        <td>Click on unread notification</td>
+        <td>Optimistic update, marked as read</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-107</td>
+        <td>Notif</td>
+        <td>Mark All</td>
+        <td>Multiple unread notifications</td>
+        <td>Click "Mark all as read"</td>
+        <td>Batch update, all marked read</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-108</td>
+        <td>Notif</td>
+        <td>Delete</td>
+        <td>Notification exists</td>
+        <td>Click delete on notification</td>
+        <td>Optimistic removal from list</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-109</td>
+        <td>Notif</td>
+        <td>Delete All Read</td>
+        <td>Read notifications exist</td>
+        <td>Click "Delete all read"</td>
+        <td>Batch removal of all read notifications</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-110</td>
+        <td>Notif</td>
+        <td>Navigate</td>
+        <td>Notification linked to invoice</td>
+        <td>Click notification</td>
+        <td>Navigate to relevant invoice/supplier detail</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-111</td>
+        <td>Notif</td>
+        <td>Polling</td>
+        <td>App open, new notification created server-side</td>
+        <td>Wait 30 seconds</td>
+        <td>Auto-refresh pulls new notification</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-112</td>
+        <td>Invoices</td>
+        <td>Reject Delete</td>
+        <td>Invoice in DELETE_REQUESTED</td>
+        <td>Click Reject Deletion</td>
+        <td>Invoice restored to previous status</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-113</td>
+        <td>Detail</td>
+        <td>Approve Data Change</td>
+        <td>Pending data change exists</td>
+        <td>Click Approve on data change banner</td>
+        <td>Supplier data updated with new values</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-114</td>
+        <td>Detail</td>
+        <td>Reject Data Change</td>
+        <td>Pending data change exists</td>
+        <td>Click Reject on data change banner</td>
+        <td>Pending change dismissed, original data retained</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-115</td>
+        <td>Detail</td>
+        <td>Approve IBAN Change</td>
+        <td>Pending IBAN change with cert</td>
+        <td>Review cert, click Approve</td>
+        <td>IBAN updated, cert marked verified</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ==================== APP 3 TESTS ==================== -->
+  <h3 class="app-title page-break" id="tests-app3">App 3: Portal Proveedores (T-116 &ndash; T-150)</h3>
+
+  <h3 class="module-title">Registration &amp; Login</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-116</td>
+        <td>Register</td>
+        <td>Full Flow</td>
+        <td>Valid invitation token</td>
+        <td>Click email link, fill all steps (company info, bank, password), submit</td>
+        <td>Account created, auto-login, redirect to home</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-117</td>
+        <td>Register</td>
+        <td>Expired Token</td>
+        <td>Token expired (&gt;72h)</td>
+        <td>Click expired email link</td>
+        <td>Dead-end screen with expired token message</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-118</td>
+        <td>Register</td>
+        <td>Used Token</td>
+        <td>Token already used</td>
+        <td>Click already-used link</td>
+        <td>Dead-end screen, cannot register</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-119</td>
+        <td>Register</td>
+        <td>Duplicate Email</td>
+        <td>Email already in system</td>
+        <td>Register with existing email</td>
+        <td>400 error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-120</td>
+        <td>Register</td>
+        <td>Duplicate NIF</td>
+        <td>NIF already in system</td>
+        <td>Register with existing NIF</td>
+        <td>400 error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-121</td>
+        <td>Register</td>
+        <td>IBAN + Cert</td>
+        <td>Valid token, step 2</td>
+        <td>Enter IBAN, upload bank certificate PDF</td>
+        <td>AI validates, warnings shown if any, proceeds to step 3</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-122</td>
+        <td>Register</td>
+        <td>IBAN No Cert</td>
+        <td>Valid token, step 2</td>
+        <td>Enter IBAN without uploading certificate</td>
+        <td>Error "Please upload a bank certificate"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-123</td>
+        <td>Register</td>
+        <td>Skip IBAN</td>
+        <td>Valid token, step 2</td>
+        <td>Leave IBAN empty, proceed</td>
+        <td>Validation skipped, goes to step 3</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-124</td>
+        <td>Register</td>
+        <td>Weak Password</td>
+        <td>Step 3 of registration</td>
+        <td>Enter "123" as password</td>
+        <td>Client-side validation blocks, error shown</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-125</td>
+        <td>Register</td>
+        <td>Password Mismatch</td>
+        <td>Step 3 of registration</td>
+        <td>Enter different passwords in both fields</td>
+        <td>Client-side error "Passwords don't match"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-126</td>
+        <td>Register</td>
+        <td>GDPR</td>
+        <td>Step 3, all fields valid</td>
+        <td>Submit without accepting GDPR</td>
+        <td>Error, cannot proceed</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-127</td>
+        <td>Register</td>
+        <td>NIF Auto-OC</td>
+        <td>NIF matches existing OC in system</td>
+        <td>Complete registration with matching NIF</td>
+        <td>OC auto-assigned to new supplier account</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-128</td>
+        <td>Register</td>
+        <td>Invalid IBAN</td>
+        <td>Step 2 of registration</td>
+        <td>Enter IBAN failing mod-97 check</td>
+        <td>400 IBAN format invalid</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-129</td>
+        <td>Login</td>
+        <td>Valid</td>
+        <td>Supplier account exists, active</td>
+        <td>Enter email + password, submit</td>
+        <td>Tokens stored, redirect to /</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-130</td>
+        <td>Login</td>
+        <td>Invalid</td>
+        <td>Supplier account exists</td>
+        <td>Enter wrong password</td>
+        <td>"Invalid email or password"</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-131</td>
+        <td>Login</td>
+        <td>Deactivated</td>
+        <td>Supplier account deactivated by admin</td>
+        <td>Attempt login with valid credentials</td>
+        <td>403 "Account deactivated"</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Invoices &amp; Upload</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-132</td>
+        <td>Invoices</td>
+        <td>View List</td>
+        <td>Supplier with invoices</td>
+        <td>Navigate to home/invoices</td>
+        <td>Invoice cards displayed with status pills</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-133</td>
+        <td>Invoices</td>
+        <td>Filter</td>
+        <td>Invoices with mixed statuses</td>
+        <td>Select status filter</td>
+        <td>API reload, filtered results shown</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-134</td>
+        <td>Invoices</td>
+        <td>View PDF</td>
+        <td>Invoice exists</td>
+        <td>Click invoice card</td>
+        <td>PDF viewer lightbox opens (Google Docs viewer)</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-135</td>
+        <td>Invoices</td>
+        <td>Empty</td>
+        <td>Supplier with no invoices</td>
+        <td>View invoices page</td>
+        <td>"No invoices" empty state</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-136</td>
+        <td>Invoices</td>
+        <td>Delete Request</td>
+        <td>PENDING invoice exists</td>
+        <td>Click delete, enter reason in modal, submit</td>
+        <td>status=DELETE_REQUESTED, reason saved</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-137</td>
+        <td>Invoices</td>
+        <td>Received</td>
+        <td>Autoinvoices exist for supplier</td>
+        <td>Navigate to received invoices tab</td>
+        <td>Cards with "Generated by DAZZ" label</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-138</td>
+        <td>Invoices</td>
+        <td>Download PDF</td>
+        <td>Autoinvoice exists</td>
+        <td>Click download on autoinvoice</td>
+        <td>Blob fetch + download trigger</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-139</td>
+        <td>Upload</td>
+        <td>Valid PDF</td>
+        <td>Supplier with IBAN, authenticated</td>
+        <td>Select PDF &lt;10MB, upload</td>
+        <td>AI extracts data, invoice created</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-140</td>
+        <td>Upload</td>
+        <td>Non-PDF</td>
+        <td>Supplier authenticated</td>
+        <td>Select .jpg file</td>
+        <td>Rejected client-side</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-141</td>
+        <td>Upload</td>
+        <td>Large File</td>
+        <td>Supplier authenticated</td>
+        <td>Select PDF &gt;10MB</td>
+        <td>Rejected client-side with size error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-142</td>
+        <td>Upload</td>
+        <td>No IBAN</td>
+        <td>Supplier without IBAN on profile</td>
+        <td>Navigate to upload page</td>
+        <td>Upload blocked, amber warning shown</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-143</td>
+        <td>Upload</td>
+        <td>AI Fail</td>
+        <td>Supplier authenticated, valid PDF</td>
+        <td>Upload PDF that AI cannot parse</td>
+        <td>422 extraction error</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-144</td>
+        <td>Upload</td>
+        <td>No OC Detected</td>
+        <td>PDF without OC number</td>
+        <td>Upload invoice</td>
+        <td>Invoice created with status=OC_PENDING</td>
+        <td><span class="badge badge-edge">Edge</span></td>
+      </tr>
+      <tr>
+        <td>T-145</td>
+        <td>Upload</td>
+        <td>Rate Limit</td>
+        <td>10+ uploads in last hour</td>
+        <td>Upload another invoice</td>
+        <td>429 rate limit error</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 class="module-title">Profile &amp; Notifications</h3>
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">Module</th>
+        <th style="width:120px">Flow</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-146</td>
+        <td>Profile</td>
+        <td>View</td>
+        <td>Supplier authenticated</td>
+        <td>Navigate to /profile</td>
+        <td>Read-only data displayed correctly</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-147</td>
+        <td>Profile</td>
+        <td>Edit Data</td>
+        <td>Supplier on profile page</td>
+        <td>Click edit, change fields, submit</td>
+        <td>Change request submitted, admin notified</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-148</td>
+        <td>Profile</td>
+        <td>Change IBAN</td>
+        <td>Supplier authenticated</td>
+        <td>Enter valid IBAN + upload cert PDF, submit</td>
+        <td>Submitted for admin review</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+      <tr>
+        <td>T-149</td>
+        <td>Profile</td>
+        <td>Change IBAN</td>
+        <td>Invalid IBAN format</td>
+        <td>Enter IBAN failing mod-97, submit</td>
+        <td>400 IBAN format invalid</td>
+        <td><span class="badge badge-error">Error</span></td>
+      </tr>
+      <tr>
+        <td>T-150</td>
+        <td>Profile</td>
+        <td>Deactivation</td>
+        <td>Supplier authenticated</td>
+        <td>Click Request Deactivation, enter reason, submit</td>
+        <td>Request submitted, admin notified</td>
+        <td><span class="badge badge-happy">Happy</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ==================== SECURITY TESTS ==================== -->
+  <h3 class="app-title page-break" id="tests-security">Cross-App Security Tests (T-151 &ndash; T-172)</h3>
+
+  <div class="table-wrapper">
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th style="width:60px">ID</th>
+        <th style="width:80px">App</th>
+        <th style="width:120px">Category</th>
+        <th style="width:160px">Precondition</th>
+        <th>Steps</th>
+        <th>Expected Result</th>
+        <th style="width:70px">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T-151</td>
+        <td>All</td>
+        <td>JWT Forgery</td>
+        <td>No authentication</td>
+        <td>Send request with forged/modified JWT token</td>
+        <td>401 Unauthorized, request rejected</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-152</td>
+        <td>All</td>
+        <td>Missing Auth</td>
+        <td>No authentication</td>
+        <td>Access any protected endpoint without Authorization header</td>
+        <td>401 Unauthorized</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-153</td>
+        <td>App 1</td>
+        <td>Privilege Escalation</td>
+        <td>WORKER user</td>
+        <td>Call ADMIN-only endpoint (e.g., /users POST)</td>
+        <td>403 Forbidden</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-154</td>
+        <td>App 1</td>
+        <td>IDOR - Projects</td>
+        <td>WORKER user</td>
+        <td>Access /projects/:id where id belongs to another user</td>
+        <td>403 Forbidden</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-155</td>
+        <td>App 1</td>
+        <td>IDOR - Tickets</td>
+        <td>WORKER user</td>
+        <td>Access /tickets/:id where ticket belongs to another user's project</td>
+        <td>403 Forbidden</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-156</td>
+        <td>App 1</td>
+        <td>BOSS Cross-Company</td>
+        <td>BOSS of Company A</td>
+        <td>Access project of Company B via direct URL</td>
+        <td>403 Forbidden</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-157</td>
+        <td>App 1</td>
+        <td>File Upload Ext</td>
+        <td>Authenticated user</td>
+        <td>Upload file with double extension (invoice.pdf.exe)</td>
+        <td>Rejected by extension check</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-158</td>
+        <td>App 1</td>
+        <td>Path Traversal</td>
+        <td>Authenticated user</td>
+        <td>Upload file named "../../../etc/passwd"</td>
+        <td>Filename sanitized, attack neutralized</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-159</td>
+        <td>App 1</td>
+        <td>Brute Force Login</td>
+        <td>Valid account exists</td>
+        <td>Attempt 6+ logins with wrong password</td>
+        <td>Account locked after 5 attempts</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-160</td>
+        <td>App 1</td>
+        <td>Token Reuse</td>
+        <td>Set-password token used</td>
+        <td>Reuse same token URL</td>
+        <td>400 "Token invalido, expirado o ya usado"</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-161</td>
+        <td>App 1</td>
+        <td>Email Enumeration</td>
+        <td>Forgot password page</td>
+        <td>Submit existing vs non-existing email, compare responses</td>
+        <td>Identical response for both (no enumeration)</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-162</td>
+        <td>App 3</td>
+        <td>Deactivated Access</td>
+        <td>Supplier deactivated by admin</td>
+        <td>Try to access API with old tokens</td>
+        <td>403, tokens invalidated</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-163</td>
+        <td>App 3</td>
+        <td>Invitation Replay</td>
+        <td>Invitation token already used</td>
+        <td>Reuse registration link</td>
+        <td>Dead-end, cannot register again</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-164</td>
+        <td>App 3</td>
+        <td>Upload Rate Limit</td>
+        <td>Supplier authenticated</td>
+        <td>Upload 11+ invoices within 1 hour</td>
+        <td>429 after 10th upload</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-165</td>
+        <td>App 2</td>
+        <td>Invoice State Machine</td>
+        <td>Invoice in PAID status</td>
+        <td>Try to approve again via API</td>
+        <td>400 invalid transition</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-166</td>
+        <td>App 1</td>
+        <td>SQL Injection</td>
+        <td>Authenticated user</td>
+        <td>Enter SQL in search/filter parameters</td>
+        <td>Parameterized queries prevent injection</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-167</td>
+        <td>App 1</td>
+        <td>XSS</td>
+        <td>Authenticated user</td>
+        <td>Enter &lt;script&gt; in project name, ticket notes, etc.</td>
+        <td>HTML escaped on render, script not executed</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-168</td>
+        <td>App 1</td>
+        <td>Double Close Race</td>
+        <td>Open project</td>
+        <td>Two simultaneous close requests</td>
+        <td>SELECT FOR UPDATE ensures only one succeeds, other gets 409</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-169</td>
+        <td>App 3</td>
+        <td>Supplier IDOR</td>
+        <td>Supplier A authenticated</td>
+        <td>Try to access Supplier B's invoices via direct API call</td>
+        <td>403 or 404, no data leak</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-170</td>
+        <td>App 1</td>
+        <td>Password Policy</td>
+        <td>Set-password page</td>
+        <td>Enter "aaaaAAAA1" (no special char)</td>
+        <td>422 validation error requiring special character</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-171</td>
+        <td>App 1</td>
+        <td>Forgot Password Rate</td>
+        <td>Login page</td>
+        <td>Submit 4+ forgot password requests in 1 hour</td>
+        <td>429 rate limit on 4th request</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+      <tr>
+        <td>T-172</td>
+        <td>App 3</td>
+        <td>IBAN Mod-97</td>
+        <td>Registration or profile edit</td>
+        <td>Enter IBAN with invalid check digits</td>
+        <td>400 validation error, not persisted</td>
+        <td><span class="badge badge-security">Security</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+</div><!-- end section 2 -->
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<!-- SECTION 3 — FINDINGS                                          -->
+<!-- ============================================================ -->
+<div class="section page-break" id="section3">
+  <h2 class="section-title">Section 3 &mdash; Suggestions &amp; Findings</h2>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Findings</div>
+      <div class="kpi-value">15</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">High Severity</div>
+      <div class="kpi-value">3</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Medium Severity</div>
+      <div class="kpi-value">7</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Low Severity</div>
+      <div class="kpi-value">5</div>
+    </div>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-001</span>
+    <div class="finding-title">Missing 404 Route in Main App</div>
+    <div class="finding-desc">DAZZ Producciones has no catch-all route in the React Router configuration. Navigating to any undefined path (e.g., /nonexistent) renders a blank page with no feedback. A wildcard route redirecting to /dashboard or showing a "Page Not Found" component should be added.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-002</span>
+    <div class="finding-title">Login Page Does Not Redirect Authenticated Users</div>
+    <div class="finding-desc">A user who is already logged in and visits /login sees the login form instead of being redirected to /dashboard. This creates confusion. The Login page should check AuthContext and redirect if tokens are present.</div>
+    <span class="finding-severity sev-low">LOW</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-003</span>
+    <div class="finding-title">Users Page Missing Loading State on Action Buttons</div>
+    <div class="finding-desc">The Create, Edit, and Delete buttons on the Users management page do not show loading states during API calls. This allows double-clicking to trigger duplicate requests, potentially creating duplicate users or sending double delete requests.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-004</span>
+    <div class="finding-title">Drop Zone Accepts Any File Type on Drag</div>
+    <div class="finding-desc">The ticket upload drop zone visually indicates only JPG/PNG/PDF are accepted, but the drag-and-drop handler does not filter by file type on the client side. Non-supported files are sent to the backend which rejects them, but the UX would be better with client-side validation on drop.</div>
+    <span class="finding-severity sev-low">LOW</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-005</span>
+    <div class="finding-title">EditData Page Silently Swallows Non-401 Errors</div>
+    <div class="finding-desc">In the Supplier Portal, the EditData page catches all errors but only handles 401 (redirect to login). For any other error (400, 500, network), the user receives no feedback. A toast notification should be shown for non-401 errors.</div>
+    <span class="finding-severity sev-high">HIGH</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-006</span>
+    <div class="finding-title">Notifications Mark-Read Has No Error Handling</div>
+    <div class="finding-desc">In the Supplier Portal, the mark-as-read function uses an optimistic update but has no .catch() handler. If the API call fails, the UI shows the notification as read but it remains unread server-side. On next reload it reappears as unread, confusing the user.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-007</span>
+    <div class="finding-title">Dashboard and Layout API Failures Are Silent</div>
+    <div class="finding-desc">When the Admin Proveedores dashboard or Layout component fails to load data from the API, no error indication is shown to the user. KPIs display 0 and feeds appear empty, which is indistinguishable from "no data" state. A connection error banner would improve clarity.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-008</span>
+    <div class="finding-title">ProjectCloseReview Still Uses window.confirm</div>
+    <div class="finding-desc">The project close confirmation uses the browser's native window.confirm() dialog, which is inconsistent with the ConfirmDialog component used elsewhere in the app. This breaks the visual consistency and dark theme experience.</div>
+    <span class="finding-severity sev-low">LOW</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-009</span>
+    <div class="finding-title">beforeunload in ReviewTicket May False-Positive</div>
+    <div class="finding-desc">The unsaved changes detection in ReviewTicket uses JSON.stringify to compare current state vs. original. Floating-point arithmetic can cause false positives (e.g., 10.1 + 10.2 = 20.299999... vs 20.3) triggering the "unsaved changes" warning even when data is unchanged.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-010</span>
+    <div class="finding-title">No Rate Limiting Feedback on Login in Frontend</div>
+    <div class="finding-desc">The backend correctly implements a 5-attempt lockout, but the frontend does not show a countdown or remaining attempts indicator. Users see the generic "Account temporarily locked" message with no guidance on when they can retry.</div>
+    <span class="finding-severity sev-low">LOW</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-011</span>
+    <div class="finding-title">Supplier Upload Block References Email Instead of Self-Service</div>
+    <div class="finding-desc">When a supplier without an IBAN tries to upload an invoice, the blocking message references contacting via email. Since the portal has a self-service IBAN change feature in the Profile section, the message should direct users there instead.</div>
+    <span class="finding-severity sev-low">LOW</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-012</span>
+    <div class="finding-title">InvoicesList Load Failure Is Completely Silent</div>
+    <div class="finding-desc">When the supplier portal's invoice list fails to load (API error, network issue), no error toast or message is shown. The user sees an empty list identical to "no invoices" state. This can mislead suppliers into thinking they have no invoices.</div>
+    <span class="finding-severity sev-high">HIGH</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-013</span>
+    <div class="finding-title">OCSelector Shows Empty List When All Prefixes Inactive</div>
+    <div class="finding-desc">In the OCSelector component, if all OC prefixes for a company are inactive, step 2 of the OC creation flow shows an empty list with no guidance. The user is stuck with no way to proceed or understand why no options are available.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-014</span>
+    <div class="finding-title">Statistics PDF Export Limited to International Data Only</div>
+    <div class="finding-desc">The PDF export in Statistics only generates the international data section. There is no full-report export option covering all KPIs, quarterly breakdowns, and country data. Users who want a complete statistics report must take screenshots or manually compile data.</div>
+    <span class="finding-severity sev-medium">MEDIUM</span>
+  </div>
+
+  <div class="finding-card">
+    <span class="finding-id">F-015</span>
+    <div class="finding-title">Concurrent Autoinvoice Generation Not Blocked in UI</div>
+    <div class="finding-desc">While the backend uses SELECT FOR UPDATE to prevent duplicate autoinvoice numbers, the frontend does not disable the Generate button during the API request. A fast double-click could submit two requests. The backend will reject the second, but the error handling creates an unnecessary user experience issue.</div>
+    <span class="finding-severity sev-high">HIGH</span>
+  </div>
+
+</div><!-- end section 3 -->
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                        -->
+<!-- ============================================================ -->
+<div class="doc-footer">
+  <p>DAZZ Producciones &mdash; QA Testing Plan v1.0 &mdash; 2026-03-30</p>
+  <p>Generated for internal quality assurance. Confidential.</p>
+  <p style="margin-top:8px; color: var(--zinc-700);">Apps: DAZZ Producciones | Admin Proveedores | Portal Proveedores</p>
+</div>
+
+</div><!-- end container -->
+</body>
+</html>

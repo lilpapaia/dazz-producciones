@@ -28,7 +28,26 @@
       "WebFetch(domain:dazzsuppliers.vercel.app)",
       "Bash(ls:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(find C:UserslilpaOneDriveEscritoriodazz-produccionesfrontend-supplierssrc -type f \\\\\\(-name *.jsx -o -name *.js -o -name *.json -o -name *.css \\\\\\))",
+      "Bash(wc -l C:/Users/lilpa/OneDrive/Escritorio/dazz-producciones/frontend/src/pages/*.jsx)",
+      "Bash(wc -l C:/Users/lilpa/OneDrive/Escritorio/dazz-producciones/frontend/src/components/*.jsx)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(wc:*)",
+      "Bash(done)",
+      "Bash(while read:*)",
+      "Bash(do echo:*)",
+      "Bash(python3 -m py_compile \"$f\")",
+      "Bash(for f:*)",
+      "Bash(do basename:*)",
+      "Bash(sed 's/@router//')",
+      "Bash(find /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones -type f \\\\\\(-name *.bak -o -name *.old -o -name *.backup -o -name *.tmp -o -name *.log \\\\\\))",
+      "Bash(find /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones/backend/app -type f \\\\\\(-name *.py \\\\\\))"
     ]
   }
 }
