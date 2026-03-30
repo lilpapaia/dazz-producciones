@@ -437,6 +437,7 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 ## 🔧 Bugs pendientes
 
 - [x] **BUG-25:** IA rechaza OCs válidos → allowExisting prop en OCSelector (2026-03-30)
+- [ ] **BUG-28:** TicketResponse.date tiene min_length=1 pero error tickets guardan date="" → falla validación Pydantic. Fix: min_length=0 o Optional en schemas.py TicketBase.date
 - [x] **Race condition autofactura:** SELECT FOR UPDATE en invoice_number (2026-03-29)
 - [x] **Cloudinary síncrono autoinvoice:** asyncio.to_thread (2026-03-29)
 - [x] **register_supplier() 3 commits:** flush + 1 commit atómico (2026-03-29)
