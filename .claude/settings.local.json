@@ -47,7 +47,8 @@
       "Bash(do basename:*)",
       "Bash(sed 's/@router//')",
       "Bash(find /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones -type f \\\\\\(-name *.bak -o -name *.old -o -name *.backup -o -name *.tmp -o -name *.log \\\\\\))",
-      "Bash(find /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones/backend/app -type f \\\\\\(-name *.py \\\\\\))"
+      "Bash(find /c/Users/lilpa/OneDrive/Escritorio/dazz-producciones/backend/app -type f \\\\\\(-name *.py \\\\\\))",
+      "Bash(git check-ignore:*)"
     ]
   }
 }
