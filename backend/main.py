@@ -259,6 +259,12 @@ async def startup_event():
             # #44: Geo indexes for statistics queries
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_is_foreign ON tickets (is_foreign)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_geo_classification ON tickets (geo_classification)"))
+            # Q3: Company invoice prefix for autoinvoice
+            conn.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS invoice_prefix VARCHAR(20)"))
+            conn.execute(text("UPDATE companies SET invoice_prefix = 'DAZZMG' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DAZZLE MGMT%'"))
+            conn.execute(text("UPDATE companies SET invoice_prefix = 'DAZZAG' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DAZZLE AGENCY%'"))
+            conn.execute(text("UPDATE companies SET invoice_prefix = 'DASSAD' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DIGITAL ADVERTISING%'"))
+            conn.execute(text("UPDATE companies SET invoice_prefix = 'DAZZCR' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DAZZ CREATIVE%'"))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")

@@ -59,18 +59,8 @@ async def get_next_invoice_number(
         except (ValueError, IndexError):
             pass
 
-    # Build prefix from company name
-    name_upper = company.name.upper()
-    if "DAZZLE MGMT" in name_upper:
-        prefix = "DAZZMG"
-    elif "DAZZLE AGENCY" in name_upper:
-        prefix = "DAZZAG"
-    elif "DIGITAL ADVERTISING" in name_upper:
-        prefix = "DASSAD"
-    elif "DAZZ CREATIVE" in name_upper:
-        prefix = "DAZZCR"
-    else:
-        prefix = "DAZZ"
+    # Build prefix from company (DB field with fallback)
+    prefix = company.invoice_prefix or re.sub(r'[^A-Z]', '', company.name.upper())[:6] or "DAZZ"
 
     invoice_number = f"{prefix}-{year}-{next_seq:03d}"
 

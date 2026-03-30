@@ -29,7 +29,7 @@ const AutoInvoice = () => {
   const [baseAmount, setBaseAmount] = useState('');
   const [ivaPercent, setIvaPercent] = useState('21');
   const [irpfPercent, setIrpfPercent] = useState('0');
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }));
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [ocNumber, setOcNumber] = useState('');
 

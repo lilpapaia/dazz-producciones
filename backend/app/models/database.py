@@ -34,8 +34,9 @@ class Company(Base):
     name = Column(String, unique=True, nullable=False, index=True)
     cif = Column(String, nullable=True)
     address = Column(Text, nullable=True)
+    invoice_prefix = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
+
     # Relaciones
     users = relationship("User", secondary="user_companies", back_populates="companies")
     projects = relationship("Project", back_populates="owner_company")

@@ -21,22 +21,7 @@ class TicketType(str, Enum):
     TICKET = "ticket"
     FACTURA = "factura"
 
-# ============================================
-# DEUDA-M2: Validación de contraseña compartida
-# ============================================
-
-def _validate_password_strength(v: str) -> str:
-    """Validación centralizada de fortaleza de contraseña.
-    Usada por UserCreate y SetPasswordRequest."""
-    if len(v) < 8:
-        raise ValueError('La contraseña debe tener al menos 8 caracteres')
-    if not re.search(r'[A-Z]', v):
-        raise ValueError('La contraseña debe contener al menos una mayúscula')
-    if not re.search(r'[0-9]', v):
-        raise ValueError('La contraseña debe contener al menos un número')
-    if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:\'",.<>?/\\`~]', v):
-        raise ValueError('La contraseña debe contener al menos un símbolo especial')
-    return v
+from app.services.password_validator import validate_password_strength as _validate_password_strength
 
 
 # ============================================

@@ -176,16 +176,8 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
-        """SEC-C4: Alineado con UserCreate del sistema principal (schemas.py)"""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[0-9]", v):
-            raise ValueError("Password must contain at least one number")
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_+=\[\]\\;'/`~]", v):
-            raise ValueError("Password must contain at least one special character")
-        return v
+        from app.services.password_validator import validate_password_strength
+        return validate_password_strength(v, lang="en")
 
 
 class RegisterResponse(BaseModel):

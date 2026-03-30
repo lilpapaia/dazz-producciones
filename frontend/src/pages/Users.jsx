@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import useEscapeKey from '../hooks/useEscapeKey';
 import CompanyMultiSelect from '../components/CompanyMultiSelect';
 import StatusBadge from '../components/common/StatusBadge';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -16,6 +17,7 @@ const Users = () => {
   const [showEdit, setShowEdit] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editInitial, setEditInitial] = useState(null);
+  const [deleteUserId, setDeleteUserId] = useState(null);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -100,8 +102,7 @@ const Users = () => {
   };
 
   const handleDelete = async (userId) => {
-    if (!confirm('¿Eliminar este usuario?')) return;
-    
+    setDeleteUserId(null);
     try {
       await deleteUser(userId);
       await loadData(); // Recargar lista
@@ -497,7 +498,7 @@ const Users = () => {
                       <Edit className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(user.id)}
+                      onClick={() => setDeleteUserId(user.id)}
                       className="p-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors border border-red-900/30"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -509,6 +510,17 @@ const Users = () => {
           ))}
         </div>
       </main>
+
+      <ConfirmDialog
+        isOpen={!!deleteUserId}
+        onClose={() => setDeleteUserId(null)}
+        onConfirm={() => handleDelete(deleteUserId)}
+        title="¿Eliminar usuario?"
+        message="Esta acción eliminará al usuario de forma permanente. No se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   );
 };
