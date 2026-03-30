@@ -6,6 +6,7 @@
 > **Auditoría calidad v4:** 2026-03-29 (4 agentes, dead code + calidad + consistencia)
 > **Plan QA exhaustivo:** 2026-03-30 (172 test cases, 210+ salidas, 15 hallazgos UX)
 > **Sistema OCs:** 2026-03-28 (tabla oc_prefixes + OCSelector componente)
+> **Pytest suite:** 2026-03-30 (301 tests, 298 passed, 15 módulos, mocks completos)
 > **Última actualización:** 2026-03-30
 
 ---
@@ -410,15 +411,25 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 - [x] **docs/DAZZ_QA_Testing_Plan.html** — 172 test cases, 32 flujos, 210+ salidas posibles
 - [x] Cubre las 3 apps: DAZZ Producciones (70), Admin Proveedores (45), Portal (35), Seguridad (22)
 
-### Backend tests (pytest)
-- [x] Setup pytest + conftest.py + fixtures (11 archivos en `backend/tests/`)
-- [ ] **Verificar cobertura real y ejecutar tests** (Esfuerzo: 🔨 2h | ROI: ⭐⭐⭐⭐⭐)
-- [ ] **Auth:** login, JWT, refresh tokens, permisos
-- [ ] **IA extracción:** mock Claude API, validación datos
-- [ ] **Cierre proyectos:** Excel generación (BytesIO), emails
-- [ ] **Moneda:** tasa cambio, conversión EUR, geo classification
-- [ ] **Companies:** permisos multi-tenant
-- [ ] Target: 70%+ coverage crítico
+### ✅ Backend tests (pytest) — 301 tests, 298 passed (2026-03-30)
+- [x] Setup pytest + conftest.py + fixtures (15 archivos en `backend/tests/`)
+- [x] **Auth:** login, JWT, refresh tokens, permisos, lockout, logout (27 tests)
+- [x] **Proyectos:** CRUD, permisos, cierre, reopen, delete (24 tests)
+- [x] **Tickets:** CRUD + upload completo con mocks Claude/Cloudinary/exchange rate (27 tests)
+- [x] **Roles:** RBAC admin/boss/worker (24 tests)
+- [x] **Seguridad:** JWT, passwords, headers, error safety (33 tests)
+- [x] **Estadísticas:** available-years, overview, monthly, distribution, breakdown (17 tests)
+- [x] **Usuarios:** CRUD, permisos, self-deletion (18 tests)
+- [x] **Empresas:** GET companies, permisos multi-tenant (9 tests)
+- [x] **Schemas:** validaciones Pydantic (29 tests)
+- [x] **Permisos:** can_access/can_modify service layer (16 tests)
+- [x] **Admin proveedores:** dashboard, lista, detalle, facturas, invitaciones, OCs, notificaciones (30 tests)
+- [x] **Portal proveedores:** registro, login, perfil, facturas, summary, account actions (24 tests)
+- [x] **Autofactura:** next-number, search, generate, preview, duplicados (10 tests)
+- [x] **Regresión:** flujos existentes post-cambios (13 tests)
+- [x] **Mocks centralizados:** Claude AI (5 variantes), Cloudinary, R2, exchange rate, email, autoinvoice PDF
+- [ ] **test_ocs.py:** tests específicos de OC prefixes (pendiente)
+- [ ] **GitHub Actions:** CI/CD automático en push
 
 ### Frontend tests (Playwright)
 - [ ] **Tests E2E** — Seguir plan en DAZZ_QA_Testing_Plan.html
