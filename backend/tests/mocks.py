@@ -92,9 +92,77 @@ def mock_email_send(*args, **kwargs):
     pass
 
 
+def mock_r2_upload(*args, **kwargs):
+    """Mock R2 bank cert upload — returns fake key."""
+    return "dazz-suppliers/certs/test/cert_test.pdf"
+
+
+def mock_r2_get_url(*args, **kwargs):
+    """Mock R2 signed URL — returns fake URL."""
+    return "https://r2.test.com/signed/cert_test.pdf?token=fake"
+
+
+def mock_r2_delete(*args, **kwargs):
+    """Mock R2 delete — no-op."""
+    pass
+
+
+def mock_supplier_ai_extraction(*args, **kwargs):
+    """Mock supplier invoice AI extraction."""
+    return {
+        "provider_name": "Test Supplier SL",
+        "date": "15/01/2026",
+        "invoice_number": "SUP-2026-099",
+        "oc_number": "OC-TEST001",
+        "base_amount": 500.0,
+        "iva_percentage": 21.0,
+        "iva_amount": 105.0,
+        "irpf_percentage": 0.0,
+        "irpf_amount": 0.0,
+        "final_total": 605.0,
+        "currency": "EUR",
+        "nif_cif": "B11223344",
+        "iban": "ES7921000813610123456789",
+    }
+
+
+def mock_supplier_ai_validation_success(*args, **kwargs):
+    """Mock supplier invoice validation — all valid."""
+    return {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "oc_status": "FOUND",
+        "company_id": 1,
+        "project_id": None,
+        "iban_match": True,
+    }
+
+
+def mock_autoinvoice_pdf(*args, **kwargs):
+    """Mock PDF generation — returns fake bytes."""
+    return b"%PDF-1.4 fake autoinvoice content"
+
+
 # Common patch targets for tickets upload flow
 UPLOAD_PATCHES = {
     "cloudinary": "app.routes.tickets.upload_ticket_file",
     "claude_ai": "app.routes.tickets.extract_ticket_data",
     "exchange_rate": "app.routes.tickets.get_historical_exchange_rate",
+}
+
+# Patch targets for supplier portal upload flow
+SUPPLIER_UPLOAD_PATCHES = {
+    "extract": "app.routes.supplier_portal.extract_supplier_invoice",
+    "validate": "app.routes.supplier_portal.validate_supplier_invoice",
+    "save_pdf": "app.routes.supplier_portal.save_invoice_pdf",
+    "save_cert": "app.routes.supplier_portal.save_bank_cert",
+    "get_cert_url": "app.routes.supplier_portal.get_bank_cert_url",
+}
+
+# Patch targets for autoinvoice flow
+AUTOINVOICE_PATCHES = {
+    "pdf_gen": "app.routes.autoinvoice.generate_autoinvoice_pdf",
+    "cloudinary": "cloudinary.uploader.upload",
+    "email": "app.routes.autoinvoice.send_autoinvoice_notification",
 }

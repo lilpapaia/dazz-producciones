@@ -25,8 +25,14 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.models.database import Base, User, Company, UserCompany, Project, Ticket, ProjectStatus
-import app.models.suppliers  # Register supplier tables in Base.metadata for create_all
+from app.models.suppliers import (
+    Supplier, SupplierInvoice, SupplierOC, SupplierInvitation,
+    SupplierNotification, SupplierRefreshToken,
+    SupplierStatus, InvoiceStatus, NotificationRecipientType, NotificationEventType,
+)
 from app.services.auth import get_password_hash, create_access_token
+from app.services.supplier_auth import get_password_hash as supplier_hash, create_supplier_access_token
+from app.services.encryption import encrypt_iban
 
 
 # ============================================
@@ -365,6 +371,100 @@ def ticket_nacional(db_session, project_dazz):
     db_session.commit()
     db_session.refresh(ticket)
     return ticket
+
+
+# ============================================
+# SUPPLIER FIXTURES
+# ============================================
+
+@pytest.fixture
+def supplier_user(db_session):
+    """Proveedor activo con IBAN encriptado."""
+    import hashlib
+    email = "supplier@test.dazz.com"
+    supplier = Supplier(
+        name="Test Supplier SL",
+        email=email,
+        email_hash=hashlib.sha256(email.encode()).hexdigest(),
+        hashed_password=supplier_hash("TestSupplier123!"),
+        nif_cif="B11223344",
+        phone="+34600111222",
+        address="Calle Test 1, Madrid",
+        iban_encrypted=encrypt_iban("ES7921000813610123456789"),
+        status=SupplierStatus.ACTIVE,
+        is_active=True,
+        gdpr_consent=True,
+    )
+    db_session.add(supplier)
+    db_session.commit()
+    db_session.refresh(supplier)
+    return supplier
+
+
+@pytest.fixture
+def supplier_token(supplier_user):
+    """JWT válido para proveedor."""
+    return create_supplier_access_token(supplier_user.id, supplier_user.email)
+
+
+@pytest.fixture
+def supplier_invitation(db_session, admin_user):
+    """Invitación válida (72h) para tests de registro."""
+    from datetime import datetime, timedelta, timezone
+    inv = SupplierInvitation(
+        email="newinvite@test.com",
+        name="Invited Supplier",
+        token="valid-invite-token-123",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=72),
+        invited_by=admin_user.id,
+    )
+    db_session.add(inv)
+    db_session.commit()
+    db_session.refresh(inv)
+    return inv
+
+
+@pytest.fixture
+def supplier_invoice(db_session, supplier_user, company_dazz):
+    """Factura de proveedor en estado PENDING."""
+    inv = SupplierInvoice(
+        supplier_id=supplier_user.id,
+        invoice_number="SUP-2026-001",
+        date="15/01/2026",
+        provider_name=supplier_user.name,
+        nif_cif=supplier_user.nif_cif,
+        oc_number="OC-TEST001",
+        company_id=company_dazz.id,
+        base_amount=500.0,
+        iva_percentage=21.0,
+        iva_amount=105.0,
+        irpf_percentage=0.0,
+        irpf_amount=0.0,
+        final_total=605.0,
+        currency="EUR",
+        is_foreign=False,
+        file_url="https://res.cloudinary.com/test/raw/upload/v1/invoice.pdf",
+        status=InvoiceStatus.PENDING,
+    )
+    db_session.add(inv)
+    db_session.commit()
+    db_session.refresh(inv)
+    return inv
+
+
+@pytest.fixture
+def supplier_oc(db_session, company_dazz):
+    """OC permanente para tests."""
+    oc = SupplierOC(
+        oc_number="OC-MGMTINT2026001",
+        talent_name="Test Talent",
+        nif_cif="X1234567A",
+        company_id=company_dazz.id,
+    )
+    db_session.add(oc)
+    db_session.commit()
+    db_session.refresh(oc)
+    return oc
 
 
 @pytest.fixture
