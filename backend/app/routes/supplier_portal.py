@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import hashlib
 
@@ -155,6 +155,16 @@ async def register_supplier(
     )
     db.add(supplier)
     db.flush()
+
+    # F-016: Link orphan IA_REJECTED notifications from validate-bank-cert
+    # (created before supplier existed, so supplier_id was None)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
+    db.query(SupplierNotification).filter(
+        SupplierNotification.event_type == NotificationEventType.IA_REJECTED,
+        SupplierNotification.related_supplier_id == None,
+        SupplierNotification.created_at >= cutoff,
+        SupplierNotification.message.contains(invitation.email),
+    ).update({"related_supplier_id": supplier.id}, synchronize_session=False)
 
     # Notifications (before commit — atomic with supplier creation)
     if body.iban:

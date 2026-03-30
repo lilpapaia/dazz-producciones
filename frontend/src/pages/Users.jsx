@@ -18,6 +18,7 @@ const Users = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [editInitial, setEditInitial] = useState(null);
   const [deleteUserId, setDeleteUserId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -50,6 +51,7 @@ const Users = () => {
   };
 
   const handleCreate = async () => {
+    setSubmitting(true);
     try {
       await registerUser(newUser);
       
@@ -75,10 +77,13 @@ const Users = () => {
       const detail = error.response?.data?.detail;
       const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : error.message);
       showError('Error al crear usuario: ' + msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleEdit = async () => {
+    setSubmitting(true);
     try {
       const payload = { ...editingUser };
       if (!payload.password || !payload.password.trim()) delete payload.password;
@@ -98,20 +103,25 @@ const Users = () => {
       const detail = error.response?.data?.detail;
       const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : error.message);
       showError('Error al actualizar usuario: ' + msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async (userId) => {
     setDeleteUserId(null);
+    setSubmitting(true);
     try {
       await deleteUser(userId);
-      await loadData(); // Recargar lista
+      await loadData();
       showSuccess('Usuario eliminado correctamente');
     } catch (error) {
       console.error('Error deleting user:', error);
       const detail = error.response?.data?.detail;
       const msg = Array.isArray(detail) ? detail.map(d => d.msg || d).join(', ') : (typeof detail === 'string' ? detail : error.message);
       showError('Error al eliminar usuario: ' + msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -307,11 +317,11 @@ const Users = () => {
                 </button>
                 <button
                   onClick={handleCreate}
-                  disabled={!newUser.name || !newUser.email || !newUser.username || newUser.company_ids.length === 0}
+                  disabled={!newUser.name || !newUser.email || !newUser.username || newUser.company_ids.length === 0 || submitting}
                   className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
                 >
-                  Crear Usuario
+                  {submitting ? 'Guardando...' : 'Crear Usuario'}
                 </button>
               </div>
             </div>
@@ -432,11 +442,11 @@ const Users = () => {
                   </button>
                   <button
                     onClick={handleEdit}
-                    disabled={!editingUser.name || !editingUser.email || !editingUser.username || !editHasChanges()}
+                    disabled={!editingUser.name || !editingUser.email || !editingUser.username || !editHasChanges() || submitting}
                     className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     type="button"
                   >
-                    Guardar Cambios
+                    {submitting ? 'Guardando...' : 'Guardar Cambios'}
                   </button>
                 </div>
               </div>
@@ -499,7 +509,8 @@ const Users = () => {
                     </button>
                     <button
                       onClick={() => setDeleteUserId(user.id)}
-                      className="p-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors border border-red-900/30"
+                      disabled={submitting}
+                      className={`p-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-sm transition-colors border border-red-900/30 ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

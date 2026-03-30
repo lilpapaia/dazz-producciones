@@ -68,10 +68,27 @@ const ReviewTicket = () => {
   // UX-L1: Sync ticket ref for stable beforeunload listener
   useEffect(() => { ticketRef.current = ticket; }, [ticket]);
 
+  // F-009: Compare with numeric tolerance to avoid float false-positives
+  const NUMERIC_FIELDS = ['base_amount', 'iva_amount', 'irpf_amount', 'total_with_iva', 'final_total'];
+  const hasUnsavedChanges = () => {
+    if (!ticketRef.current || !initialTicketRef.current) return false;
+    const initial = JSON.parse(initialTicketRef.current);
+    const current = ticketRef.current;
+    for (const key of Object.keys(current)) {
+      const a = initial[key], b = current[key];
+      if (NUMERIC_FIELDS.includes(key)) {
+        if (Math.abs((Number(a) || 0) - (Number(b) || 0)) > 0.01) return true;
+      } else {
+        if (JSON.stringify(a) !== JSON.stringify(b)) return true;
+      }
+    }
+    return false;
+  };
+
   // UX-L1: Avisar si hay cambios sin guardar al cerrar/navegar
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (ticketRef.current && initialTicketRef.current && JSON.stringify(ticketRef.current) !== initialTicketRef.current) {
+      if (hasUnsavedChanges()) {
         e.preventDefault();
         e.returnValue = '';
       }

@@ -35,6 +35,19 @@ const AutoInvoice = lazy(() => import('./pages/suppliers/AutoInvoice'));
 // PWA Components
 import { PWAUpdatePrompt, PWAInstallPrompt } from './components/PWAComponents';
 
+// F-001: 404 catch-all
+const NotFound = () => (
+  <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-center p-4">
+    <div>
+      <p className="text-6xl font-bebas text-amber-500 mb-4">404</p>
+      <p className="text-zinc-400 mb-6">Página no encontrada</p>
+      <a href="/dashboard" className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all">
+        IR AL DASHBOARD
+      </a>
+    </div>
+  </div>
+);
+
 // Loading fallback branded
 const PageLoader = () => (
   <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -173,6 +186,8 @@ function App() {
               <Route path="notifications" element={<SupplierNotifications />} />
               <Route path=":id" element={<SupplierDetail />} />
             </Route>
+            {/* 404 catch-all */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
 

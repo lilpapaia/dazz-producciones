@@ -68,9 +68,15 @@ const UploadTickets = () => {
     e.target.value = '';
   };
 
+  const ALLOWED_DROP_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
+
   const handleDrop = async (e) => {
     e.preventDefault();
-    await processFiles(Array.from(e.dataTransfer.files), true);
+    const dropped = Array.from(e.dataTransfer.files);
+    const valid = dropped.filter(f => ALLOWED_DROP_TYPES.includes(f.type));
+    const rejected = dropped.length - valid.length;
+    if (rejected > 0) showWarning(`${rejected} archivo(s) rechazado(s) — solo JPG, PNG, WebP, HEIC y PDF`);
+    if (valid.length > 0) await processFiles(valid, true);
   };
 
   // Quitar un archivo individual de la lista
