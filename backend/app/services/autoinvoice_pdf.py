@@ -57,6 +57,11 @@ def generate_autoinvoice_pdf(
     irpf_percentage: float,
     irpf_amount: float,
     final_total: float,
+    gastos_base: float = 0,
+    gastos_iva_percentage: float = 0,
+    gastos_iva_amount: float = 0,
+    gastos_irpf_amount: float = 0,
+    gastos_subtotal: float = 0,
 ) -> bytes:
     """
     Generate autoinvoice PDF and return as bytes.
@@ -78,7 +83,7 @@ def generate_autoinvoice_pdf(
     pdf.cell(0, 10, "DAZZ GROUP", ln=False)
     pdf.set_xy(15, 26)
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 6, "AUTOFACTURA", ln=True)
+    pdf.cell(0, 6, "SELF-BILLING INVOICE", ln=True)
 
     # Invoice number + date right-aligned
     pdf.set_xy(w - 60, 14)
@@ -97,7 +102,7 @@ def generate_autoinvoice_pdf(
     pdf.set_xy(10, y)
     pdf.set_font("Helvetica", "B", 7)
     pdf.set_text_color(*C_LABEL)
-    pdf.cell(col_w, 5, "ISSUER (EMPRESA EMISORA)", ln=True)
+    pdf.cell(col_w, 5, "ISSUER", ln=True)
     pdf.set_x(10)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*C_BLACK)
@@ -112,7 +117,7 @@ def generate_autoinvoice_pdf(
     pdf.set_xy(10 + col_w + 6, y)
     pdf.set_font("Helvetica", "B", 7)
     pdf.set_text_color(*C_LABEL)
-    pdf.cell(col_w, 5, "RECIPIENT (PROVEEDOR)", ln=True)
+    pdf.cell(col_w, 5, "RECIPIENT", ln=True)
     pdf.set_x(10 + col_w + 6)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*C_BLACK)
@@ -166,6 +171,22 @@ def generate_autoinvoice_pdf(
     if irpf_amount > 0:
         irpf_pct_display = f"{irpf_percentage * 100:.0f}%"
         _row(f"IRPF ({irpf_pct_display})", f"-{irpf_amount:,.2f} EUR", color=(239, 68, 68))
+
+    # FEAT-02: Expenses section (only if gastos_base > 0)
+    if gastos_base > 0:
+        pdf.ln(4)
+        pdf.set_x(table_x)
+        pdf.set_font("Helvetica", "B", 7)
+        pdf.set_text_color(*C_LABEL)
+        pdf.cell(0, 5, "EXPENSES", ln=True)
+        _row("Expenses base", f"{gastos_base:,.2f} EUR")
+        if gastos_iva_amount > 0:
+            gastos_iva_pct_display = f"{gastos_iva_percentage * 100:.0f}%"
+            _row(f"Expenses IVA ({gastos_iva_pct_display})", f"{gastos_iva_amount:,.2f} EUR")
+        if gastos_irpf_amount > 0:
+            irpf_pct_display = f"{irpf_percentage * 100:.0f}%"
+            _row(f"Expenses IRPF ({irpf_pct_display})", f"-{gastos_irpf_amount:,.2f} EUR", color=(239, 68, 68))
+        _row("Expenses subtotal", f"{gastos_subtotal:,.2f} EUR", bold=True)
 
     pdf.ln(2)
     pdf.set_x(table_x)

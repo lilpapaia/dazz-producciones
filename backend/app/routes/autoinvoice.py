@@ -143,7 +143,13 @@ async def generate_autoinvoice(
     # Calculate amounts
     iva_amount = round(body.base_amount * body.iva_percentage, 2)
     irpf_amount = round(body.base_amount * body.irpf_percentage, 2)
-    final_total = round(body.base_amount + iva_amount - irpf_amount, 2)
+    service_total = round(body.base_amount + iva_amount - irpf_amount, 2)
+
+    # FEAT-02: Calculate expenses (IRPF % inherited from main invoice)
+    gastos_iva_amount = round(body.gastos_base * body.gastos_iva_percentage, 2)
+    gastos_irpf_amount = round(body.gastos_base * body.irpf_percentage, 2)
+    gastos_subtotal = round(body.gastos_base + gastos_iva_amount - gastos_irpf_amount, 2)
+    final_total = round(service_total + gastos_subtotal, 2) if body.gastos_base > 0 else service_total
 
     # Decrypt IBAN
     supplier_iban = ""
@@ -169,6 +175,11 @@ async def generate_autoinvoice(
         irpf_percentage=body.irpf_percentage,
         irpf_amount=irpf_amount,
         final_total=final_total,
+        gastos_base=body.gastos_base,
+        gastos_iva_percentage=body.gastos_iva_percentage,
+        gastos_iva_amount=gastos_iva_amount,
+        gastos_irpf_amount=gastos_irpf_amount,
+        gastos_subtotal=gastos_subtotal,
     )
 
     # Upload PDF to Cloudinary
@@ -329,7 +340,12 @@ async def preview_autoinvoice(
 
     iva_amount = round(body.base_amount * body.iva_percentage, 2)
     irpf_amount = round(body.base_amount * body.irpf_percentage, 2)
-    final_total = round(body.base_amount + iva_amount - irpf_amount, 2)
+    service_total = round(body.base_amount + iva_amount - irpf_amount, 2)
+
+    gastos_iva_amount = round(body.gastos_base * body.gastos_iva_percentage, 2)
+    gastos_irpf_amount = round(body.gastos_base * body.irpf_percentage, 2)
+    gastos_subtotal = round(body.gastos_base + gastos_iva_amount - gastos_irpf_amount, 2)
+    final_total = round(service_total + gastos_subtotal, 2) if body.gastos_base > 0 else service_total
 
     supplier_iban = ""
     if supplier.iban_encrypted:
@@ -353,6 +369,11 @@ async def preview_autoinvoice(
         irpf_percentage=body.irpf_percentage,
         irpf_amount=irpf_amount,
         final_total=final_total,
+        gastos_base=body.gastos_base,
+        gastos_iva_percentage=body.gastos_iva_percentage,
+        gastos_iva_amount=gastos_iva_amount,
+        gastos_irpf_amount=gastos_irpf_amount,
+        gastos_subtotal=gastos_subtotal,
     )
 
     return Response(

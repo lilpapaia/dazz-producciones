@@ -277,3 +277,5 @@ class AutoInvoiceRequest(BaseModel):
     iva_percentage: float = Field(ge=0, le=1)
     irpf_percentage: float = Field(ge=0, le=1)
     oc_number: str = Field(min_length=1, max_length=100)
+    gastos_base: float = Field(default=0, ge=0)
+    gastos_iva_percentage: float = Field(default=0, ge=0, le=1)

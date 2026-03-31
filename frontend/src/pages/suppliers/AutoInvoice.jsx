@@ -40,6 +40,11 @@ const AutoInvoice = () => {
   const [confirmation, setConfirmation] = useState(null);
   const [selectedPrefixPermanent, setSelectedPrefixPermanent] = useState(false);
 
+  // FEAT-02: Expenses
+  const [showGastos, setShowGastos] = useState(false);
+  const [gastosBase, setGastosBase] = useState('');
+  const [gastosIvaPct, setGastosIvaPct] = useState('21');
+
   useEffect(() => {
     getCompanies().then(r => setCompanies(r.data)).catch(() => {});
   }, []);
@@ -78,7 +83,15 @@ const AutoInvoice = () => {
   const irpfPct = parseFloat(irpfPercent) / 100;
   const ivaAmount = Math.round(base * ivaPct * 100) / 100;
   const irpfAmount = Math.round(base * irpfPct * 100) / 100;
-  const total = Math.round((base + ivaAmount - irpfAmount) * 100) / 100;
+  const serviceTotal = Math.round((base + ivaAmount - irpfAmount) * 100) / 100;
+
+  // FEAT-02: Expenses calculations (IRPF inherited from main)
+  const gBase = showGastos ? (parseFloat(gastosBase) || 0) : 0;
+  const gIvaPct = parseFloat(gastosIvaPct) / 100;
+  const gIvaAmount = Math.round(gBase * gIvaPct * 100) / 100;
+  const gIrpfAmount = Math.round(gBase * irpfPct * 100) / 100;
+  const gSubtotal = Math.round((gBase + gIvaAmount - gIrpfAmount) * 100) / 100;
+  const total = gBase > 0 ? Math.round((serviceTotal + gSubtotal) * 100) / 100 : serviceTotal;
 
   const canSubmit = companyId && selectedSupplier && concept.trim() && base > 0 && invoiceNumber.trim() && ocNumber.trim() && invoiceDate.trim();
 
@@ -92,6 +105,8 @@ const AutoInvoice = () => {
     iva_percentage: ivaPct,
     irpf_percentage: irpfPct,
     oc_number: ocNumber.trim(),
+    gastos_base: gBase,
+    gastos_iva_percentage: gBase > 0 ? gIvaPct : 0,
   });
 
   const handlePreview = async () => {
@@ -129,7 +144,7 @@ const AutoInvoice = () => {
     setConfirmation(null);
     setSelectedSupplier(null); setSupplierSearch(''); setSupplierName(''); setSupplierNif('');
     setSupplierAddress(''); setSupplierIban(''); setConcept(''); setBaseAmount(''); setOcNumber('');
-    setSelectedPrefixPermanent(false);
+    setSelectedPrefixPermanent(false); setShowGastos(false); setGastosBase(''); setGastosIvaPct('21');
     if (companyId) getNextInvoiceNumber(companyId).then(r => setInvoiceNumber(r.data.invoice_number)).catch(() => {});
   };
 
@@ -276,6 +291,34 @@ const AutoInvoice = () => {
               </div>
             )}
           </div>
+
+          {/* FEAT-02: Expenses section */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
+            <label className="flex items-center gap-3 cursor-pointer mb-1">
+              <input type="checkbox" checked={showGastos} onChange={e => setShowGastos(e.target.checked)}
+                className="w-4 h-4 accent-amber-500 rounded" />
+              <span className="text-[9px] text-zinc-500 tracking-widest uppercase font-semibold">Incluir gastos</span>
+            </label>
+            {showGastos && (
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                <div>
+                  <label className={labelCls}>Importe gastos *</label>
+                  <input type="number" step="0.01" value={gastosBase} onChange={e => setGastosBase(e.target.value)} placeholder="250.00" className={`${inputCls} font-mono`} />
+                </div>
+                <div>
+                  <label className={labelCls}>IVA gastos %</label>
+                  <select value={gastosIvaPct} onChange={e => setGastosIvaPct(e.target.value)} className={`${inputCls} appearance-none`}>
+                    <option value="21">21%</option><option value="10">10%</option><option value="4">4%</option><option value="0">0%</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>IRPF gastos %</label>
+                  <input value={`${irpfPercent}%`} disabled className={`${inputCls} opacity-60 cursor-not-allowed`} />
+                  <div className="text-[10px] text-zinc-600 mt-0.5">Heredado</div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* RIGHT: Summary */}
@@ -295,6 +338,26 @@ const AutoInvoice = () => {
                 <span className="text-zinc-500">IRPF ({irpfPercent}%)</span>
                 <span className="text-red-400 font-mono">-{irpfAmount.toFixed(2)} EUR</span>
               </div>
+            )}
+            {gBase > 0 && (
+              <>
+                <div className="flex justify-between py-2 border-b border-white/[.04] text-xs">
+                  <span className="text-zinc-500">Gastos base</span>
+                  <span className="text-zinc-200 font-mono">{gBase.toFixed(2)} EUR</span>
+                </div>
+                {gIvaAmount > 0 && (
+                  <div className="flex justify-between py-2 border-b border-white/[.04] text-xs">
+                    <span className="text-zinc-500">Gastos IVA ({gastosIvaPct}%)</span>
+                    <span className="text-zinc-200 font-mono">{gIvaAmount.toFixed(2)} EUR</span>
+                  </div>
+                )}
+                {gIrpfAmount > 0 && (
+                  <div className="flex justify-between py-2 border-b border-white/[.04] text-xs">
+                    <span className="text-zinc-500">Gastos IRPF ({irpfPercent}%)</span>
+                    <span className="text-red-400 font-mono">-{gIrpfAmount.toFixed(2)} EUR</span>
+                  </div>
+                )}
+              </>
             )}
             <div className="flex justify-between pt-3 mt-1 border-t border-zinc-700 mb-4">
               <span className="text-[13px] font-semibold text-zinc-300">Total</span>
