@@ -213,7 +213,7 @@ class TicketUpdate(BaseModel):
     is_reviewed: Optional[bool] = None
 
 class TicketResponse(TicketBase):
-    date: str = ""  # BUG-28: Override TicketBase min_length=1 — AI extraction failures save date=""
+    date: Optional[str] = None  # BUG-28: Override TicketBase min_length=1 — AI extraction failures save date=""
     id: int
     file_name: str
     file_path: str
