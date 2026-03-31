@@ -7,7 +7,8 @@
 > **Plan QA exhaustivo:** 2026-03-30 (172 test cases, 210+ salidas, 15 hallazgos UX)
 > **Sistema OCs:** 2026-03-28 (tabla oc_prefixes + OCSelector componente)
 > **Pytest suite:** 2026-03-30 (301 tests, 298 passed, 15 módulos, mocks completos)
-> **Última actualización:** 2026-03-30
+> **Sesión bugs+features:** 2026-03-31 (15 commits, 18 bugs, 3 features, prompt IA, dual moneda)
+> **Última actualización:** 2026-03-31
 
 ---
 
@@ -445,15 +446,79 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ---
 
-## 🔧 Bugs pendientes
+## ✅ Sesión 2026-03-31 — 15 commits, 18 bugs, 3 features
 
+### ✅ Bugs críticos resueltos (2026-03-31)
+- [x] **BUG-28:** TicketResponse.date Optional[str] + DateType alias para exchange_rate_date
+- [x] **BUG-29:** OC permanente fija empresa DAZZLE MGMT en SupplierInvite
+- [x] **BUG-30:** Datos fiscales autofactura — billing_company + company name en auto-created project
+- [x] **BUG-32:** Advisory lock pg_try_advisory_lock(12345) para migraciones multi-worker
+- [x] **BUG-34:** Drop zone deshabilitada durante upload (opacity + pointer-events-none)
+- [x] **BUG-35:** Archivos exitosos se eliminan de files[] automáticamente
+- [x] **BUG-37:** cert_type=[object Object] — onClick pasaba SyntheticEvent → arrow function
+- [x] **BUG-38/41:** Google Docs Viewer eliminado (0 sitios) → iframe directo + galería img
+- [x] **BUG-39:** ia_warnings separado de notes — nueva columna BD + migración + UI separada
+- [x] **BUG-40:** Mensaje "Procesado · Pendiente de revisión" en resultados upload
+- [x] **BUG-43:** Pending actions 404 — quitado is_read filter, usa PENDING_TITLES
+- [x] **BUG-43b:** Banner data change muestra actual vs nuevo con labels español
+- [x] **BUG-43c:** IBAN nuevo enmascarado ••••XXXX en banner
+- [x] **BUG-43d:** Lightbox certificado con barra superior + botón descarga
+- [x] **BUG-44:** Notificación IBAN mismatch movida post-flush con invoice_id
+- [x] **BUG-46:** PDF autofactura traducido a inglés (SELF-BILLING INVOICE)
+- [x] **BUG-48:** Badge "AUTO" azul en InvoicesList (móvil + desktop)
+- [x] **BUG-49:** Autofacturas clickables en portal (tab Received)
+- [x] **BUG-50:** exchange_rate_date type shadow — import date as DateType (hotfix producción)
+
+### ✅ Features implementadas (2026-03-31)
+- [x] **FEAT-01:** Modal editar proyecto en ProjectView (9 campos, UserAutocomplete, save disabled sin cambios)
+- [x] **FEAT-02:** Gastos en autofactura (schema + backend + PDF EXPENSES + UI colapsable)
+- [x] **FEAT-03:** Verificado ya implementado — autofacturas PENDING con approve workflow
+
+### ✅ Mejoras IA y UI (2026-03-31)
+- [x] **MEJORA-02:** Prompt IA mejorado — Staff Charge ≠ IVA, importes en divisa original, no convertir a EUR
+- [x] **MEJORA-03:** Desglose dual moneda en ReviewTicket — editar en divisa original, EUR en tiempo real
+
+### Descartados (ya resueltos)
+- [x] **BUG-33:** SHA-256 ya filtra por project_id — no necesita cambio
+- [x] **BUG-36:** OC huérfano no aplica — creative_code es string, no FK
+- [x] **BUG-51:** Total proyecto — backend ya resta correctamente con SQL atómico
+- [x] **BUG-31:** CORS autofactura — configuración correcta, no es bug
+
+### ✅ Bugs previos resueltos
 - [x] **BUG-25:** IA rechaza OCs válidos → allowExisting prop en OCSelector (2026-03-30)
-- [ ] **BUG-28:** TicketResponse.date tiene min_length=1 pero error tickets guardan date="" → falla validación Pydantic. Fix: min_length=0 o Optional en schemas.py TicketBase.date
 - [x] **Race condition autofactura:** SELECT FOR UPDATE en invoice_number (2026-03-29)
 - [x] **Cloudinary síncrono autoinvoice:** asyncio.to_thread (2026-03-29)
 - [x] **register_supplier() 3 commits:** flush + 1 commit atómico (2026-03-29)
 - [x] **generate_autoinvoice() 2 commits:** flush + 1 commit atómico (2026-03-29)
+
+---
+
+## 🔧 Bugs pendientes
+
 - [ ] **Rate limiting storage memory://:** No se comparte entre workers gunicorn — necesita Redis
+- [ ] **BUG-47:** Verificar límite tamaño archivos en producción
+- [ ] **BUG-52:** Total proyecto huérfano tras error BUG-50 — verificar y limpiar datos producción
+
+---
+
+## 📋 Próxima fase
+
+### Verificar en producción (2026-03-31)
+- [ ] Tickets US con Staff Charge — prompt IA mejorado
+- [ ] Autofacturas con gastos — sección EXPENSES en PDF
+- [ ] Modal editar proyecto — permisos ADMIN/BOSS
+- [ ] Badge AUTO en lista facturas admin
+- [ ] Autofactura clickable en portal proveedores
+- [ ] Lightbox certificado bancario con descarga
+
+### Integraciones pendientes
+- [ ] **INT-1:** Facturas aprobadas proveedores → tickets en DAZZ Producciones (ya parcial en approve endpoint)
+
+### Testing
+- [ ] **test_ocs.py:** 34 tests creados, pendiente fix conftest para ejecutar
+- [ ] **GitHub Actions:** CI/CD automático en push
+- [ ] **Playwright E2E:** Setup + flujos críticos
+- [ ] Testing manual plan QA por app
 
 ---
 
