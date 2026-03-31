@@ -1,7 +1,7 @@
 import re
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Any, Dict
-from datetime import datetime, date
+from datetime import datetime, date as DateType
 from enum import Enum
 
 # ============================================
@@ -234,7 +234,7 @@ class TicketResponse(TicketBase):
     foreign_tax_amount: Optional[float] = None
     foreign_tax_eur: Optional[float] = None
     exchange_rate: Optional[float] = None
-    exchange_rate_date: Optional[date] = None
+    exchange_rate_date: Optional[DateType] = None
     from_supplier_portal: bool = False
     supplier_id: Optional[int] = None
     supplier_invoice_id: Optional[int] = None
