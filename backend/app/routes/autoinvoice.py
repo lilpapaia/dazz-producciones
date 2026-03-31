@@ -221,6 +221,7 @@ async def generate_autoinvoice(
                 year=oc_prefix.year_format,
                 send_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
                 creative_code=body.oc_number,
+                company=company.name,
                 owner_company_id=oc_prefix.company_id,
                 owner_id=admin.id,
                 responsible=admin.username,
