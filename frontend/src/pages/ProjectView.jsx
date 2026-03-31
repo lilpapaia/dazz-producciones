@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, deleteTicket, deleteProject, reopenProject } from '../services/api';
-import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock } from 'lucide-react';
+import { getProject, getProjectTickets, deleteTicket, deleteProject, reopenProject, updateProject } from '../services/api';
+import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock, Edit3 } from 'lucide-react';
+import UserAutocomplete from '../components/UserAutocomplete';
 import { useAuth } from '../context/AuthContext';
 import { showSuccess, showError } from '../utils/toast';
 import { ROLES } from '../constants/roles';
@@ -23,6 +24,11 @@ const ProjectView = () => {
   const [reopeningProject, setReopeningProject] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+
+  // Edit modal
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
 
   // Búsqueda tickets
   const [ticketSearch, setTicketSearch] = useState('');
@@ -148,6 +154,31 @@ const ProjectView = () => {
       setDeletingProject(false);
     }
   };
+
+  // Edit project modal
+  const EDIT_FIELDS = ['description', 'responsible', 'send_date', 'invoice_type', 'other_invoice_data', 'client_oc', 'client_data', 'client_email', 'project_link'];
+
+  const openEditModal = () => {
+    const form = {};
+    EDIT_FIELDS.forEach(f => { form[f] = project[f] || ''; });
+    setEditForm(form);
+    setEditModal(true);
+  };
+
+  const handleEditSave = async () => {
+    setEditSaving(true);
+    try {
+      await updateProject(id, editForm);
+      showSuccess('Proyecto actualizado');
+      setEditModal(false);
+      loadProject();
+    } catch (e) {
+      showError(e.response?.data?.detail || 'Error al guardar');
+    }
+    setEditSaving(false);
+  };
+
+  const editHasChanges = project && EDIT_FIELDS.some(f => (editForm[f] || '') !== (project[f] || ''));
 
   // Filtrar tickets
   const filteredTickets = tickets.filter(t => {
@@ -540,7 +571,15 @@ const ProjectView = () => {
 
         {/* Project Info Card */}
         <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-sm p-6">
-          <h3 className="text-lg font-bebas tracking-wider mb-4">INFORMACIÓN DEL PROYECTO</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bebas tracking-wider">INFORMACIÓN DEL PROYECTO</h3>
+            {(isAdmin || isBoss) && project.status !== 'cerrado' && (
+              <button onClick={openEditModal}
+                className="flex items-center gap-1.5 text-[12px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded-sm hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
+                <Edit3 size={13} /> Editar
+              </button>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-6 text-sm">
             <div>
@@ -604,6 +643,80 @@ const ProjectView = () => {
         cancelText="Cancelar"
         type="danger"
       />
+
+      {/* Modal editar proyecto */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setEditModal(false)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-sm w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+              <h3 className="text-lg font-bebas tracking-wider">EDITAR PROYECTO</h3>
+              <button onClick={() => setEditModal(false)} className="text-zinc-500 hover:text-zinc-300 transition-colors"><X size={20} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">NOMBRE DEL PROYECTO</label>
+                <input type="text" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+              </div>
+              <div>
+                <UserAutocomplete
+                  value={editForm.responsible}
+                  onChange={(name) => setEditForm({ ...editForm, responsible: name })}
+                  companyId={project.owner_company_id || null}
+                  label="RESPONSABLE"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">FECHA ENVÍO FACTURA</label>
+                  <input type="text" value={editForm.send_date} onChange={e => setEditForm({ ...editForm, send_date: e.target.value })}
+                    placeholder="dd/mm/yyyy"
+                    className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">TIPO FACTURA</label>
+                  <input type="text" value={editForm.invoice_type} onChange={e => setEditForm({ ...editForm, invoice_type: e.target.value })}
+                    className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">OTROS DATOS FACTURA</label>
+                <input type="text" value={editForm.other_invoice_data} onChange={e => setEditForm({ ...editForm, other_invoice_data: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">OC CLIENTE</label>
+                <input type="text" value={editForm.client_oc} onChange={e => setEditForm({ ...editForm, client_oc: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">DATOS CLIENTE</label>
+                <textarea value={editForm.client_data} onChange={e => setEditForm({ ...editForm, client_data: e.target.value })} rows={3}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">EMAIL CLIENTE</label>
+                <input type="email" value={editForm.client_email} onChange={e => setEditForm({ ...editForm, client_email: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">LINK PROYECTO (SHAREPOINT)</label>
+                <input type="url" value={editForm.project_link} onChange={e => setEditForm({ ...editForm, project_link: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4 border-t border-zinc-800">
+              <button onClick={() => setEditModal(false)}
+                className="flex-1 py-2.5 text-sm border border-zinc-700 text-zinc-400 rounded-sm hover:bg-zinc-800 transition-colors">Cancelar</button>
+              <button onClick={handleEditSave} disabled={editSaving || !editHasChanges}
+                className="flex-1 py-2.5 text-sm bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {editSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
