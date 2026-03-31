@@ -112,6 +112,8 @@ const UploadTickets = () => {
         const ticketData = response.data.ticket || response.data;
         const warning = response.data.duplicate_invoice_warning || null;
         newResults.push({ file: file.name, success: true, data: ticketData, duplicate_invoice_warning: warning });
+        // BUG-35: Remove successfully processed file from the list
+        setFiles(prev => prev.filter(f => f.name !== file.name));
       } catch (error) {
         const detail = error.response?.data?.detail;
         // Duplicado hash → warning especial (no error fatal, no reintentar)
@@ -172,11 +174,11 @@ const UploadTickets = () => {
             </div>
           )}
 
-          {/* Zona de drop */}
+          {/* Zona de drop — BUG-34: disabled during upload */}
           <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            className="border-2 border-dashed border-zinc-700 hover:border-amber-500 rounded-sm p-12 text-center transition-colors"
+            onDragOver={(e) => { if (!uploading) e.preventDefault(); }}
+            onDrop={(e) => { if (uploading) { e.preventDefault(); return; } handleDrop(e); }}
+            className={`border-2 border-dashed rounded-sm p-12 text-center transition-colors ${uploading ? 'border-zinc-800 opacity-50 pointer-events-none' : 'border-zinc-700 hover:border-amber-500'}`}
           >
             <Upload size={48} className="mx-auto text-zinc-600 mb-4" />
             <p className="text-lg font-medium text-zinc-300 mb-2">
@@ -356,6 +358,7 @@ const UploadTickets = () => {
                         <p className="font-medium text-sm mb-1">{result.file}</p>
                         {result.success ? (
                           <div className="text-xs space-y-1 font-mono text-zinc-400">
+                            <p className="text-green-400 font-semibold font-sans mb-1">Procesado · Pendiente de revisión</p>
                             <p>
                               <span className="font-medium">Proveedor:</span>{' '}
                               {result.data?.provider || 'N/A'}
@@ -396,6 +399,11 @@ const UploadTickets = () => {
                                     {result.data.country_code}
                                   </p>
                                 )}
+                              </div>
+                            )}
+                            {result.data?.notes && /^(Incoherencia|Baja confianza|Proveedor no|Fecha no|Total no)/m.test(result.data.notes) && (
+                              <div className="mt-2 pt-2 border-t border-amber-500/30">
+                                <p className="text-amber-400 font-sans font-semibold">⚠ Requiere revisión — la IA detectó advertencias</p>
                               </div>
                             )}
                           </div>
