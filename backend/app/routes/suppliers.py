@@ -1145,6 +1145,7 @@ async def get_pending_actions(
         "id": n.id, "title": n.title, "message": n.message,
         "event_type": n.event_type.value, "created_at": n.created_at.isoformat(),
         "related_invoice_id": n.related_invoice_id,
+        "extra_data": n.extra_data,
     } for n in notifs]
 
 

@@ -221,14 +221,18 @@ const SupplierDetail = () => {
     try { await verifyCert(id); load(); } catch (e) { showError(e.response?.data?.detail || 'Error'); }
   };
 
-  const parseDataChanges = (message) => {
-    try { return JSON.parse(message.split(': ', 2)[1]); } catch { return {}; }
+  const parseDataChanges = (action) => {
+    try {
+      if (action.extra_data) return JSON.parse(action.extra_data);
+      return JSON.parse(action.message.split(': ', 2)[1]);
+    } catch { return {}; }
   };
 
   const parseIbanInfo = (message) => {
     const match = message.match(/change to (\S+)/);
-    const certMatch = message.match(/cert: (.+)$/);
-    return { maskedIban: match?.[1] || '****', certKey: certMatch?.[1] || null };
+    const raw = match?.[1] || '';
+    const masked = raw.length > 4 ? '••••' + raw.slice(-4) : raw || '••••';
+    return { maskedIban: masked };
   };
 
   const parseDeactivationReason = (message) => {
@@ -450,14 +454,18 @@ const SupplierDetail = () => {
                 {pendingActions.map(action => {
                   // A-7: Data Change
                   if (action.title === 'Data Change Request') {
-                    const changes = parseDataChanges(action.message);
+                    const changes = parseDataChanges(action);
+                    const labels = { name: 'Nombre', phone: 'Teléfono', address: 'Dirección' };
+                    const changedEntries = Object.entries(changes).filter(([k, v]) => v !== null && v !== supplier?.[k]);
                     return (
                       <div key={action.id} className="bg-zinc-900 border border-zinc-800 rounded p-3">
                         <div className="text-[12px] font-semibold text-zinc-200 mb-2">Solicitud de cambio de datos</div>
                         <div className="space-y-1 mb-3">
-                          {Object.entries(changes).map(([k, v]) => (
-                            <div key={k} className="flex gap-2 text-[11px]">
-                              <span className="text-zinc-500 w-16">{k}:</span>
+                          {changedEntries.map(([k, v]) => (
+                            <div key={k} className="flex gap-2 text-[11px] items-baseline">
+                              <span className="text-zinc-500 w-20 flex-shrink-0">{labels[k] || k}:</span>
+                              <span className="text-zinc-400 line-through">{supplier?.[k] || '—'}</span>
+                              <span className="text-zinc-600">→</span>
                               <span className="text-green-400">{v}</span>
                             </div>
                           ))}
