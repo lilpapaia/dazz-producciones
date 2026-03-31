@@ -500,12 +500,8 @@ async def upload_invoice(
         # Validation against DB
         validation = validate_supplier_invoice(extracted, supplier.id, db)
 
-        # IBAN mismatch: non-blocking warning + admin notification
-        if validation.get("iban_match") is False:
-            _notify(db, NotificationRecipientType.ADMIN, 0,
-                    NotificationEventType.IA_REJECTED, "IBAN Mismatch",
-                    f"Invoice from {supplier.name}: IBAN on invoice does not match registered IBAN",
-                    supplier_id=supplier.id)
+        # BUG-44: Defer IBAN mismatch notification until after flush (need invoice.id)
+        iban_mismatch = validation.get("iban_match") is False
 
         if not validation["valid"]:
             _notify(db, NotificationRecipientType.ADMIN, 0,
@@ -565,6 +561,13 @@ async def upload_invoice(
         date_parsed = validation.get("date_parsed")
         if date_parsed:
             invoice.date_parsed = date_parsed
+
+        # BUG-44: IBAN mismatch notification with invoice_id + invoice_number
+        if iban_mismatch:
+            _notify(db, NotificationRecipientType.ADMIN, 0,
+                    NotificationEventType.IA_REJECTED, "IBAN Mismatch",
+                    f"Invoice {invoice.invoice_number} from {supplier.name}: IBAN does not match registered IBAN",
+                    invoice_id=invoice.id, supplier_id=supplier.id)
 
         # Notifications use invoice.id from flush
         if invoice_status == InvoiceStatus.OC_PENDING:

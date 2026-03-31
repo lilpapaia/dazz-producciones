@@ -22,8 +22,8 @@ const getRoute = (n) => {
   if (['NEW_INVOICE', 'OC_LINKED', 'DELETED'].includes(n.event_type) && n.related_invoice_id) {
     return `/suppliers/invoices/${n.related_invoice_id}?from=notifications`;
   }
-  // REJECTED with invoice → invoice detail
-  if (n.event_type === 'REJECTED' && n.related_invoice_id) {
+  // REJECTED / IA_REJECTED with invoice → invoice detail
+  if ((n.event_type === 'REJECTED' || n.event_type === 'IA_REJECTED') && n.related_invoice_id) {
     return `/suppliers/invoices/${n.related_invoice_id}?from=notifications`;
   }
   // Supplier-centric → supplier detail
