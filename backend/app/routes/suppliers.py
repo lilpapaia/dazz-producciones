@@ -986,11 +986,13 @@ async def mark_all_notifications_read(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Mark all admin notifications as read."""
+    """Mark all admin notifications as read (excludes pending actions)."""
+    # BUG-43: Exclude actionable notifications — they must remain visible until approved/rejected
     db.query(SupplierNotification).filter(
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.is_read == False,
-    ).update({"is_read": True})
+        ~SupplierNotification.title.in_(PENDING_TITLES),
+    ).update({"is_read": True}, synchronize_session="fetch")
     db.commit()
     return {"message": "All notifications marked as read"}
 
@@ -1108,12 +1110,17 @@ async def dashboard_stats(
 
 
 def _get_pending_notification(db: Session, supplier_id: int, notification_id: int) -> SupplierNotification:
-    """Get a pending admin notification for a supplier, or raise 404."""
+    """Get an actionable admin notification for a supplier, or raise 404.
+
+    BUG-43: Do NOT filter by is_read — the notification may have been marked as read
+    when the admin opened it (markNotificationRead) or via "Mark all read", but the
+    action (approve/reject) is still pending. Filter by PENDING_TITLES instead.
+    """
     notif = db.query(SupplierNotification).filter(
         SupplierNotification.id == notification_id,
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.related_supplier_id == supplier_id,
-        SupplierNotification.is_read == False,
+        SupplierNotification.title.in_(PENDING_TITLES),
     ).first()
     if not notif:
         raise HTTPException(404, "Pending notification not found")

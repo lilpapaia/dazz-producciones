@@ -173,9 +173,20 @@ if ENVIRONMENT == "development":
 async def startup_event():
     Base.metadata.create_all(bind=engine)
 
-    # Migraciones idempotentes al arrancar (todas <1ms si ya existen)
+    # BUG-32: Advisory lock prevents deadlock when multiple Gunicorn workers
+    # execute ALTER TABLE simultaneously on PostgreSQL.
+    # pg_try_advisory_lock returns immediately: True if acquired, False if another worker holds it.
     from sqlalchemy import text
+    is_postgres = str(engine.url).startswith("postgresql")
+
     with engine.connect() as conn:
+        if is_postgres:
+            got_lock = conn.execute(text("SELECT pg_try_advisory_lock(12345)")).scalar()
+            if not got_lock:
+                logger.info("Another worker is running migrations, skipping")
+                conn.close()
+                return
+
         try:
             # PERF-M2: Índices compuestos
             conn.execute(text(
@@ -269,9 +280,7 @@ async def startup_event():
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")
 
-    # OC-1: Seed oc_prefixes (idempotent — skips if prefix already exists)
-    from sqlalchemy import text as _text
-    with engine.connect() as conn:
+        # OC-1: Seed oc_prefixes (idempotent — skips if prefix already exists)
         try:
             _seed = [
                 ("BR",            "DAZZLE AGENCY, S.L.",                      "DAZZLE AGENCY, S.L.",                      "Proyectos",               5, "2026", False),
@@ -289,7 +298,7 @@ async def startup_event():
                 ("HDMKT",         "DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","DIGITAL ADVERTISING SOCIAL SERVICES, S.L.","Gastos empresa",          3, "2026", False),
             ]
             for prefix, co_name, bill_name, desc, digits, yr_fmt, perm in _seed:
-                conn.execute(_text(
+                conn.execute(text(
                     "INSERT INTO oc_prefixes (prefix, company_id, billing_company_id, description, number_digits, year_format, permanent_oc, active) "
                     "SELECT :prefix, c1.id, c2.id, :desc, :digits, :yr_fmt, :perm, true "
                     "FROM companies c1, companies c2 "
@@ -300,6 +309,11 @@ async def startup_event():
             logger.info("OC prefixes seeded")
         except Exception as e:
             logger.warning(f"OC prefixes seed warning: {e}")
+
+        # Release advisory lock
+        if is_postgres:
+            conn.execute(text("SELECT pg_advisory_unlock(12345)"))
+            conn.commit()
 
     logger.info("Base de datos inicializada")
     logger.info(f"Modo: {ENVIRONMENT}")
