@@ -152,9 +152,20 @@ Ejemplos de clasificación:
 - Factura de New York → is_foreign: true, currency: "USD", country_code: "US"
 - Factura de Londres → is_foreign: true, currency: "GBP", country_code: "GB"
 
-IMPORTANTE: Si es factura internacional, extrae TANTO los importes originales EN SU DIVISA
-como los convertidos a EUR (si la factura los muestra). Si solo muestra una divisa, repite
-los valores en ambos campos (foreign_amount = base_amount si solo hay una divisa).
+🍽️ RECARGOS DE SERVICIO — NO SON IMPUESTOS:
+Staff Charge, Service Charge, Gratuity, Tip → NO son IVA/Tax.
+- iva_amount = solo el impuesto real (Tax, Sales Tax, VAT, IVA)
+- Si no hay línea de Tax/impuesto → iva_amount = 0, iva_percentage = 0
+- final_total = SIEMPRE el total impreso en el ticket, NO lo calcules
+- Ejemplo: Subtotal $9.00, Staff Charge $1.67, Tax $1.12, Total $11.79
+  → base_amount = 9.00, iva_amount = 1.12, final_total = 11.79
+
+REGLA CRÍTICA — IMPORTES SIEMPRE EN DIVISA ORIGINAL:
+- Extrae los importes TAL COMO aparecen impresos en el ticket
+- NUNCA conviertas a EUR — el backend lo hace automáticamente
+- Si el ticket es en USD → todos los importes en USD
+- base_amount = foreign_amount (mismo valor)
+- final_total = foreign_total (mismo valor, el total impreso)
 
 CAMPOS A EXTRAER:
 
@@ -162,13 +173,13 @@ CAMPOS BÁSICOS:
 - date: Fecha (SIEMPRE DD/MM/YYYY)
 - provider: Nombre del proveedor/empresa
 - invoice_number: Número de factura (si existe)
-- base_amount: Base imponible en EUR (convertir si es necesario, o dejar original si no hay conversión)
+- base_amount: Base imponible (en la divisa del ticket, NO convertir)
 - iva_percentage: Porcentaje de IVA/VAT (0.21 para 21%, 0.20 para 20%, etc.)
-- iva_amount: Cantidad de IVA en EUR
-- total_with_iva: Total con IVA en EUR
+- iva_amount: Cantidad de IVA/Tax real (NO incluir service charges)
+- total_with_iva: Total con IVA (en la divisa del ticket)
 - irpf_percentage: Porcentaje de IRPF si aplica (0.15 para 15%, 0 si no hay)
-- irpf_amount: Cantidad retenida de IRPF en EUR (0 si no hay)
-- final_total: Total final en EUR
+- irpf_amount: Cantidad retenida de IRPF (0 si no hay)
+- final_total: Total impreso en el ticket (NUNCA calcularlo, copiar el número exacto)
 - type: "factura" si tiene número de factura y NIF/CIF, "ticket" si es ticket simple
 
 CAMPOS INTERNACIONAL (solo si is_foreign es true):
@@ -216,18 +227,18 @@ Ejemplo 1 - Factura nacional (España):
   "confidence": 0.95
 }
 
-Ejemplo 2 - Factura USA (USD):
+Ejemplo 2 - Factura USA (USD) — importes en divisa original, NO convertir:
 {
   "date": "15/01/2025",
   "provider": "Amazon Web Services Inc.",
   "invoice_number": "INV-2025-00123",
-  "base_amount": 461.70,
+  "base_amount": 500.00,
   "iva_percentage": 0.075,
-  "iva_amount": 34.63,
-  "total_with_iva": 496.33,
+  "iva_amount": 37.50,
+  "total_with_iva": 537.50,
   "irpf_percentage": 0.0,
   "irpf_amount": 0.0,
-  "final_total": 496.33,
+  "final_total": 537.50,
   "type": "factura",
   "is_foreign": true,
   "currency": "USD",
