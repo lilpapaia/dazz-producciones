@@ -363,7 +363,7 @@ const SupplierDetail = () => {
             <div key={label} className="flex justify-between py-2 border-b border-white/[.04] last:border-0">
               <span className="text-[13px] text-zinc-500">{label}</span>
               {val === 'pdf' ? (
-                <button onClick={handleViewCert} disabled={certLoading} className="text-[13px] text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">
+                <button onClick={() => handleViewCert()} disabled={certLoading} className="text-[13px] text-red-400 cursor-pointer flex items-center gap-1 hover:text-red-300 transition-colors">
                   {certLoading ? 'Cargando...' : 'Ver PDF'}</button>
               ) : (
                 <span className={`text-right max-w-[175px] break-all text-[13px] ${mono ? 'font-mono' : ''} ${amber ? 'text-amber-400' : 'text-zinc-300'}`}>
