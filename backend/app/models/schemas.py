@@ -220,6 +220,7 @@ class TicketResponse(TicketBase):
     file_pages: Optional[str] = None
     pdf_url: Optional[str] = None
     notes: Optional[str] = None
+    ia_warnings: Optional[str] = None
     file_hash: Optional[str] = None
     is_reviewed: bool
     created_at: datetime

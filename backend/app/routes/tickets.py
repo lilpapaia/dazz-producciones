@@ -211,7 +211,7 @@ async def upload_ticket(
                 foreign_tax_eur=foreign_tax_eur,
                 exchange_rate=exchange_rate,
                 exchange_rate_date=exchange_rate_date,
-                notes="\n".join(ai_warnings) if ai_warnings else None,
+                ia_warnings="\n".join(ai_warnings) if ai_warnings else None,
                 is_reviewed=False
             )
 

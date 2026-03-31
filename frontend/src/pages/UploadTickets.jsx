@@ -401,7 +401,7 @@ const UploadTickets = () => {
                                 )}
                               </div>
                             )}
-                            {result.data?.notes && /^(Incoherencia|Baja confianza|Proveedor no|Fecha no|Total no)/m.test(result.data.notes) && (
+                            {result.data?.ia_warnings && (
                               <div className="mt-2 pt-2 border-t border-amber-500/30">
                                 <p className="text-amber-400 font-sans font-semibold">⚠ Requiere revisión — la IA detectó advertencias</p>
                               </div>

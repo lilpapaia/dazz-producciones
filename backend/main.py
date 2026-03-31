@@ -267,6 +267,15 @@ async def startup_event():
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_related_supplier ON supplier_notifications (related_supplier_id)"))
             # #42: Widen file_hash for SHA-256 (64 chars vs MD5 32)
             conn.execute(text("ALTER TABLE tickets ALTER COLUMN file_hash TYPE VARCHAR(64)"))
+            # BUG-39: Separate ia_warnings from user notes
+            conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ia_warnings TEXT"))
+            conn.execute(text(
+                "UPDATE tickets SET ia_warnings = notes, notes = NULL "
+                "WHERE ia_warnings IS NULL AND notes IS NOT NULL "
+                "AND (notes LIKE 'Incoherencia matem%%' OR notes LIKE 'Baja confianza%%' "
+                "OR notes LIKE 'Proveedor no detectado%%' OR notes LIKE 'Fecha no detectada%%' "
+                "OR notes LIKE 'Total no detectado%%')"
+            ))
             # #44: Geo indexes for statistics queries
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_is_foreign ON tickets (is_foreign)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_geo_classification ON tickets (geo_classification)"))

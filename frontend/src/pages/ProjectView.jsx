@@ -393,7 +393,7 @@ const ProjectView = () => {
                                 <span className="text-sm">🌍</span>
                               )}
                               <StatusBadge type="ticket" value={ticket.type} />
-                              {ticket.notes && <span className="text-amber-400 text-sm">⚠️</span>}
+                              {ticket.ia_warnings && <span className="text-amber-400 text-sm">⚠️</span>}
                             </div>
                             <p className="font-semibold text-sm">{ticket.provider}</p>
                             <p className="text-xs text-zinc-400 mt-0.5">
@@ -500,8 +500,8 @@ const ProjectView = () => {
                           <span className="text-lg flex-shrink-0" title="Internacional">🌍</span>
                         )}
                         <StatusBadge type="ticket" value={ticket.type} />
-                        {ticket.notes && (
-                          <span className="text-amber-400 flex-shrink-0" title={ticket.notes}>⚠️</span>
+                        {ticket.ia_warnings && (
+                          <span className="text-amber-400 flex-shrink-0" title={ticket.ia_warnings}>⚠️</span>
                         )}
                       </div>
 

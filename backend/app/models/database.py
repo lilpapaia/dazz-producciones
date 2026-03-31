@@ -160,6 +160,7 @@ class Ticket(Base):
     invoice_status = Column(String)
     payment_status = Column(String)
     notes = Column(Text)
+    ia_warnings = Column(Text, nullable=True)
     is_foreign = Column(Boolean, default=False, index=True)
     currency = Column(String, default='EUR')
     country_code = Column(String, nullable=True)
