@@ -119,7 +119,7 @@ const SupplierDetail = () => {
     setCertLoading(true);
     try {
       const { data } = await getBankCertUrl(id, type);
-      setCertUrl(`https://docs.google.com/viewer?url=${encodeURIComponent(data.url)}&embedded=true`);
+      setCertUrl(data.url);
       setShowCertLightbox(true);
     } catch { showError('No se pudo cargar el certificado bancario'); }
     setCertLoading(false);
@@ -851,6 +851,9 @@ const SupplierDetail = () => {
         <div className="fixed inset-0 bg-black z-50 flex items-center justify-center backdrop-blur-sm"
           style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           onClick={() => setShowCertLightbox(false)}>
+          <a href={certUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+            className="absolute top-4 right-16 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
+            style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><Download size={20} /></a>
           <button onClick={(e) => { e.stopPropagation(); setShowCertLightbox(false); }}
             className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
             style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><X size={32} /></button>

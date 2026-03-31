@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSummary, getMyInvoices, getReceivedInvoices, requestDeleteInvoice } from '../services/api';
-import { Search, Trash2, Upload, Info, Download, FileText, X } from 'lucide-react';
+import { Search, Trash2, Upload, Info, Download, FileText, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 const PILL = {
@@ -31,6 +31,7 @@ const Home = () => {
   const [receivedLoading, setReceivedLoading] = useState(false);
   const [error, setError] = useState('');
   const [viewer, setViewer] = useState(null);
+  const [viewerPage, setViewerPage] = useState(0);
 
   const load = () => {
     setError('');
@@ -300,9 +301,18 @@ const Home = () => {
         </div>
       )}
 
-      {/* ═══ PDF Viewer Lightbox ═══ */}
+      {/* ═══ Invoice Viewer Lightbox ═══ */}
       {viewer && (() => {
         const viewerIdx = filtered.findIndex(i => i.id === viewer.id);
+        let pages = [];
+        if (viewer.file_pages) {
+          if (Array.isArray(viewer.file_pages)) pages = viewer.file_pages;
+          else if (typeof viewer.file_pages === 'string') {
+            try { const p = JSON.parse(viewer.file_pages); if (Array.isArray(p)) pages = p; } catch { /* ignore */ }
+          }
+        }
+        const hasPages = pages.length > 0;
+        const switchViewer = (inv) => { setViewerPage(0); setViewer(inv); };
         return (
           <div className="fixed inset-0 bg-zinc-950 z-[60] flex flex-col"
             style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
@@ -310,7 +320,7 @@ const Home = () => {
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-3">
                   {filtered.length > 1 && (
-                    <button onClick={() => setViewer(filtered[viewerIdx - 1])} disabled={viewerIdx <= 0}
+                    <button onClick={() => switchViewer(filtered[viewerIdx - 1])} disabled={viewerIdx <= 0}
                       className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">
                       <span className="lg:hidden">←</span>
                       <span className="hidden lg:inline">← Previous</span>
@@ -318,7 +328,7 @@ const Home = () => {
                   )}
                   <span className="text-sm text-zinc-200 font-mono">{viewer.invoice_number}</span>
                   {filtered.length > 1 && (
-                    <button onClick={() => setViewer(filtered[viewerIdx + 1])} disabled={viewerIdx >= filtered.length - 1}
+                    <button onClick={() => switchViewer(filtered[viewerIdx + 1])} disabled={viewerIdx >= filtered.length - 1}
                       className="text-[13px] px-3 py-1.5 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30 transition-colors">
                       <span className="lg:hidden">→</span>
                       <span className="hidden lg:inline">Next →</span>
@@ -334,10 +344,32 @@ const Home = () => {
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 min-h-0">
-              <iframe
-                src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewer.file_url)}&embedded=true`}
-                className="w-full h-full bg-white" title="Invoice PDF" />
+            <div className="flex-1 min-h-0 flex items-center justify-center overflow-auto bg-zinc-950">
+              {hasPages ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {pages.length > 1 && viewerPage > 0 && (
+                    <button onClick={() => setViewerPage(p => p - 1)}
+                      className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center z-10">
+                      <ChevronLeft size={28} /></button>
+                  )}
+                  <img src={pages[viewerPage]} alt={`Page ${viewerPage + 1}`}
+                    className="max-w-full max-h-full object-contain select-none" />
+                  {pages.length > 1 && viewerPage < pages.length - 1 && (
+                    <button onClick={() => setViewerPage(p => p + 1)}
+                      className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center z-10">
+                      <ChevronRight size={28} /></button>
+                  )}
+                  {pages.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-900/80 px-4 py-2 rounded-full text-sm font-mono text-zinc-300 border border-zinc-700">
+                      Page {viewerPage + 1} / {pages.length}
+                    </div>
+                  )}
+                </div>
+              ) : viewer.file_url ? (
+                <iframe src={viewer.file_url} className="w-full h-full bg-white" title="Invoice PDF" />
+              ) : (
+                <p className="text-zinc-500 text-sm">No file available</p>
+              )}
             </div>
             <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4 space-y-3 text-center">
               <div className="flex items-center justify-center gap-4">
@@ -354,6 +386,12 @@ const Home = () => {
                   <span className="text-[11px] px-2 py-[2px] rounded bg-amber-500/[.08] text-amber-400 font-mono border border-amber-500/15">{viewer.oc_number}</span>
                 ) : (
                   <span className="text-[11px] text-zinc-600">Pending assignment</span>
+                )}
+                {viewer.file_url && (
+                  <a href={viewer.file_url} target="_blank" rel="noopener noreferrer"
+                    className="text-[12px] text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded hover:bg-zinc-800 transition-colors flex items-center gap-1.5">
+                    <Download size={12} /> Download PDF
+                  </a>
                 )}
                 {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING') && (
                   <button onClick={() => { setViewer(null); setDeleteModal(viewer); }}

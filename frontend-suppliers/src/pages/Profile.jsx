@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, getBankCertUrl } from '../services/api';
-import { ExternalLink, Edit3, CreditCard, UserMinus, Info } from 'lucide-react';
+import { ExternalLink, Edit3, CreditCard, UserMinus, Info, X, Download } from 'lucide-react';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const STATUS_MAP = {
   ACTIVE: { cls: 'bg-green-400/10 text-green-400 border-green-400/20', label: 'ACTIVE' },
@@ -14,10 +15,14 @@ const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [certError, setCertError] = useState('');
+  const [certUrl, setCertUrl] = useState(null);
+  const [showCertLightbox, setShowCertLightbox] = useState(false);
 
   useEffect(() => {
     getProfile().then(r => setProfile(r.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  useEscapeKey(() => setShowCertLightbox(false), showCertLightbox);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -28,7 +33,8 @@ const Profile = () => {
   const handleViewCert = async () => {
     try {
       const { data } = await getBankCertUrl();
-      window.open(data.url, '_blank');
+      setCertUrl(data.url);
+      setShowCertLightbox(true);
     } catch { setCertError('Could not load bank certificate'); }
   };
 
@@ -147,6 +153,25 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* ═══ LIGHTBOX: Certificado bancario PDF ═══ */}
+      {showCertLightbox && certUrl && (
+        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center backdrop-blur-sm"
+          style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          onClick={() => setShowCertLightbox(false)}>
+          <a href={certUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+            className="absolute top-4 right-16 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
+            style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><Download size={20} /></a>
+          <button onClick={(e) => { e.stopPropagation(); setShowCertLightbox(false); }}
+            className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
+            style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><X size={32} /></button>
+          <iframe
+            src={certUrl}
+            className="w-full h-full max-w-4xl max-h-[90vh] md:rounded-lg border border-zinc-700 bg-white"
+            onClick={(e) => e.stopPropagation()}
+            title="Bank certificate" />
+        </div>
+      )}
     </div>
   );
 };
