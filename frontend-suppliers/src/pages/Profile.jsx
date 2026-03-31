@@ -156,20 +156,22 @@ const Profile = () => {
 
       {/* ═══ LIGHTBOX: Certificado bancario PDF ═══ */}
       {showCertLightbox && certUrl && (
-        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center backdrop-blur-sm"
-          style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-          onClick={() => setShowCertLightbox(false)}>
-          <a href={certUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-            className="absolute top-4 right-16 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
-            style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><Download size={20} /></a>
-          <button onClick={(e) => { e.stopPropagation(); setShowCertLightbox(false); }}
-            className="absolute top-4 right-4 text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700 z-10"
-            style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}><X size={32} /></button>
-          <iframe
-            src={certUrl}
-            className="w-full h-full max-w-4xl max-h-[90vh] md:rounded-lg border border-zinc-700 bg-white"
-            onClick={(e) => e.stopPropagation()}
-            title="Bank certificate" />
+        <div className="fixed inset-0 bg-black z-50 flex flex-col"
+          style={{ minHeight: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+            <span className="text-[13px] text-zinc-400">Bank certificate</span>
+            <div className="flex items-center gap-2">
+              <a href={certUrl} target="_blank" rel="noopener noreferrer"
+                className="text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700">
+                <Download size={18} /></a>
+              <button onClick={() => setShowCertLightbox(false)}
+                className="text-white hover:text-amber-500 transition-colors bg-zinc-900/80 rounded-full p-2 border border-zinc-700">
+                <X size={18} /></button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            <iframe src={certUrl} className="w-full h-full bg-white" title="Bank certificate" />
+          </div>
         </div>
       )}
     </div>

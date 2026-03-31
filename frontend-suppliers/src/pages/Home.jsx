@@ -344,16 +344,16 @@ const Home = () => {
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 min-h-0 flex items-center justify-center overflow-auto bg-zinc-950">
+            <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden bg-zinc-950">
               {hasPages ? (
-                <div className="relative w-full h-full flex items-center justify-center">
+                <div className="relative w-full h-full flex items-center justify-center px-2">
                   {pages.length > 1 && viewerPage > 0 && (
                     <button onClick={() => setViewerPage(p => p - 1)}
                       className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center z-10">
                       <ChevronLeft size={28} /></button>
                   )}
                   <img src={pages[viewerPage]} alt={`Page ${viewerPage + 1}`}
-                    className="max-w-full max-h-full object-contain select-none" />
+                    className="max-w-full max-h-[80vh] object-contain select-none" />
                   {pages.length > 1 && viewerPage < pages.length - 1 && (
                     <button onClick={() => setViewerPage(p => p + 1)}
                       className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 bg-zinc-900/80 hover:bg-zinc-700 text-white p-3 rounded-full border border-zinc-700 items-center justify-center z-10">
