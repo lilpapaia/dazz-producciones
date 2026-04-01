@@ -116,14 +116,14 @@ const Notifications = () => {
       {displayed.length === 0 ? (
         <div className="text-center py-16 text-xs text-zinc-600">No notifications</div>
       ) : (
-        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] px-3.5 lg:px-5">
+        <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] px-3.5 lg:px-5 overflow-hidden">
           {displayed.map(n => {
             const ev = EVENT_ICON[n.event_type] || EVENT_ICON.REGISTRATION;
             const Icon = ev.icon;
             return (
               <div key={n.id}
                 onClick={() => !n.is_read && handleMarkRead(n.id)}
-                className={`flex items-start gap-2 py-3 lg:py-4 border-b border-white/[.04] last:border-0 ${!n.is_read ? 'bg-amber-500/[.02] cursor-pointer' : ''}`}>
+                className={`flex items-start gap-2 py-3 lg:py-4 border-b border-white/[.04] last:border-0 ${!n.is_read ? 'bg-amber-500/[.02] cursor-pointer -mx-3.5 px-3.5 lg:-mx-5 lg:px-5' : ''}`}>
                 {!n.is_read ? (
                   <div className="w-[7px] h-[7px] rounded-full bg-amber-500 flex-shrink-0 mt-[5px]" />
                 ) : (
