@@ -48,7 +48,7 @@ const Notifications = () => {
   const displayed = notifs.filter(n => {
     if (readFilter === 'unread' && n.is_read) return false;
     if (typeFilter === 'all') return true;
-    if (typeFilter === 'invoices') return INVOICE_TYPES.includes(n.event_type);
+    if (typeFilter === 'invoices') return INVOICE_TYPES.includes(n.event_type) && !ACCOUNT_RE.test(n.title);
     if (typeFilter === 'account') return n.event_type === 'REGISTRATION' || ACCOUNT_RE.test(n.title);
     return true;
   });
