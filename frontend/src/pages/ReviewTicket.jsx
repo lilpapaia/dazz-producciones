@@ -675,11 +675,14 @@ const ReviewTicket = () => {
           <div className="bg-zinc-950 border border-zinc-700 rounded-sm p-4">
             {ticket.is_foreign && ticket.currency !== 'EUR' ? (
               <>
-                {/* ═══ INTERNATIONAL: Dual currency ═══ */}
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-zinc-500 font-mono tracking-wider">DESGLOSE IMPORTES ({ticket.currency})</p>
+                {/* ═══ INTERNATIONAL: Dual currency — Parallel columns ═══ */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-zinc-500 font-mono tracking-wider">DESGLOSE IMPORTES</p>
+                    <span className="bg-amber-500/15 text-amber-400 text-[11px] font-bold px-2 py-0.5 rounded">{ticket.currency}</span>
+                  </div>
                   {ticket.exchange_rate && (
-                    <span className="text-[10px] text-zinc-600 font-mono">1 {ticket.currency} = {ticket.exchange_rate.toFixed(4)} EUR</span>
+                    <span className="text-[10px] text-zinc-600 font-mono bg-zinc-800 px-2.5 py-1 rounded">1 {ticket.currency} = {ticket.exchange_rate.toFixed(4)} EUR</span>
                   )}
                 </div>
 
@@ -706,46 +709,65 @@ const ReviewTicket = () => {
                   };
 
                   return (
-                    <>
-                      <div className="flex items-end gap-4 mb-4">
-                        <div className="flex-1">
-                          <label className="block text-zinc-400 mb-1 text-xs">Base</label>
-                          <div className="relative">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+                      {/* ── Columna izquierda: Divisa original ── */}
+                      <div className="md:pr-5 md:border-r md:border-zinc-800 pb-4 md:pb-0">
+                        <p className="text-[10px] text-zinc-600 font-mono tracking-wider uppercase mb-3">Divisa original ({ticket.currency})</p>
+
+                        {/* Base */}
+                        <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+                          <label className="text-[13px] text-zinc-400">Base</label>
+                          <div className="relative w-28">
                             <input type="number" step="0.01"
                               value={ticket.foreign_amount ?? ''}
                               onChange={(e) => updateFromForeign(parseFloat(e.target.value) || 0, ticket.iva_percentage || 0)}
-                              className={inputCls} />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">{sym}</span>
-                          </div>
-                          <p className="text-[11px] text-zinc-600 mt-1 text-right">≈ {ticket.base_amount?.toFixed(2)} EUR</p>
-                        </div>
-                        <div className="w-20">
-                          <label className="block text-zinc-400 mb-1 text-xs">% IVA</label>
-                          <div className="relative">
-                            <input type="number" step="1" min="0" max="100"
-                              value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
-                              onChange={(e) => updateFromForeign(ticket.foreign_amount || 0, (parseFloat(e.target.value) || 0) / 100)}
-                              className={`${inputCls} pr-7`} />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">%</span>
+                              className={`${inputCls} text-right pr-7 text-sm`} />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">{sym}</span>
                           </div>
                         </div>
-                        <div className="flex-1">
-                          <label className="block text-zinc-400 mb-1 text-xs">IVA</label>
-                          <p className="px-3 py-2 font-semibold text-zinc-300">
-                            {ticket.foreign_tax_amount?.toFixed(2)}{sym}
-                          </p>
-                          <p className="text-[11px] text-zinc-600 mt-1 text-right">≈ {ticket.iva_amount?.toFixed(2)} EUR</p>
+
+                        {/* IVA */}
+                        <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+                          <label className="text-[13px] text-zinc-400">IVA</label>
+                          <div className="flex items-center gap-2">
+                            <div className="relative w-16">
+                              <input type="number" step="1" min="0" max="100"
+                                value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
+                                onChange={(e) => updateFromForeign(ticket.foreign_amount || 0, (parseFloat(e.target.value) || 0) / 100)}
+                                className={`${inputCls} text-center pr-6 text-sm`} />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">%</span>
+                            </div>
+                            <span className="text-sm text-zinc-300 font-mono w-20 text-right">{ticket.foreign_tax_amount?.toFixed(2)}{sym}</span>
+                          </div>
+                        </div>
+
+                        {/* Total */}
+                        <div className="flex items-center justify-between pt-3">
+                          <span className="text-[13px] text-zinc-300 font-medium">Total</span>
+                          <span className="text-xl font-bold text-amber-500 font-mono">{ticket.foreign_total?.toFixed(2)} {sym}</span>
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-zinc-700">
-                        <p className="text-zinc-400 mb-1 text-xs">Total</p>
-                        <p className="text-xl font-bold text-amber-500">
-                          {ticket.foreign_total?.toFixed(2)}{sym}
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-1">≈ {ticket.final_total?.toFixed(2)} EUR</p>
+                      {/* ── Columna derecha: Equivalencia EUR ── */}
+                      <div className="md:pl-5 pt-4 md:pt-0 border-t md:border-t-0 border-zinc-800">
+                        <p className="text-[10px] text-zinc-600 font-mono tracking-wider uppercase mb-3">Equivalencia EUR</p>
+
+                        {/* Base EUR */}
+                        <div className="flex items-center justify-end py-2 border-b border-zinc-800/50 h-[42px]">
+                          <span className="text-sm text-zinc-400 font-mono">≈ {ticket.base_amount?.toFixed(2)} €</span>
+                        </div>
+
+                        {/* IVA EUR */}
+                        <div className="flex items-center justify-end py-2 border-b border-zinc-800/50 h-[42px]">
+                          <span className="text-sm text-zinc-400 font-mono">≈ {ticket.iva_amount?.toFixed(2)} €</span>
+                        </div>
+
+                        {/* Total EUR */}
+                        <div className="flex items-center justify-end pt-3">
+                          <span className="text-lg text-zinc-300 font-medium font-mono">≈ {ticket.final_total?.toFixed(2)} €</span>
+                        </div>
                       </div>
-                    </>
+                    </div>
                   );
                 })()}
               </>
