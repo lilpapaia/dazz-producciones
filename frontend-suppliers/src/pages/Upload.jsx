@@ -1,12 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadInvoice, getProfile } from '../services/api';
 import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User } from 'lucide-react';
-import { useEffect } from 'react';
 
 const UploadPage = () => {
   const navigate = useNavigate();
   const fileRef = useRef(null);
+  const mountedRef = useRef(true);
   const [files, setFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -14,7 +14,10 @@ const UploadPage = () => {
   const [currentIdx, setCurrentIdx] = useState(-1);
   const [profile, setProfile] = useState(null);
 
-  useEffect(() => { getProfile().then(r => setProfile(r.data)).catch(() => {}); }, []);
+  useEffect(() => {
+    getProfile().then(r => { if (mountedRef.current) setProfile(r.data); }).catch(() => {});
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const addFiles = (fileList) => {
     setRejected('');
@@ -25,16 +28,17 @@ const UploadPage = () => {
     if (tooBig.length) setRejected(`${tooBig.length} file(s) too large (max 10MB)`);
     else if (wrongType.length) setRejected(`${wrongType.length} file(s) rejected — only PDF accepted`);
     if (!valid.length) return;
-    setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: 'pending', result: null }))]);
+    setFiles(prev => [...prev, ...valid.map(f => ({ id: crypto.randomUUID(), file: f, status: 'pending', result: null }))]);
   };
 
   const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (!uploading && e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
-  const removeFile = (i) => setFiles(prev => prev.filter((_, idx) => idx !== i));
+  const removeFile = (id) => setFiles(prev => prev.filter(f => f.id !== id));
 
   const handleUploadAll = async () => {
     setUploading(true);
     const updated = [...files];
     for (let i = 0; i < updated.length; i++) {
+      if (!mountedRef.current) return;
       if (updated[i].status !== 'pending') continue;
       setCurrentIdx(i);
       updated[i].status = 'uploading';
@@ -46,10 +50,13 @@ const UploadPage = () => {
         const detail = err.response?.data?.detail;
         updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [detail || 'Upload failed'] } };
       }
+      if (!mountedRef.current) return;
       setFiles([...updated]);
     }
-    setCurrentIdx(-1);
-    setUploading(false);
+    if (mountedRef.current) {
+      setCurrentIdx(-1);
+      setUploading(false);
+    }
   };
 
   const reset = () => setFiles([]);
@@ -148,8 +155,8 @@ const UploadPage = () => {
       {/* File list */}
       {files.length > 0 && (
         <div className="px-4 lg:px-0 space-y-2 lg:space-y-3 mb-3">
-          {files.map((f, i) => (
-            <div key={i} className={`bg-[#18181b] border rounded-[10px] p-3 lg:p-4 flex items-center gap-3 ${
+          {files.map((f) => (
+            <div key={f.id} className={`bg-[#18181b] border rounded-[10px] p-3 lg:p-4 flex items-center gap-3 ${
               f.status === 'success' ? 'border-green-400/20' :
               f.status === 'error' ? 'border-red-400/20' :
               f.status === 'uploading' ? 'border-amber-500/30' :
@@ -179,7 +186,7 @@ const UploadPage = () => {
                 )}
               </div>
               {f.status === 'pending' && !uploading && (
-                <button onClick={() => removeFile(i)} className="text-zinc-600 hover:text-zinc-400 p-1"><X size={14} /></button>
+                <button onClick={() => removeFile(f.id)} className="text-zinc-600 hover:text-zinc-400 p-1"><X size={14} /></button>
               )}
             </div>
           ))}

@@ -354,7 +354,7 @@ def validate_supplier_invoice(
     final = extracted_data.get("final_total", 0.0) or 0.0
 
     expected_total = base + iva - irpf
-    if abs(expected_total - final) > MATH_TOLERANCE and final > 0:
+    if abs(expected_total - final) > max(MATH_TOLERANCE, final * 0.005) and final > 0:
         warnings.append(
             f"Incoherencia matemática: base ({base:.2f}) + IVA ({iva:.2f}) "
             f"- IRPF ({irpf:.2f}) = {expected_total:.2f}, "

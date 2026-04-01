@@ -72,6 +72,7 @@ async def upload_ticket(
     with open(temp_path, "wb") as buffer:
         buffer.write(file_contents)
 
+    cloudinary_result = None
     try:
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
         cloudinary_result = await asyncio.to_thread(upload_ticket_file, str(temp_path), file.filename, project_id, project.creative_code)
@@ -164,7 +165,7 @@ async def upload_ticket(
             irpf = extracted_data.get("irpf_amount", 0.0) or 0.0
             final = extracted_data.get("final_total", 0.0) or 0.0
             expected = round(base + iva - irpf, 2)
-            if final > 0 and abs(expected - final) > MATH_TOLERANCE:
+            if final > 0 and abs(expected - final) > max(MATH_TOLERANCE, final * 0.005):
                 ai_warnings.append(f"Incoherencia matemática: base({base}) + IVA({iva}) - IRPF({irpf}) = {expected}, pero total = {final}")
 
             # T2: Confidence threshold
@@ -245,6 +246,16 @@ async def upload_ticket(
     except HTTPException:
         raise  # Re-raise HTTPExceptions from validators as-is
     except Exception as e:
+        # BUG-24: Cleanup Cloudinary if upload succeeded but later processing failed
+        if cloudinary_result:
+            try:
+                from app.services.cloudinary_service import delete_ticket_files
+                delete_ticket_files(
+                    json.dumps(cloudinary_result.get("pages", [])),
+                    cloudinary_result.get("pdf_url")
+                )
+            except Exception as cleanup_err:
+                logger.error(f"Cloudinary cleanup failed after error: {cleanup_err}")
         # VULN-006: Logear error real, devolver genérico
         logger.error(f"Error procesando ticket: {str(e)}")
         raise HTTPException(status_code=500, detail="Error interno al procesar ticket")

@@ -251,9 +251,7 @@ async def logout_supplier(
     supplier: Supplier = Depends(get_current_active_supplier),
     db: Session = Depends(get_db),
 ):
-    revoked = revoke_supplier_refresh_token(db, body.refresh_token, supplier_id=supplier.id)
-    if not revoked:
-        raise HTTPException(400, "Refresh token not found or already revoked")
+    revoke_supplier_refresh_token(db, body.refresh_token, supplier_id=supplier.id)
     return {"message": "Logged out successfully"}
 
 

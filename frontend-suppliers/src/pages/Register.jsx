@@ -197,7 +197,13 @@ const Register = () => {
                   <label className="block border-2 border-dashed border-zinc-700 rounded-md p-4 text-center cursor-pointer hover:border-amber-500 transition-colors">
                     <FileText size={20} className="text-zinc-600 mx-auto mb-1" />
                     <span className="text-xs text-zinc-400">Tap to select PDF</span>
-                    <input type="file" accept=".pdf,application/pdf" onChange={e => { if (e.target.files?.[0]) setBankCertFile(e.target.files[0]); }} className="hidden" />
+                    <input type="file" accept=".pdf,application/pdf" onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (f.size > 10 * 1024 * 1024) { setError('File too large (max 10MB)'); return; }
+                      setError('');
+                      setBankCertFile(f);
+                    }} className="hidden" />
                   </label>
                 )}
                 <p className="text-[10px] text-zinc-600 mt-1">Document proving bank account ownership (required by DAZZ).</p>

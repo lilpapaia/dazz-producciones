@@ -305,14 +305,7 @@ async def logout(
     db: Session = Depends(get_db)
 ):
     """Revocar refresh token (logout)"""
-    revoked = revoke_refresh_token(db, request_body.refresh_token)
-
-    if not revoked:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Refresh token no encontrado o ya revocado"
-        )
-
+    revoke_refresh_token(db, request_body.refresh_token)
     return {"message": "Sesión cerrada correctamente"}
 
 

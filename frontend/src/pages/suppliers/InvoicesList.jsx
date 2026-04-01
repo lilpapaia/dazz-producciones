@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Trash2, X, CreditCard, Mic, Info, RotateCcw } from 'lucide-react';
+import { Search, Trash2, X, Mic, Info, RotateCcw } from 'lucide-react';
 import { getAllInvoices, updateInvoiceStatus, deleteInvoice, rejectInvoiceDeletion } from '../../services/suppliersApi';
 import { getCompanies } from '../../services/api';
 import { showError } from '../../utils/toast';
@@ -41,7 +41,7 @@ const InvoicesList = () => {
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
   const [page, setPage] = useState(0);
-  const [totalLoaded, setTotalLoaded] = useState(0);
+
 
   const { isListening, startVoiceSearch } = useVoiceSearch({
     lang: 'es-ES',
@@ -64,7 +64,7 @@ const InvoicesList = () => {
     if (statusFilter) params.status = statusFilter;
     if (companyFilter) params.company_id = companyFilter;
     Promise.all([getAllInvoices(params), getCompanies()])
-      .then(([inv, c]) => { setInvoices(inv.data); setTotalLoaded(inv.data.length); setCompanies(c.data); })
+      .then(([inv, c]) => { setInvoices(inv.data); setCompanies(c.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   };

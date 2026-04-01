@@ -52,7 +52,7 @@ def _decode_iban(supplier) -> str | None:
 def _mask_iban(iban: str | None) -> str | None:
     """Mask IBAN for list view: show first 4 + last 4 only."""
     if not iban or len(iban) < 8:
-        return iban
+        return iban or ''
     return f"{iban[:4]}{'*' * (len(iban) - 8)}{iban[-4:]}"
 
 

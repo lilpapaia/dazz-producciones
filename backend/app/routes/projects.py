@@ -10,7 +10,7 @@ from pydantic import BaseModel, EmailStr
 from config.database import get_db
 from app.models import schemas
 from app.models.database import User, Project, ProjectStatus, Company, UserRole
-from app.services.auth import get_current_active_user
+from app.services.auth import get_current_active_user, get_current_admin_user
 from app.services.companies_service import validate_company_access
 from app.services.permissions import get_user_company_ids, can_access_project, can_modify_project
 
@@ -445,3 +445,45 @@ async def delete_project(
 
     logger.info(f"Proyecto {project_id} eliminado completamente")
     return None
+
+
+@router.post("/recalculate-totals")
+async def recalculate_project_totals(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """BUG-52: Recalculate tickets_count and total_amount for all projects from actual ticket data."""
+    from app.models.database import Ticket
+
+    projects = db.query(Project).all()
+    fixed = []
+
+    for project in projects:
+        real_count = db.query(func.count(Ticket.id)).filter(
+            Ticket.project_id == project.id,
+            Ticket.provider != "Error en extracción",
+        ).scalar()
+        real_total = db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).filter(
+            Ticket.project_id == project.id,
+            Ticket.provider != "Error en extracción",
+        ).scalar()
+
+        if project.tickets_count != real_count or abs((project.total_amount or 0) - real_total) > 0.01:
+            logger.warning(
+                f"Project {project.id} ({project.creative_code}): "
+                f"count {project.tickets_count}→{real_count}, "
+                f"total {project.total_amount}→{real_total}"
+            )
+            fixed.append({
+                "id": project.id,
+                "code": project.creative_code,
+                "old_count": project.tickets_count,
+                "new_count": real_count,
+                "old_total": float(project.total_amount or 0),
+                "new_total": float(real_total),
+            })
+            project.tickets_count = real_count
+            project.total_amount = real_total
+
+    db.commit()
+    return {"fixed": len(fixed), "details": fixed}
