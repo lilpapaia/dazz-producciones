@@ -415,13 +415,13 @@ async def delete_project(
             from app.services.cloudinary_service import delete_ticket_files
 
             for ticket in tickets:
-                # Borrar archivos de Cloudinary
-                try:
-                    delete_ticket_files(ticket.file_pages, ticket.pdf_url)
-                    logger.info(f"Archivos eliminados para ticket {ticket.id}")
-                except Exception as e:
-                    logger.warning(f"Error eliminando archivos del ticket {ticket.id}: {str(e)}")
-                    # Continuar aunque falle
+                # INT-1: Skip Cloudinary cleanup for supplier tickets (files belong to supplier module)
+                if not ticket.from_supplier_portal:
+                    try:
+                        delete_ticket_files(ticket.file_pages, ticket.pdf_url)
+                        logger.info(f"Archivos eliminados para ticket {ticket.id}")
+                    except Exception as e:
+                        logger.warning(f"Error eliminando archivos del ticket {ticket.id}: {str(e)}")
 
                 # Borrar ticket de BD
                 db.delete(ticket)

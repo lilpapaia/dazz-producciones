@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, deleteTicket, deleteProject, reopenProject, updateProject } from '../services/api';
-import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock, Edit3 } from 'lucide-react';
+import { getProject, getProjectTickets, deleteTicket, deleteProject, reopenProject, updateProject, requestSupplierTicketDeletion } from '../services/api';
+import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock, Edit3, ExternalLink } from 'lucide-react';
 import UserAutocomplete from '../components/UserAutocomplete';
 import { useAuth } from '../context/AuthContext';
 import { showSuccess, showError } from '../utils/toast';
@@ -29,6 +29,11 @@ const ProjectView = () => {
   const [editModal, setEditModal] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [editSaving, setEditSaving] = useState(false);
+
+  // INT-1: Supplier ticket deletion request modal
+  const [supplierDeleteModal, setSupplierDeleteModal] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [requestingDelete, setRequestingDelete] = useState(false);
 
   // Búsqueda tickets
   const [ticketSearch, setTicketSearch] = useState('');
@@ -179,6 +184,23 @@ const ProjectView = () => {
   };
 
   const editHasChanges = project && EDIT_FIELDS.some(f => (editForm[f] || '') !== (project[f] || ''));
+
+  // INT-1: Handle supplier ticket deletion request
+  const handleRequestSupplierDeletion = async () => {
+    if (!supplierDeleteModal || !deleteReason.trim()) return;
+    setRequestingDelete(true);
+    try {
+      await requestSupplierTicketDeletion(supplierDeleteModal.id, deleteReason.trim());
+      showSuccess('Solicitud de borrado enviada');
+      setSupplierDeleteModal(null);
+      setDeleteReason('');
+      loadTickets();
+    } catch (e) {
+      showError(e.response?.data?.detail || 'Error al solicitar borrado');
+    } finally {
+      setRequestingDelete(false);
+    }
+  };
 
   // Filtrar tickets
   const filteredTickets = tickets.filter(t => {
@@ -500,6 +522,12 @@ const ProjectView = () => {
                           <span className="text-lg flex-shrink-0" title="Internacional">🌍</span>
                         )}
                         <StatusBadge type="ticket" value={ticket.type} />
+                        {ticket.from_supplier_portal && !ticket.is_autoinvoice && (
+                          <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-sm text-xs font-bold">PROVEEDOR</span>
+                        )}
+                        {ticket.from_supplier_portal && ticket.is_autoinvoice && (
+                          <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-sm text-xs font-bold">AUTO</span>
+                        )}
                         {ticket.ia_warnings && (
                           <span className="text-amber-400 flex-shrink-0" title={ticket.ia_warnings}>⚠️</span>
                         )}
@@ -522,16 +550,42 @@ const ProjectView = () => {
                           </p>
                         </div>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTicket(ticket.id);
-                          }}
-                          className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-sm transition-colors"
-                          title="Eliminar ticket"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {/* INT-1: Conditional action button based on ticket source and role */}
+                        {!ticket.from_supplier_portal ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTicket(ticket.id);
+                            }}
+                            className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-sm transition-colors"
+                            title="Eliminar ticket"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        ) : isAdmin ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/suppliers/invoices/${ticket.supplier_invoice_id}`);
+                            }}
+                            className="p-2 hover:bg-purple-500/20 text-zinc-500 hover:text-purple-400 rounded-sm transition-colors"
+                            title="Gestionar en proveedores"
+                          >
+                            <ExternalLink size={18} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSupplierDeleteModal(ticket);
+                              setDeleteReason('');
+                            }}
+                            className="p-2 hover:bg-amber-500/20 text-zinc-500 hover:text-amber-400 rounded-sm transition-colors"
+                            title="Solicitar borrado"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -712,6 +766,46 @@ const ProjectView = () => {
               <button onClick={handleEditSave} disabled={editSaving || !editHasChanges}
                 className="flex-1 py-2.5 text-sm bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {editSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* INT-1: Modal solicitud borrado ticket proveedor */}
+      {supplierDeleteModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setSupplierDeleteModal(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-sm max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+              <h3 className="text-lg font-bold text-zinc-100">Solicitar borrado</h3>
+              <button onClick={() => setSupplierDeleteModal(null)} className="text-zinc-400 hover:text-zinc-100 transition-colors p-1">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-zinc-300 text-sm mb-1">
+                <span className="font-semibold">{supplierDeleteModal.provider}</span> — {supplierDeleteModal.final_total?.toFixed(2)}€
+              </p>
+              <p className="text-zinc-500 text-xs mb-4">
+                Esta factura viene del portal de proveedores. Se enviara una solicitud de borrado al administrador.
+              </p>
+              <textarea
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="Motivo de la solicitud..."
+                rows={3}
+                className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none resize-none"
+              />
+            </div>
+            <div className="flex gap-3 p-6 border-t border-zinc-800">
+              <button onClick={() => setSupplierDeleteModal(null)}
+                className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold">
+                Cancelar
+              </button>
+              <button
+                onClick={handleRequestSupplierDeletion}
+                disabled={!deleteReason.trim() || requestingDelete}
+                className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-sm transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                {requestingDelete ? 'Enviando...' : 'Solicitar borrado'}
               </button>
             </div>
           </div>

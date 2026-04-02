@@ -38,6 +38,11 @@ from app.services.supplier_email import (
 
 from app.services.notifications import create_notification as _notify
 from app.services.auth import _generate_token
+from app.services.supplier_integration import (
+    get_or_create_project_for_oc,
+    create_ticket_from_supplier_invoice,
+    delete_ticket_for_invoice,
+)
 
 router = APIRouter(prefix="/suppliers", tags=["Suppliers (Admin)"])
 
@@ -773,39 +778,11 @@ async def update_invoice_status(
 
     invoice.status = InvoiceStatus(new_status)
 
-    # Auto-create ticket in DAZZ Producciones when APPROVED
-    if new_status == "APPROVED" and invoice.project_id:
-        existing_ticket = db.query(Ticket).filter(
-            Ticket.supplier_invoice_id == invoice.id
-        ).first()
-        if not existing_ticket:
-            ticket = Ticket(
-                project_id=invoice.project_id,
-                date=format_date_for_response(invoice.date),
-                provider=invoice.provider_name or "",
-                invoice_number=invoice.invoice_number,
-                po_notes=invoice.oc_number,
-                base_amount=invoice.base_amount,
-                iva_percentage=invoice.iva_percentage,
-                iva_amount=invoice.iva_amount,
-                irpf_percentage=invoice.irpf_percentage or 0,
-                irpf_amount=invoice.irpf_amount or 0,
-                total_with_iva=invoice.base_amount + invoice.iva_amount,
-                final_total=invoice.final_total,
-                currency=invoice.currency or "EUR",
-                is_foreign=invoice.is_foreign or False,
-                invoice_status="Aprobada",
-                payment_status="Pendiente",
-                type=TicketType.FACTURA,
-                file_path=invoice.file_url or "",
-                file_name=f"{invoice.invoice_number}.pdf",
-                notes="Ticket generated automatically from supplier portal",
-                from_supplier_portal=True,
-                supplier_id=invoice.supplier_id,
-                supplier_invoice_id=invoice.id,
-            )
-            db.add(ticket)
-            logger.info(f"Ticket created in DAZZ for invoice {invoice.invoice_number} -> project {invoice.project_id}")
+    # INT-1: Auto-create ticket in DAZZ Producciones when APPROVED
+    if new_status == "APPROVED" and invoice.oc_number:
+        project = get_or_create_project_for_oc(db, invoice.oc_number, admin, supplier)
+        create_ticket_from_supplier_invoice(db, invoice, supplier, project)
+        invoice.project_id = project.id
 
     # Notifications + emails
     if supplier:
@@ -825,6 +802,14 @@ async def update_invoice_status(
                                            invoice.invoice_number, invoice.final_total)
             except Exception as e:
                 logger.warning(f"Failed to send PAID email to {supplier.email}: {e}")
+
+    # INT-1: Sync payment status to linked DAZZ ticket
+    if new_status == "PAID":
+        linked_ticket = db.query(Ticket).filter(
+            Ticket.supplier_invoice_id == invoice.id
+        ).first()
+        if linked_ticket:
+            linked_ticket.payment_status = "PAGADO ADMIN"
 
     # Single commit: status change + ticket + notifications
     db.commit()
@@ -857,19 +842,8 @@ async def confirm_invoice_deletion(
                 NotificationEventType.DELETED, "Invoice Deleted",
                 msg, invoice_id=invoice.id, supplier_id=supplier.id)
 
-    # Cascade: delete or void the linked ticket in DAZZ Producciones
-    linked_ticket = db.query(Ticket).filter(
-        Ticket.supplier_invoice_id == invoice.id
-    ).first()
-    if linked_ticket:
-        # If ticket has been reviewed (is_reviewed=True), mark as voided instead of deleting
-        if linked_ticket.is_reviewed:
-            linked_ticket.payment_status = "Anulado"
-            linked_ticket.notes = (linked_ticket.notes or "") + "\n[AUTO] Voided: supplier invoice deleted from portal"
-            logger.info(f"Ticket {linked_ticket.id} marked as Anulado (had activity)")
-        else:
-            db.delete(linked_ticket)
-            logger.info(f"Ticket {linked_ticket.id} deleted (cascade from supplier invoice)")
+    # INT-1: Cascade delete/void linked DAZZ ticket + recalculate project totals
+    delete_ticket_for_invoice(db, invoice.id)
 
     # LOGIC-M5: Delete Cloudinary files with error logging (was silent pass)
     if invoice.file_url:

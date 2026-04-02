@@ -93,15 +93,16 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
         "ESTATUS PAGO",
         "LINK",
         "COMO SE PAGÓ",
-        "FECHA PAGO"
+        "FECHA PAGO",
+        "ORIGEN"
     ]
-    
+
     for col, header in enumerate(headers_row5, start=1):
         cell = sheet.cell(row=5, column=col, value=header)
         cell.font = Font(bold=True, size=10)
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    
+
     # === FILA 6+: Tickets individuales ===
     for idx, ticket in enumerate(tickets, start=6):
         sheet.cell(row=idx, column=1, value=ticket.get('date', ''))
@@ -117,17 +118,23 @@ def generate_project_excel(project_data: Dict, tickets: List[Dict], output_path:
         sheet.cell(row=idx, column=11, value=ticket.get('final_total', 0))
         sheet.cell(row=idx, column=12, value=ticket.get('invoice_status', ''))
         sheet.cell(row=idx, column=13, value=ticket.get('payment_status', ''))
-        
+
         if ticket.get('type') == 'factura':
             sheet.cell(row=idx, column=14, value=ticket.get('phone', ''))
             sheet.cell(row=idx, column=15, value=ticket.get('email', ''))
             sheet.cell(row=idx, column=16, value=ticket.get('contact_name', ''))
-    
+
+        # INT-1: Origen del ticket
+        is_supplier = ticket.get('from_supplier_portal', False)
+        is_auto = ticket.get('is_autoinvoice', False)
+        origin = "AUTOFACTURA" if (is_supplier and is_auto) else "PROVEEDOR" if is_supplier else "INTERNO"
+        sheet.cell(row=idx, column=23, value=origin)
+
     # === Ajustar anchos de columnas ===
     column_widths = {
         'A': 15, 'B': 25, 'C': 18, 'D': 20, 'E': 12, 'F': 10, 'G': 10, 'H': 12,
         'I': 10, 'J': 12, 'K': 12, 'L': 18, 'M': 18, 'N': 15, 'O': 30, 'P': 20,
-        'Q': 25, 'R': 12, 'S': 18, 'T': 15, 'U': 18, 'V': 15
+        'Q': 25, 'R': 12, 'S': 18, 'T': 15, 'U': 18, 'V': 15, 'W': 15
     }
     
     for col_letter, width in column_widths.items():
@@ -177,7 +184,9 @@ def create_project_excel_from_db(project, tickets, output_dir: str = "excel_gene
             'type': ticket.type,
             'phone': ticket.phone,
             'email': ticket.email,
-            'contact_name': ticket.contact_name
+            'contact_name': ticket.contact_name,
+            'from_supplier_portal': getattr(ticket, 'from_supplier_portal', False),
+            'is_autoinvoice': getattr(ticket, 'is_autoinvoice', False),
         })
     
     safe_code = project.creative_code.replace('/', '-').replace('\\', '-')
@@ -280,15 +289,16 @@ def create_project_excel_bytes(project, tickets) -> bytes:
         "ESTATUS PAGO",
         "LINK",
         "COMO SE PAGÓ",
-        "FECHA PAGO"
+        "FECHA PAGO",
+        "ORIGEN"
     ]
-    
+
     for col, header in enumerate(headers_row5, start=1):
         cell = sheet.cell(row=5, column=col, value=header)
         cell.font = Font(bold=True, size=10)
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    
+
     # === FILA 6+: Tickets ===
     # FIX: Usar getattr() para campos que pueden tener diferentes nombres
     for idx, ticket in enumerate(tickets, start=6):
@@ -328,12 +338,18 @@ def create_project_excel_bytes(project, tickets) -> bytes:
             # contact_name también puede no existir
             contact_name = getattr(ticket, 'contact_name', '') or ''
             sheet.cell(row=idx, column=16, value=contact_name)
-    
+
+        # INT-1: Origen del ticket
+        is_supplier = getattr(ticket, 'from_supplier_portal', False)
+        is_auto = getattr(ticket, 'is_autoinvoice', False)
+        origin = "AUTOFACTURA" if (is_supplier and is_auto) else "PROVEEDOR" if is_supplier else "INTERNO"
+        sheet.cell(row=idx, column=23, value=origin)
+
     # === Ajustar anchos ===
     column_widths = {
         'A': 15, 'B': 25, 'C': 18, 'D': 20, 'E': 12, 'F': 10, 'G': 10, 'H': 12,
         'I': 10, 'J': 12, 'K': 12, 'L': 18, 'M': 18, 'N': 15, 'O': 30, 'P': 20,
-        'Q': 25, 'R': 12, 'S': 18, 'T': 15, 'U': 18, 'V': 15
+        'Q': 25, 'R': 12, 'S': 18, 'T': 15, 'U': 18, 'V': 15, 'W': 15
     }
     
     for col_letter, width in column_widths.items():

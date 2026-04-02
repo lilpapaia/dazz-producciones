@@ -1,9 +1,9 @@
 import logging
 import hashlib
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Body, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import update
-from typing import List
+from typing import List, Optional
 import asyncio
 import os, json
 from pathlib import Path
@@ -339,3 +339,51 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     db.delete(ticket)
     db.commit()
     return None
+
+
+@router.post("/{ticket_id}/request-supplier-deletion")
+async def request_supplier_ticket_deletion(
+    ticket_id: int,
+    reason: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """INT-1: BOSS/WORKER requests deletion of a supplier-originated ticket.
+    Sets ticket invoice_status to 'RECIBIDO PERO ERRONEO' and marks the
+    linked SupplierInvoice as DELETE_REQUESTED."""
+    ticket = db.query(Ticket).options(joinedload(Ticket.project)).filter(
+        Ticket.id == ticket_id
+    ).first()
+    if not ticket:
+        raise HTTPException(404, "Ticket not found")
+    if not ticket.from_supplier_portal:
+        raise HTTPException(400, "This ticket is not from the supplier portal")
+    if not can_access_project(current_user, ticket.project, db):
+        raise HTTPException(403, "Not enough permissions")
+
+    ticket.invoice_status = "RECIBIDO PERO ERRONEO"
+
+    # Mark the linked supplier invoice as DELETE_REQUESTED
+    if ticket.supplier_invoice_id:
+        from app.models.suppliers import SupplierInvoice, InvoiceStatus
+        invoice = db.query(SupplierInvoice).filter(
+            SupplierInvoice.id == ticket.supplier_invoice_id
+        ).first()
+        if invoice and invoice.status not in (InvoiceStatus.PAID, InvoiceStatus.DELETE_REQUESTED):
+            invoice.status = InvoiceStatus.DELETE_REQUESTED
+            invoice.delete_reason = reason or "Solicitado desde proyecto DAZZ"
+
+    # Notify admin
+    from app.models.suppliers import NotificationRecipientType, NotificationEventType
+    from app.services.notifications import create_notification as _notify
+    msg = f"Ticket #{ticket_id} ({ticket.provider}) — deletion requested by {current_user.name}"
+    if reason:
+        msg += f": {reason}"
+    _notify(
+        db, NotificationRecipientType.ADMIN, 0,
+        NotificationEventType.DELETED, "Supplier ticket deletion requested",
+        msg, invoice_id=ticket.supplier_invoice_id, supplier_id=ticket.supplier_id,
+    )
+
+    db.commit()
+    return {"message": "Solicitud de borrado enviada"}

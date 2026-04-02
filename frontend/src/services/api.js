@@ -174,6 +174,9 @@ export const updateTicket = (id, data) =>
 export const deleteTicket = (id) =>
   api.delete(`/tickets/${id}`);
 
+export const requestSupplierTicketDeletion = (ticketId, reason) =>
+  api.post(`/tickets/${ticketId}/request-supplier-deletion`, { reason });
+
 // ============================================
 // USERS
 // ============================================

@@ -298,6 +298,10 @@ async def startup_event():
             conn.execute(text("UPDATE companies SET invoice_prefix = 'DAZZAG' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DAZZLE AGENCY%'"))
             conn.execute(text("UPDATE companies SET invoice_prefix = 'DASSAD' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DIGITAL ADVERTISING%'"))
             conn.execute(text("UPDATE companies SET invoice_prefix = 'DAZZCR' WHERE invoice_prefix IS NULL AND UPPER(name) LIKE '%DAZZ CREATIVE%'"))
+            # INT-1: is_autoinvoice flag on tickets (supplier integration)
+            conn.execute(text(
+                "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS is_autoinvoice BOOLEAN DEFAULT FALSE NOT NULL"
+            ))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")

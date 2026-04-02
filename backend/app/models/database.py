@@ -184,6 +184,7 @@ class Ticket(Base):
     from_supplier_portal = Column(Boolean, default=False)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True, index=True)
     supplier_invoice_id = Column(Integer, ForeignKey("supplier_invoices.id"), nullable=True, index=True)
+    is_autoinvoice = Column(Boolean, default=False, nullable=False)
 
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
 

@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { getTicket, updateTicket, deleteTicket, getProjectTickets } from '../services/api';
+import { getTicket, updateTicket, deleteTicket, getProjectTickets, requestSupplierTicketDeletion } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
-import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, X, ZoomIn, ChevronLeft, ChevronRight, Trash2, ExternalLink } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useEscapeKey from '../hooks/useEscapeKey';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 import { getCurrencySymbol } from '../utils/currency';
+import { useAuth } from '../context/AuthContext';
+import { ROLES } from '../constants/roles';
 
 const invoiceStatusOptions = [
   "RECIBIDO", "PEDIDO", "PENDIENTE PEDIR", "RECIBIDO PERO ERRONEO",
@@ -40,6 +42,13 @@ const ReviewTicket = () => {
   const [currentTicketIndex, setCurrentTicketIndex] = useState(-1);
   const [customPayment, setCustomPayment] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+
+  // INT-1: Supplier ticket controls
+  const { user } = useAuth();
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const [supplierDeleteModal, setSupplierDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [requestingDelete, setRequestingDelete] = useState(false);
 
   // UX-L1: Detectar cambios sin guardar
   const initialTicketRef = useRef(null);
@@ -180,6 +189,23 @@ const ReviewTicket = () => {
     }
   };
 
+  // INT-1: Handle supplier ticket deletion request
+  const handleRequestSupplierDeletion = async () => {
+    if (!deleteReason.trim()) return;
+    setRequestingDelete(true);
+    try {
+      await requestSupplierTicketDeletion(id, deleteReason.trim());
+      showSuccess('Solicitud de borrado enviada');
+      setSupplierDeleteModal(false);
+      setDeleteReason('');
+      navigate(`/projects/${ticket.project_id}`);
+    } catch (e) {
+      showError(e.response?.data?.detail || 'Error al solicitar borrado');
+    } finally {
+      setRequestingDelete(false);
+    }
+  };
+
   // Obtener array de páginas - VERSION SIMPLIFICADA Y ROBUSTA
   const getPages = () => {
     if (!ticket) return [];
@@ -219,6 +245,7 @@ const ReviewTicket = () => {
 
   if (loading) return <LoadingSpinner size="lg" fullPage />;
 
+  const isSupplierTicket = ticket?.from_supplier_portal === true;
   const pages = getPages();
   const totalPages = pages.length;
   
@@ -314,6 +341,12 @@ const ReviewTicket = () => {
           {/* Badges en su propia fila */}
           <div className="flex items-center gap-2 mb-3">
             <StatusBadge type="ticket" value={ticket.type} />
+            {ticket.from_supplier_portal && !ticket.is_autoinvoice && (
+              <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-sm text-xs font-bold">PROVEEDOR</span>
+            )}
+            {ticket.from_supplier_portal && ticket.is_autoinvoice && (
+              <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-sm text-xs font-bold">AUTO</span>
+            )}
             {ticket.is_foreign && (
               <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-sm text-xs font-bold uppercase border border-blue-500/30 flex items-center gap-1">
                 🌍 INTERNACIONAL
@@ -332,16 +365,36 @@ const ReviewTicket = () => {
               <div></div>
             )}
 
-            {/* Botón Eliminar - DERECHA - Responsive */}
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={deleting}
-              className="flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Eliminar ticket"
-            >
-              <Trash2 size={18} />
-              <span className="hidden md:inline text-sm font-semibold">Eliminar</span>
-            </button>
+            {/* Botón Eliminar/Gestionar - DERECHA - Responsive */}
+            {!isSupplierTicket ? (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deleting}
+                className="flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Eliminar ticket"
+              >
+                <Trash2 size={18} />
+                <span className="hidden md:inline text-sm font-semibold">Eliminar</span>
+              </button>
+            ) : isAdmin ? (
+              <button
+                onClick={() => navigate(`/suppliers/invoices/${ticket.supplier_invoice_id}`)}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-sm transition-colors"
+                title="Gestionar en proveedores"
+              >
+                <ExternalLink size={18} />
+                <span className="hidden md:inline text-sm font-semibold">Proveedores</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => { setSupplierDeleteModal(true); setDeleteReason(''); }}
+                className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-sm transition-colors"
+                title="Solicitar borrado"
+              >
+                <Trash2 size={18} />
+                <span className="hidden md:inline text-sm font-semibold">Solicitar borrado</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -555,6 +608,29 @@ const ReviewTicket = () => {
             </div>
           </div>
 
+          {/* INT-1: Banner ticket proveedor */}
+          {isSupplierTicket && (
+            <div className="bg-purple-500/10 border-2 border-purple-500/30 rounded-sm p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🔗</span>
+                  <p className="text-sm text-purple-300">
+                    Esta factura proviene del portal de proveedores. Los importes no son editables.
+                  </p>
+                </div>
+                {isAdmin && ticket.supplier_invoice_id && (
+                  <button
+                    onClick={() => navigate(`/suppliers/invoices/${ticket.supplier_invoice_id}`)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border border-purple-500/40 rounded-sm text-xs font-bold transition-colors"
+                  >
+                    <ExternalLink size={14} />
+                    Gestionar en proveedores
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Info Internacional */}
           {ticket.is_foreign && (
             <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-sm p-5">
@@ -629,13 +705,15 @@ const ReviewTicket = () => {
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">FECHA FACTURA</label>
               <input type="text" value={ticket.date || ''} onChange={(e) => setTicket({...ticket, date: e.target.value})}
-                placeholder="DD/MM/AAAA" className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+                disabled={isSupplierTicket}
+                placeholder="DD/MM/AAAA" className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed" />
             </div>
             {ticket.type === 'factura' && (
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">Nº FACTURA</label>
                 <input type="text" value={ticket.invoice_number || ''} onChange={(e) => setTicket({...ticket, invoice_number: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+                  disabled={isSupplierTicket}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed" />
               </div>
             )}
           </div>
@@ -644,7 +722,8 @@ const ReviewTicket = () => {
           <div>
             <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">PROVEEDOR *</label>
             <input type="text" value={ticket.provider || ''} onChange={(e) => setTicket({...ticket, provider: e.target.value})}
-              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+              disabled={isSupplierTicket}
+              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed" />
           </div>
 
           {/* Teléfono y Email juntos - SIN GAP */}
@@ -653,12 +732,14 @@ const ReviewTicket = () => {
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">TELÉFONO</label>
                 <input type="text" value={ticket.phone || ''} onChange={(e) => setTicket({...ticket, phone: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+                  disabled={isSupplierTicket}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed" />
               </div>
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">EMAIL</label>
                 <input type="email" value={ticket.email || ''} onChange={(e) => setTicket({...ticket, email: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+                  disabled={isSupplierTicket}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed" />
               </div>
             </div>
           )}
@@ -667,7 +748,8 @@ const ReviewTicket = () => {
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">NOMBRE CONTACTO</label>
               <input type="text" value={ticket.contact_name || ''} onChange={(e) => setTicket({...ticket, contact_name: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500" />
+                disabled={isSupplierTicket}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed" />
             </div>
           )}
 
@@ -689,7 +771,7 @@ const ReviewTicket = () => {
                 {(() => {
                   const rate = ticket.exchange_rate || 1;
                   const sym = getCurrencySymbol(ticket.currency);
-                  const inputCls = "w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+                  const inputCls = `w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none${isSupplierTicket ? ' opacity-60 cursor-not-allowed' : ''}`;
 
                   const updateFromForeign = (foreignBase, ivaPct) => {
                     const foreignTax = Math.round(foreignBase * ivaPct * 100) / 100;
@@ -724,6 +806,7 @@ const ReviewTicket = () => {
                             <input type="number" step="0.01"
                               value={ticket.foreign_amount ?? ''}
                               onChange={(e) => updateFromForeign(parseFloat(e.target.value) || 0, ticket.iva_percentage || 0)}
+                              disabled={isSupplierTicket}
                               className={`${inputCls} text-right pr-7 text-sm`} />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">{sym}</span>
                           </div>
@@ -742,6 +825,7 @@ const ReviewTicket = () => {
                               <input type="number" step="1" min="0" max="100"
                                 value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
                                 onChange={(e) => updateFromForeign(ticket.foreign_amount || 0, (parseFloat(e.target.value) || 0) / 100)}
+                                disabled={isSupplierTicket}
                                 className={`${inputCls} text-center pr-6 text-sm`} />
                               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">%</span>
                             </div>
@@ -777,6 +861,7 @@ const ReviewTicket = () => {
                               <input type="number" step="0.01"
                                 value={ticket.foreign_amount ?? ''}
                                 onChange={(e) => updateFromForeign(parseFloat(e.target.value) || 0, ticket.iva_percentage || 0)}
+                                disabled={isSupplierTicket}
                                 className={`${inputCls} text-right pr-7 text-sm`} />
                               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">{sym}</span>
                             </div>
@@ -788,6 +873,7 @@ const ReviewTicket = () => {
                                 <input type="number" step="1" min="0" max="100"
                                   value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
                                   onChange={(e) => updateFromForeign(ticket.foreign_amount || 0, (parseFloat(e.target.value) || 0) / 100)}
+                                  disabled={isSupplierTicket}
                                   className={`${inputCls} text-center pr-6 text-sm`} />
                                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">%</span>
                               </div>
@@ -838,7 +924,8 @@ const ReviewTicket = () => {
                           const iva = Math.round(base * ivaP * 100) / 100;
                           setTicket({ ...ticket, base_amount: base, iva_amount: iva, total_with_iva: Math.round((base + iva) * 100) / 100, final_total: Math.round((base + iva) * 100) / 100 });
                         }}
-                        className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        disabled={isSupplierTicket}
+                        className={`w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none${isSupplierTicket ? ' opacity-60 cursor-not-allowed' : ''}`}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">€</span>
                     </div>
@@ -854,7 +941,8 @@ const ReviewTicket = () => {
                           const iva = Math.round(base * pct * 100) / 100;
                           setTicket({ ...ticket, iva_percentage: pct, iva_amount: iva, total_with_iva: Math.round((base + iva) * 100) / 100, final_total: Math.round((base + iva) * 100) / 100 });
                         }}
-                        className="w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 pr-7 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        disabled={isSupplierTicket}
+                        className={`w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 pr-7 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none${isSupplierTicket ? ' opacity-60 cursor-not-allowed' : ''}`}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">%</span>
                     </div>
@@ -951,7 +1039,7 @@ const ReviewTicket = () => {
         </div>
       </main>
 
-      {/* Modal de confirmación de borrado */}
+      {/* Modal de confirmación de borrado (tickets internos) */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
@@ -962,6 +1050,47 @@ const ReviewTicket = () => {
         cancelText="Cancelar"
         type="danger"
       />
+
+      {/* INT-1: Modal solicitud borrado ticket proveedor */}
+      {supplierDeleteModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setSupplierDeleteModal(false)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-sm max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+              <h3 className="text-lg font-bold text-zinc-100">Solicitar borrado</h3>
+              <button onClick={() => setSupplierDeleteModal(false)} className="text-zinc-400 hover:text-zinc-100 transition-colors p-1">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-zinc-300 text-sm mb-1">
+                <span className="font-semibold">{ticket?.provider}</span> — {ticket?.final_total?.toFixed(2)}€
+              </p>
+              <p className="text-zinc-500 text-xs mb-4">
+                Esta factura viene del portal de proveedores. Se enviara una solicitud de borrado al administrador.
+              </p>
+              <textarea
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="Motivo de la solicitud..."
+                rows={3}
+                className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none resize-none"
+              />
+            </div>
+            <div className="flex gap-3 p-6 border-t border-zinc-800">
+              <button onClick={() => setSupplierDeleteModal(false)}
+                className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-sm transition-colors font-semibold">
+                Cancelar
+              </button>
+              <button
+                onClick={handleRequestSupplierDeletion}
+                disabled={!deleteReason.trim() || requestingDelete}
+                className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-sm transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                {requestingDelete ? 'Enviando...' : 'Solicitar borrado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

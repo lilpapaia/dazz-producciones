@@ -23,6 +23,7 @@ from app.services.auth import get_current_admin_user
 from app.services.encryption import decrypt_iban
 from app.services.autoinvoice_pdf import generate_autoinvoice_pdf
 from app.services.supplier_email import send_autoinvoice_notification
+from app.services.supplier_integration import get_or_create_project_for_oc
 
 logger = logging.getLogger(__name__)
 
@@ -209,43 +210,9 @@ async def generate_autoinvoice(
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    # Resolve project_id from OC
-    project_id = None
-    project = db.query(Project).filter(
-        Project.creative_code.ilike(body.oc_number)
-    ).first()
-    if project:
-        project_id = project.id
-    else:
-        # Check if OC belongs to a permanent prefix → auto-create project
-        oc_lower = body.oc_number.lower()
-        oc_prefix = None
-        if oc_lower.startswith("oc-"):
-            active_prefixes = db.query(OCPrefix).filter(OCPrefix.active == True).all()
-            for p in active_prefixes:
-                if oc_lower.startswith(f"oc-{p.prefix.lower()}"):
-                    oc_prefix = p
-                    break
-
-        if oc_prefix and oc_prefix.permanent_oc:
-            project = Project(
-                year=oc_prefix.year_format,
-                send_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-                creative_code=body.oc_number,
-                company=company.name,
-                owner_company_id=oc_prefix.company_id,
-                owner_id=admin.id,
-                responsible=admin.username,
-                invoice_type=f"PRODUCCION{oc_prefix.year_format}",
-                description=supplier.name,
-                status=ProjectStatus.EN_CURSO,
-            )
-            db.add(project)
-            db.flush()
-            project_id = project.id
-            logger.info(f"Auto-created project {project_id} for permanent OC {body.oc_number}")
-        elif oc_prefix and not oc_prefix.permanent_oc:
-            raise HTTPException(400, f"No existe proyecto con OC '{body.oc_number}'. Créalo primero.")
+    # INT-1: Resolve project from OC (auto-create for permanent, check closed)
+    project = get_or_create_project_for_oc(db, body.oc_number, admin, supplier)
+    project_id = project.id
 
     # Duplicate invoice number check (SELECT FOR UPDATE on PostgreSQL)
     existing = db.query(SupplierInvoice.id).filter(
