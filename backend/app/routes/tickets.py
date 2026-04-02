@@ -10,7 +10,7 @@ from pathlib import Path
 from datetime import datetime
 
 from config.database import get_db
-from config.constants import MATH_TOLERANCE, MIN_AI_CONFIDENCE
+from config.constants import MATH_TOLERANCE, MIN_AI_CONFIDENCE, ADMIN_RECIPIENT_ID
 from app.models import schemas
 from app.models.database import User, Project, Ticket
 from app.services.auth import get_current_active_user
@@ -380,7 +380,7 @@ async def request_supplier_ticket_deletion(
     if reason:
         msg += f": {reason}"
     _notify(
-        db, NotificationRecipientType.ADMIN, 0,
+        db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
         NotificationEventType.DELETED, "Supplier ticket deletion requested",
         msg, invoice_id=ticket.supplier_invoice_id, supplier_id=ticket.supplier_id,
     )

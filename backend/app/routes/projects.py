@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
 
 from config.database import get_db
+from config.constants import ADMIN_RECIPIENT_ID
 from app.models import schemas
 from app.models.database import User, Project, ProjectStatus, Company, UserRole
 from app.services.auth import get_current_active_user, get_current_admin_user
@@ -99,7 +100,7 @@ async def create_project(
             inv.project_id = db_project.id
             inv.company_id = db_project.owner_company_id
             inv.status = InvoiceStatus.PENDING
-            _notify(db, NotificationRecipientType.ADMIN, 0,
+            _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                     NotificationEventType.OC_LINKED, "OC Linked",
                     f"Invoice {inv.invoice_number} linked to project {db_project.creative_code}",
                     invoice_id=inv.id, supplier_id=inv.supplier_id)

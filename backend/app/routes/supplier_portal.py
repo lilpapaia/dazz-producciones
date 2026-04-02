@@ -16,6 +16,7 @@ from typing import Optional, List
 import hashlib
 
 from config.database import get_db
+from config.constants import ADMIN_RECIPIENT_ID
 from app.models.database import User
 from app.models.supplier_schemas import (
     ValidateTokenResponse, RegisterRequest, RegisterResponse,
@@ -168,11 +169,11 @@ async def register_supplier(
 
     # Notifications (before commit — atomic with supplier creation)
     if body.iban:
-        _notify(db, NotificationRecipientType.ADMIN, 0, NotificationEventType.REGISTRATION,
+        _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID, NotificationEventType.REGISTRATION,
                 "New Supplier Registered", f"{supplier.name} ({supplier.email})",
                 supplier_id=supplier.id)
     else:
-        _notify(db, NotificationRecipientType.ADMIN, 0, NotificationEventType.REGISTRATION,
+        _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID, NotificationEventType.REGISTRATION,
                 "New Supplier Registered — No IBAN",
                 f"{supplier.name} ({supplier.email}) — registered without IBAN, payment method pending",
                 supplier_id=supplier.id)
@@ -398,7 +399,7 @@ async def validate_bank_cert_iban(
 
     # IA no pudo leer nada
     if not cert_data or (not cert_data.get("iban") and not cert_data.get("nif") and cert_data.get("is_bank_certificate") is None):
-        _notify(db, NotificationRecipientType.ADMIN, 0,
+        _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                 NotificationEventType.IA_REJECTED, "Bank cert not readable",
                 f"{invitation.name} ({invitation.email}) — AI could not read the bank certificate — manual review needed",
                 supplier_id=None)
@@ -409,7 +410,7 @@ async def validate_bank_cert_iban(
     # 1. Verificar tipo de documento
     is_cert = cert_data.get("is_bank_certificate")
     if is_cert is False:
-        _notify(db, NotificationRecipientType.ADMIN, 0,
+        _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                 NotificationEventType.IA_REJECTED, "Document is not a bank certificate",
                 f"{invitation.name} ({invitation.email}) — uploaded document does not appear to be a bank certificate",
                 supplier_id=None)
@@ -425,7 +426,7 @@ async def validate_bank_cert_iban(
             iban_match = True
         else:
             iban_match = False
-            _notify(db, NotificationRecipientType.ADMIN, 0,
+            _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                     NotificationEventType.IA_REJECTED, "IBAN mismatch on bank cert",
                     f"{invitation.name} ({invitation.email}) — IBAN on certificate does not match the one entered by supplier",
                     supplier_id=None)
@@ -442,7 +443,7 @@ async def validate_bank_cert_iban(
                 nif_match = True
             else:
                 nif_match = False
-                _notify(db, NotificationRecipientType.ADMIN, 0,
+                _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                         NotificationEventType.IA_REJECTED, "NIF mismatch on bank cert",
                         f"{invitation.name} ({invitation.email}) — NIF on certificate does not match the one entered by supplier",
                         supplier_id=None)
@@ -502,7 +503,7 @@ async def upload_invoice(
         iban_mismatch = validation.get("iban_match") is False
 
         if not validation["valid"]:
-            _notify(db, NotificationRecipientType.ADMIN, 0,
+            _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                     NotificationEventType.IA_REJECTED, "AI Rejected Invoice",
                     f"Invoice from {supplier.name}: {'; '.join(validation['errors'])}",
                     supplier_id=supplier.id)
@@ -562,14 +563,14 @@ async def upload_invoice(
 
         # BUG-44: IBAN mismatch notification with invoice_id + invoice_number
         if iban_mismatch:
-            _notify(db, NotificationRecipientType.ADMIN, 0,
+            _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                     NotificationEventType.IA_REJECTED, "IBAN Mismatch",
                     f"Invoice {invoice.invoice_number} from {supplier.name}: IBAN does not match registered IBAN",
                     invoice_id=invoice.id, supplier_id=supplier.id)
 
         # Notifications use invoice.id from flush
         if invoice_status == InvoiceStatus.OC_PENDING:
-            _notify(db, NotificationRecipientType.ADMIN, 0,
+            _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                     NotificationEventType.NEW_INVOICE, "New Invoice — OC Required",
                     f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR) — no OC detected, manual assignment needed",
                     invoice_id=invoice.id, supplier_id=supplier.id)
@@ -578,7 +579,7 @@ async def upload_invoice(
                     f"Your invoice {invoice.invoice_number} was received but no OC was detected. DAZZ will assign the OC manually.",
                     invoice_id=invoice.id, supplier_id=supplier.id)
         else:
-            _notify(db, NotificationRecipientType.ADMIN, 0,
+            _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
                     NotificationEventType.NEW_INVOICE, "New Invoice Submitted",
                     f"{supplier.name} — {invoice.invoice_number} ({invoice.final_total:.2f} EUR)",
                     invoice_id=invoice.id, supplier_id=supplier.id)
@@ -708,7 +709,7 @@ async def request_invoice_deletion(
     invoice.status = InvoiceStatus.DELETE_REQUESTED
     invoice.delete_reason = body.reason
 
-    _notify(db, NotificationRecipientType.ADMIN, 0,
+    _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
             NotificationEventType.DELETED, "Deletion Requested",
             f"{supplier.name} requests deletion of {invoice.invoice_number}: {body.reason}",
             invoice_id=invoice.id, supplier_id=supplier.id)
@@ -839,7 +840,7 @@ async def request_data_change(
     if not changes:
         raise HTTPException(400, "No changes provided")
 
-    _notify(db, NotificationRecipientType.ADMIN, 0,
+    _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
             NotificationEventType.REGISTRATION, "Data Change Request",
             f"{supplier.name} requests data change",
             supplier_id=supplier.id,
@@ -875,7 +876,7 @@ async def request_iban_change(
     # Store pending IBAN + cert key on supplier (admin will approve/reject)
     supplier.pending_iban_encrypted = encrypt_iban(new_iban)
     supplier.pending_bank_cert_url = cert_key
-    _notify(db, NotificationRecipientType.ADMIN, 0,
+    _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
             NotificationEventType.REGISTRATION, "IBAN Change Request",
             f"{supplier.name} requests IBAN change to {new_iban[:4]}****{new_iban[-4:]}",
             supplier_id=supplier.id)
@@ -894,7 +895,7 @@ async def request_deactivation(
     db: Session = Depends(get_db),
 ):
     """Request account deactivation. Admin must confirm."""
-    _notify(db, NotificationRecipientType.ADMIN, 0,
+    _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID,
             NotificationEventType.REGISTRATION, "Deactivation Request",
             f"{supplier.name} requests account deactivation. Reason: {body.reason}",
             supplier_id=supplier.id)

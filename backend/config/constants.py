@@ -9,3 +9,8 @@ MIN_AI_CONFIDENCE = 0.5     # Below this, ticket/invoice is flagged for review
 
 # File upload limits
 MAX_SUPPLIER_PDF_SIZE = 10 * 1024 * 1024   # 10MB — supplier invoices and bank certs
+
+# Admin notifications use recipient_id=0 as convention.
+# Admin queries filter by recipient_type='ADMIN', not by recipient_id.
+# This constant exists for clarity and grep-ability.
+ADMIN_RECIPIENT_ID = 0
