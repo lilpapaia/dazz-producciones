@@ -171,6 +171,8 @@ class RegisterRequest(BaseModel):
     iban: Optional[str] = Field(default=None, max_length=50)
     password: str = Field(min_length=8, max_length=128)
     gdpr_consent: bool
+    privacy_accepted: bool
+    contract_accepted: Optional[bool] = None
     has_cert_warnings: bool = False
 
     @field_validator("password")
@@ -218,6 +220,8 @@ class ProfileResponse(BaseModel):
     status: str = "ACTIVE"
     has_pending_change: bool = False
     pending_change_info: Optional[str] = None
+    privacy_accepted_at: Optional[datetime] = None
+    contract_accepted_at: Optional[datetime] = None
     created_at: datetime
 
 

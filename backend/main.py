@@ -302,6 +302,11 @@ async def startup_event():
             conn.execute(text(
                 "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS is_autoinvoice BOOLEAN DEFAULT FALSE NOT NULL"
             ))
+            # Legal documents acceptance tracking
+            conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_accepted_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS privacy_policy_version VARCHAR(10)"))
+            conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_version VARCHAR(10)"))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")

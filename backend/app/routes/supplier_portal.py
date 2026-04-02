@@ -79,6 +79,45 @@ async def validate_invitation_token(
     return ValidateTokenResponse(valid=True, name=invitation.name, email=invitation.email)
 
 
+@router.get("/register/check-oc")
+@limiter.limit("10/minute")
+async def check_oc_for_registration(
+    request: Request,
+    response: Response,
+    token: str = Query(...),
+    nif: Optional[str] = Query(default=None),
+    name: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    """Check if supplier will have a permanent OC (influencer) based on NIF or name."""
+    invitation = db.query(SupplierInvitation).filter(
+        SupplierInvitation.token == token,
+        SupplierInvitation.used_at == None,
+        SupplierInvitation.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if not invitation:
+        raise HTTPException(400, "Invalid or expired token")
+
+    # Primary: match by NIF (reliable)
+    if nif:
+        normalized = _normalize_nif(nif)
+        if normalized:
+            ocs_with_nif = db.query(SupplierOC).filter(SupplierOC.nif_cif != None).all()
+            for oc in ocs_with_nif:
+                if _normalize_nif(oc.nif_cif) == normalized:
+                    return {"has_oc": True}
+
+    # Fallback: match by talent_name (case-insensitive)
+    if name:
+        match = db.query(SupplierOC).filter(
+            func.lower(SupplierOC.talent_name) == name.strip().lower()
+        ).first()
+        if match:
+            return {"has_oc": True}
+
+    return {"has_oc": False}
+
+
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 @limiter.limit("5/hour")
 async def register_supplier(
@@ -100,6 +139,9 @@ async def register_supplier(
 
     if not body.gdpr_consent:
         raise HTTPException(400, "GDPR consent is required to register")
+
+    if not body.privacy_accepted:
+        raise HTTPException(400, "Privacy policy must be accepted to register")
 
     # Check email uniqueness
     if db.query(Supplier).filter(Supplier.email == invitation.email).first():
@@ -130,6 +172,10 @@ async def register_supplier(
                         oc_id = oc.id
                     break
 
+    # Validate agency contract acceptance for influencers (suppliers with permanent OC)
+    if oc_id and not body.contract_accepted:
+        raise HTTPException(400, "Agency contract must be accepted to register")
+
     # SEC-M1: Validate + normalize IBAN format (mod-97 checksum) before encrypting
     if body.iban:
         body.iban = validate_iban_format(body.iban)
@@ -151,6 +197,10 @@ async def register_supplier(
         oc_id=oc_id,
         gdpr_consent=True,
         gdpr_consent_at=datetime.now(timezone.utc),
+        privacy_accepted_at=datetime.now(timezone.utc),
+        privacy_policy_version="v1",
+        contract_accepted_at=datetime.now(timezone.utc) if oc_id and body.contract_accepted else None,
+        contract_version="v1" if oc_id and body.contract_accepted else None,
         is_active=True,
         ia_cert_verified=not body.has_cert_warnings,
     )
@@ -312,6 +362,8 @@ async def get_profile(
         company_name=company_name,
         has_pending_change=pending_change is not None,
         pending_change_info=pending_change.message if pending_change else None,
+        privacy_accepted_at=supplier.privacy_accepted_at,
+        contract_accepted_at=supplier.contract_accepted_at,
         created_at=supplier.created_at,
     )
 

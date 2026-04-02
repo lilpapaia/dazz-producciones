@@ -69,6 +69,8 @@ api.interceptors.response.use(
 
 // Auth
 export const validateToken = (token) => api.get(`/portal/register/validate/${token}`);
+export const checkOcForRegistration = (nif, name, token) =>
+  api.get('/portal/register/check-oc', { params: { nif: nif || undefined, name: name || undefined, token } });
 export const registerSupplier = (data) => api.post('/portal/register', data);
 export const loginSupplier = (data) => api.post('/portal/login', data);
 export const logoutSupplier = (refreshToken) => api.post('/portal/logout', { refresh_token: refreshToken });

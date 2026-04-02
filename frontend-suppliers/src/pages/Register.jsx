@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { validateToken, registerSupplier, uploadBankCert, validateBankCertIban } from '../services/api';
+import { validateToken, registerSupplier, uploadBankCert, validateBankCertIban, checkOcForRegistration } from '../services/api';
 import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { LegalDocumentModal, PrivacyPolicyContent, AgencyContractContent } from '../components/LegalDocuments';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -10,7 +11,7 @@ const Register = () => {
   const { login } = useAuth();
   const token = params.get('token') || '';
 
-  const [step, setStep] = useState(1); // 1: details, 2: banking, 3: password
+  const [step, setStep] = useState(1); // 1: details, 2: banking, 3: password, 4: legal
   const [tokenValid, setTokenValid] = useState(null);
   const [invitation, setInvitation] = useState({});
   const [form, setForm] = useState({ name: '', nif_cif: '', phone: '', address: '', iban: '', password: '', confirmPassword: '', gdpr_consent: false });
@@ -23,6 +24,14 @@ const Register = () => {
   const [ibanStatus, setIbanStatus] = useState(null); // null | 'success' | 'warning'
   const [ibanMessage, setIbanMessage] = useState('');
 
+  // Step 4: Legal documents
+  const [hasOc, setHasOc] = useState(false);
+  const [checkingOc, setCheckingOc] = useState(true);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [contractAccepted, setContractAccepted] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+
   useEffect(() => {
     if (!token) { setTokenValid(false); return; }
     validateToken(token).then(({ data }) => {
@@ -30,6 +39,17 @@ const Register = () => {
       if (data.valid) { setInvitation(data); setForm(f => ({ ...f, name: data.name || '' })); }
     }).catch(() => setTokenValid(false));
   }, [token]);
+
+  // Check OC when entering step 4
+  useEffect(() => {
+    if (step === 4) {
+      setCheckingOc(true);
+      checkOcForRegistration(form.nif_cif, form.name, token)
+        .then(r => setHasOc(r.data.has_oc))
+        .catch(() => setHasOc(false))
+        .finally(() => setCheckingOc(false));
+    }
+  }, [step]);
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
 
@@ -53,6 +73,8 @@ const Register = () => {
         iban: form.iban || null,
         password: form.password,
         gdpr_consent: true,
+        privacy_accepted: true,
+        contract_accepted: hasOc ? true : undefined,
       });
       login({ access_token: data.access_token, refresh_token: data.refresh_token, supplier: { id: data.supplier_id, name: form.name, email: invitation.email } });
 
@@ -130,6 +152,8 @@ const Register = () => {
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-md focus:border-amber-500 outline-none";
   const labelCls = "text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1.5 block";
 
+  const canComplete = privacyAccepted && (!hasOc || contractAccepted);
+
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
@@ -140,12 +164,12 @@ const Register = () => {
 
         {/* Progress */}
         <div className="flex gap-1 mb-1.5">
-          {[1, 2, 3].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <div key={s} className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-amber-500' : 'bg-zinc-800'}`} />
           ))}
         </div>
         <div className="flex justify-between text-[9px] text-zinc-600 mb-5">
-          <span>Details</span><span>Banking</span><span>Password</span>
+          <span>Details</span><span>Banking</span><span>Password</span><span>Legal</span>
         </div>
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
@@ -277,7 +301,7 @@ const Register = () => {
               <label className="flex items-start gap-2 mb-4 cursor-pointer">
                 <input type="checkbox" checked={form.gdpr_consent} onChange={set('gdpr_consent')} className="mt-0.5 accent-amber-500" />
                 <span className="text-[11px] text-zinc-400 leading-relaxed">
-                  I consent to the processing of my personal data in accordance with GDPR and the <a href="#" className="text-amber-500 underline">privacy policy</a>.
+                  I consent to the processing of my personal data in accordance with GDPR and the privacy policy.
                 </span>
               </label>
 
@@ -287,14 +311,120 @@ const Register = () => {
 
               <div className="flex gap-2">
                 <button onClick={() => setStep(2)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
-                <button onClick={handleSubmit} disabled={loading} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
-                  {loading ? 'Creating...' : 'Create account'}
+                <button onClick={() => {
+                  setError('');
+                  if (form.password !== form.confirmPassword) { setError('Passwords do not match'); return; }
+                  if (form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
+                  if (!/[A-Z]/.test(form.password)) { setError('Password must contain at least one uppercase letter'); return; }
+                  if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number'); return; }
+                  if (!/[!@#$%^&*(),.?":{}|<>\-_+=\[\]\\;'/`~]/.test(form.password)) { setError('Password must contain at least one special character'); return; }
+                  if (!form.gdpr_consent) { setError('You must accept the data processing terms'); return; }
+                  setStep(4);
+                }} className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors">
+                  Continue
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step 4: Legal documents */}
+          {step === 4 && (
+            <>
+              <div className="mb-4">
+                <h3 className="font-['Bebas_Neue'] text-base tracking-wider text-zinc-100 mb-1">Legal documents</h3>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">Please read and accept the required documents to complete your registration.</p>
+              </div>
+
+              {checkingOc ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-3 mb-4">
+                  {/* Privacy Policy card */}
+                  <div className="bg-zinc-800 border border-zinc-700 rounded-md p-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <FileText size={16} className="text-zinc-400 flex-shrink-0" />
+                      <div>
+                        <div className="text-[13px] text-zinc-200">Privacy Policy</div>
+                        <div className="text-[10px] text-zinc-500">DAZZ CREATIVE — v1.0</div>
+                      </div>
+                    </div>
+                    {privacyAccepted ? (
+                      <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
+                        <CheckCircle size={14} /> Accepted
+                      </span>
+                    ) : (
+                      <button onClick={() => setShowPrivacyModal(true)}
+                        className="text-xs text-amber-500 hover:text-amber-400 font-semibold transition-colors">
+                        Read document
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Agency Contract card (only for influencers) */}
+                  {hasOc && (
+                    <div className="bg-zinc-800 border border-zinc-700 rounded-md p-3.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <FileText size={16} className="text-zinc-400 flex-shrink-0" />
+                        <div>
+                          <div className="text-[13px] text-zinc-200">Agency Contract</div>
+                          <div className="text-[10px] text-zinc-500">DAZZLE MANAGEMENT — v1.0</div>
+                        </div>
+                      </div>
+                      {contractAccepted ? (
+                        <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
+                          <CheckCircle size={14} /> Accepted
+                        </span>
+                      ) : (
+                        <button onClick={() => setShowContractModal(true)}
+                          className="text-xs text-amber-500 hover:text-amber-400 font-semibold transition-colors">
+                          Read document
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-md p-2.5 text-xs mb-3">{error}</div>
+              )}
+
+              <div className="flex gap-2">
+                <button onClick={() => setStep(3)} className="flex-1 text-sm py-2.5 rounded-md border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors">Back</button>
+                <button onClick={handleSubmit} disabled={loading || !canComplete || checkingOc}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm py-2.5 rounded-md transition-colors disabled:opacity-50">
+                  {loading ? 'Creating...' : 'Complete registration'}
                 </button>
               </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Legal modals */}
+      {showPrivacyModal && (
+        <LegalDocumentModal
+          title="PRIVACY POLICY"
+          pdfUrl="/docs/privacy-policy.pdf"
+          onAccept={() => setPrivacyAccepted(true)}
+          onClose={() => setShowPrivacyModal(false)}
+        >
+          <PrivacyPolicyContent />
+        </LegalDocumentModal>
+      )}
+
+      {showContractModal && (
+        <LegalDocumentModal
+          title="AGENCY CONTRACT"
+          pdfUrl="/docs/agency-contract.pdf"
+          onAccept={() => setContractAccepted(true)}
+          onClose={() => setShowContractModal(false)}
+        >
+          <AgencyContractContent />
+        </LegalDocumentModal>
+      )}
     </div>
   );
 };

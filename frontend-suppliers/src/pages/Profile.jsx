@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, getBankCertUrl } from '../services/api';
-import { ExternalLink, Edit3, CreditCard, UserMinus, Info, X, Download } from 'lucide-react';
+import { ExternalLink, Edit3, CreditCard, UserMinus, Info, X, Download, FileText } from 'lucide-react';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 const STATUS_MAP = {
@@ -110,6 +110,43 @@ const Profile = () => {
               </div>
             ))}
           </div>
+
+          {/* Legal documents */}
+          {(profile.privacy_accepted_at || profile.contract_accepted_at) && (
+            <div className="bg-[#18181b] border border-zinc-800 rounded-[10px] p-3.5 lg:p-5 mb-3">
+              <div className="text-[10px] font-semibold text-zinc-500 tracking-widest uppercase mb-2.5">Legal documents</div>
+              <div className="space-y-2">
+                {profile.privacy_accepted_at && (
+                  <div className="flex items-center justify-between py-1.5">
+                    <div className="flex items-center gap-2">
+                      <FileText size={13} className="text-zinc-500" />
+                      <div>
+                        <div className="text-[13px] text-zinc-300">Privacy Policy</div>
+                        <div className="text-[10px] text-zinc-600">Accepted on {new Date(profile.privacy_accepted_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                      </div>
+                    </div>
+                    <a href="/docs/privacy-policy.pdf" download className="inline-flex items-center gap-1 border border-zinc-700 text-zinc-400 text-[11px] px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">
+                      <Download size={10} /> PDF
+                    </a>
+                  </div>
+                )}
+                {profile.contract_accepted_at && (
+                  <div className="flex items-center justify-between py-1.5">
+                    <div className="flex items-center gap-2">
+                      <FileText size={13} className="text-zinc-500" />
+                      <div>
+                        <div className="text-[13px] text-zinc-300">Agency Contract</div>
+                        <div className="text-[10px] text-zinc-600">Accepted on {new Date(profile.contract_accepted_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                      </div>
+                    </div>
+                    <a href="/docs/agency-contract.pdf" download className="inline-flex items-center gap-1 border border-zinc-700 text-zinc-400 text-[11px] px-2.5 py-1 rounded hover:bg-zinc-800 transition-colors">
+                      <Download size={10} /> PDF
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ═══ RIGHT: Actions ═══ */}
