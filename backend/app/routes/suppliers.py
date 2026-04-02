@@ -19,7 +19,7 @@ from app.models.suppliers import (
     SupplierInvitation, InvoiceStatus, SupplierStatus,
     NotificationRecipientType, NotificationEventType, PENDING_TITLES,
 )
-from app.services.auth import get_current_admin_user
+from app.services.auth import get_current_admin_user, get_current_active_user
 from app.models.supplier_schemas import (
     InviteRequest, InviteResponse, SupplierResponse, SupplierUpdate,
     AssignOCRequest, AssignInvoiceOCRequest, NoteRequest, InvoiceStatusUpdate,
@@ -117,7 +117,7 @@ async def check_oc_nif(
 async def list_oc_prefixes(
     permanent_only: bool = Query(False),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """List active OC prefixes with company info."""
     query = db.query(OCPrefix).options(
@@ -139,7 +139,7 @@ async def list_oc_prefixes(
 async def validate_oc(
     oc: str = Query(..., min_length=3, max_length=50),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Check if an OC already exists in supplier_ocs or projects."""
     oc = oc.strip()
@@ -156,7 +156,7 @@ async def validate_oc(
 async def oc_suggestions(
     q: str = Query("", max_length=50),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Autocomplete: search permanent OCs + open projects by code/name."""
     results = []
