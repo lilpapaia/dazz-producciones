@@ -217,6 +217,10 @@ async def upload_ticket(
             )
 
         db.add(ticket)
+        # UX-LAST: Track last uploaded file
+        db.execute(update(Project).where(Project.id == project_id).values(
+            last_uploaded_file=file.filename,
+        ))
         # T5: Error de IA (final_total=0) → no sumar al proyecto
         if "error" not in extracted_data:
             db.execute(update(Project).where(Project.id == project_id).values(

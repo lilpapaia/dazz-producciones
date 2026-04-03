@@ -304,6 +304,12 @@ const ProjectView = () => {
               SUBIR
             </button>
 
+            {project.last_uploaded_file && (
+              <span className="hidden md:inline text-zinc-400 text-sm truncate max-w-xs" title={project.last_uploaded_file}>
+                Último archivo: {project.last_uploaded_file}
+              </span>
+            )}
+
             {/* BOTÓN CERRAR (solo si EN CURSO) */}
             {project.status === 'en_curso' && (
               <button

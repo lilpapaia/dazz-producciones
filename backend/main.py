@@ -307,6 +307,8 @@ async def startup_event():
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_accepted_at TIMESTAMP"))
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS privacy_policy_version VARCHAR(10)"))
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_version VARCHAR(10)"))
+            # UX-LAST: Track last uploaded file per project
+            conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS last_uploaded_file VARCHAR"))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")

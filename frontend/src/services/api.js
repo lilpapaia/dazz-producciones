@@ -154,11 +154,12 @@ export const deleteProject = (id) => api.delete(`/projects/${id}`);
 // TICKETS
 // ============================================
 
-export const uploadTicket = (projectId, file) => {
+export const uploadTicket = (projectId, file, options = {}) => {
   const formData = new FormData();
   formData.append('file', file);
   return api.post(`/tickets/${projectId}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    signal: options.signal,
   });
 };
 

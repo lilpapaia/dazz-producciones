@@ -160,7 +160,8 @@ class ProjectResponse(ProjectBase):
     closed_at: Optional[datetime] = None
     owner_id: int
     owner_company: Optional[CompanyResponse] = None  # Empresa del proyecto
-    
+    last_uploaded_file: Optional[str] = None
+
     class Config:
         from_attributes = True
 

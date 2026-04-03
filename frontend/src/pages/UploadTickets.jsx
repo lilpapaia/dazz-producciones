@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket } from '../services/api';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
 import { showWarning } from '../utils/toast';
 import { getCurrencySymbol } from '../utils/currency';
+
+const MAX_FILES_PER_BATCH = 15;
+const UPLOAD_TIMEOUT_MS = 60000;
 
 const UploadTickets = () => {
   const { id } = useParams();
@@ -13,8 +16,16 @@ const UploadTickets = () => {
   const [compressing, setCompressing] = useState(false);
   const [results, setResults] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-  // ← NUEVO: archivos que fallaron, para poder reintentar
+  const [currentFileName, setCurrentFileName] = useState('');
   const [failedFiles, setFailedFiles] = useState([]);
+
+  // BUG-54: Block navigation while uploading
+  useEffect(() => {
+    if (!uploading) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [uploading]);
 
   const compressImageIfNeeded = async (file) => {
     if (!file.type.startsWith('image/') || file.size < 3 * 1024 * 1024) return file;
@@ -36,7 +47,19 @@ const UploadTickets = () => {
 
   // append=true → acumula sobre los existentes (no reemplaza)
   const processFiles = async (selectedFiles, append = false) => {
-    const hasLargeImages = selectedFiles.some(f =>
+    // CAP-1: Limit files per batch
+    const currentCount = append ? files.length : 0;
+    const slotsAvailable = MAX_FILES_PER_BATCH - currentCount;
+    let filesToProcess = selectedFiles;
+
+    if (filesToProcess.length > slotsAvailable) {
+      filesToProcess = filesToProcess.slice(0, Math.max(0, slotsAvailable));
+      showWarning(`Máximo ${MAX_FILES_PER_BATCH} archivos por lote. Se han seleccionado los primeros ${MAX_FILES_PER_BATCH}.`);
+    }
+
+    if (filesToProcess.length === 0) return;
+
+    const hasLargeImages = filesToProcess.some(f =>
       f.type.startsWith('image/') && f.size > 3 * 1024 * 1024
     );
 
@@ -44,11 +67,11 @@ const UploadTickets = () => {
     if (hasLargeImages) {
       setCompressing(true);
       processedFiles = await Promise.all(
-        selectedFiles.map(file => compressImageIfNeeded(file))
+        filesToProcess.map(file => compressImageIfNeeded(file))
       );
       setCompressing(false);
     } else {
-      processedFiles = selectedFiles;
+      processedFiles = filesToProcess;
     }
 
     if (append) {
@@ -84,7 +107,7 @@ const UploadTickets = () => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ← NUEVO: volver al estado inicial solo con los archivos fallidos
+  // Volver al estado inicial solo con los archivos fallidos
   const retryFailed = () => {
     setFiles(failedFiles);
     setResults([]);
@@ -98,23 +121,31 @@ const UploadTickets = () => {
     }
 
     setUploading(true);
-    setFailedFiles([]); // limpiar fallidos anteriores
+    setFailedFiles([]);
     setUploadProgress({ current: 0, total: files.length });
     const newResults = [];
-    const newFailedFiles = []; // ← acumular File objects fallidos
+    const newFailedFiles = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       setUploadProgress({ current: i + 1, total: files.length });
+      setCurrentFileName(file.name);
 
       try {
-        const response = await uploadTicket(id, file);
+        // TIMEOUT: Abort after 60s
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
+        const response = await uploadTicket(id, file, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         const ticketData = response.data.ticket || response.data;
         const warning = response.data.duplicate_invoice_warning || null;
         newResults.push({ file: file.name, success: true, data: ticketData, duplicate_invoice_warning: warning });
         // BUG-35: Remove successfully processed file from the list
         setFiles(prev => prev.filter(f => f.name !== file.name));
       } catch (error) {
+        const isTimeout = error.code === 'ERR_CANCELED' || error.name === 'AbortError';
         const detail = error.response?.data?.detail;
         // Duplicado hash → warning especial (no error fatal, no reintentar)
         if (error.response?.status === 409 && detail?.code === 'duplicate_hash') {
@@ -129,17 +160,20 @@ const UploadTickets = () => {
           newResults.push({
             file: file.name,
             success: false,
-            error: typeof detail === 'string' ? detail : detail?.message || 'Error al procesar'
+            error: isTimeout
+              ? 'Timeout — el servidor no respondió en 60 segundos'
+              : typeof detail === 'string' ? detail : detail?.message || 'Error al procesar'
           });
-          newFailedFiles.push(file); // ← guardar el File object original
+          newFailedFiles.push(file);
         }
       }
 
       setResults([...newResults]);
     }
 
-    setFailedFiles(newFailedFiles); // ← guardar todos los fallidos al terminar
+    setFailedFiles(newFailedFiles);
     setUploading(false);
+    setCurrentFileName('');
     setUploadProgress({ current: 0, total: 0 });
   };
 
@@ -150,8 +184,9 @@ const UploadTickets = () => {
       <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <button
-            onClick={() => navigate(`/projects/${id}`)}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors mb-3"
+            onClick={() => { if (!uploading) navigate(`/projects/${id}`); }}
+            disabled={uploading}
+            className={`flex items-center gap-2 transition-colors mb-3 ${uploading ? 'text-zinc-600 cursor-not-allowed opacity-50' : 'text-zinc-400 hover:text-zinc-100'}`}
           >
             <ArrowLeft size={18} />
             <span className="text-sm">Volver</span>
@@ -185,7 +220,7 @@ const UploadTickets = () => {
               Arrastra archivos aquí o elige una opción
             </p>
             <p className="text-sm text-zinc-500 mb-6 font-mono">
-              Acepta: JPG, PNG, PDF • Imágenes grandes se comprimen automáticamente
+              Acepta: JPG, PNG, PDF • <span className="text-amber-400">Máximo 30MB</span> por archivo • <span className="text-amber-400">Máximo {MAX_FILES_PER_BATCH} archivos</span> por lote
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
@@ -289,6 +324,13 @@ const UploadTickets = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* UX-LAST: Current file name */}
+                  {currentFileName && (
+                    <p className="text-sm text-zinc-400 truncate">
+                      Procesando: {currentFileName}
+                    </p>
+                  )}
 
                   {/* Barra de progreso con gradiente */}
                   <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
@@ -425,7 +467,7 @@ const UploadTickets = () => {
                 ))}
               </div>
 
-              {/* ← NUEVO: botón reintentar fallidos */}
+              {/* Botón reintentar fallidos */}
               {failedFiles.length > 0 && (
                 <button
                   onClick={retryFailed}

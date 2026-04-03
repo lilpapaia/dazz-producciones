@@ -93,10 +93,10 @@ export const validateBankCertIban = (iban, file, nifCif, token) => {
 };
 
 // Invoices
-export const uploadInvoice = (file) => {
+export const uploadInvoice = (file, options = {}) => {
   const form = new FormData();
   form.append('file', file);
-  return api.post('/portal/invoices/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return api.post('/portal/invoices/upload', form, { headers: { 'Content-Type': 'multipart/form-data' }, signal: options.signal });
 };
 export const getMyInvoices = (params) => api.get('/portal/invoices', { params });
 export const getReceivedInvoices = (params) => api.get('/portal/invoices/received', { params });

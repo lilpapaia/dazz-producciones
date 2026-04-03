@@ -19,6 +19,14 @@ const UploadPage = () => {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // BUG-54: Block navigation while uploading
+  useEffect(() => {
+    if (!uploading) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [uploading]);
+
   const addFiles = (fileList) => {
     setRejected('');
     const all = Array.from(fileList);
@@ -44,11 +52,15 @@ const UploadPage = () => {
       updated[i].status = 'uploading';
       setFiles([...updated]);
       try {
-        const { data } = await uploadInvoice(updated[i].file);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const { data } = await uploadInvoice(updated[i].file, { signal: controller.signal });
+        clearTimeout(timeoutId);
         updated[i] = { ...updated[i], status: 'success', result: data };
       } catch (err) {
+        const isTimeout = err.code === 'ERR_CANCELED' || err.name === 'AbortError';
         const detail = err.response?.data?.detail;
-        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [detail || 'Upload failed'] } };
+        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [isTimeout ? 'Timeout — server did not respond in 60 seconds' : (detail || 'Upload failed')] } };
       }
       if (!mountedRef.current) return;
       setFiles([...updated]);
@@ -69,7 +81,7 @@ const UploadPage = () => {
     <div className="max-w-2xl lg:max-w-4xl mx-auto pt-4 lg:pt-6 lg:px-6">
       {/* Header */}
       <div className="px-4 lg:px-0 mb-4 flex items-center gap-3">
-        <button onClick={() => navigate('/')} className="lg:hidden w-8 h-8 bg-[#27272a] rounded-lg flex items-center justify-center">
+        <button onClick={() => { if (!uploading) navigate('/'); }} disabled={uploading} className={`lg:hidden w-8 h-8 bg-[#27272a] rounded-lg flex items-center justify-center ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
           <ChevronLeft size={16} className="text-zinc-300" strokeWidth={1.5} />
         </button>
         <h1 className="font-['Bebas_Neue'] text-[16px] lg:text-[22px] tracking-wider text-zinc-300">Upload invoice</h1>

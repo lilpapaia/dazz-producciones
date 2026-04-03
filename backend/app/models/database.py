@@ -127,7 +127,8 @@ class Project(Base):
     tickets_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     closed_at = Column(DateTime, nullable=True)
-    
+    last_uploaded_file = Column(String, nullable=True)
+
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     # Relaciones
