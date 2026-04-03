@@ -173,13 +173,13 @@ class TicketBase(BaseModel):
     provider: str = Field(min_length=1, max_length=500)
     invoice_number: Optional[str] = Field(default=None, max_length=100)
     po_notes: Optional[str] = Field(default=None, max_length=1000)
-    base_amount: float = Field(ge=0)
-    iva_amount: float = Field(ge=0)
+    base_amount: float = 0
+    iva_amount: float = 0
     iva_percentage: float = Field(ge=0, le=100)
-    total_with_iva: float = Field(ge=0)
+    total_with_iva: float = 0
     irpf_percentage: float = Field(default=0.0, ge=0, le=100)
-    irpf_amount: float = Field(default=0.0, ge=0)
-    final_total: float = Field(ge=0)
+    irpf_amount: float = 0.0
+    final_total: float = 0
     phone: Optional[str] = Field(default=None, max_length=50)
     email: Optional[str] = Field(default=None, max_length=200)
     contact_name: Optional[str] = Field(default=None, max_length=200)
@@ -197,17 +197,17 @@ class TicketUpdate(BaseModel):
     invoice_number: Optional[str] = Field(default=None, max_length=100)
     po_notes: Optional[str] = Field(default=None, max_length=1000)
     notes: Optional[str] = Field(default=None, max_length=2000)
-    base_amount: Optional[float] = Field(default=None, ge=0)
-    iva_amount: Optional[float] = Field(default=None, ge=0)
+    base_amount: Optional[float] = None
+    iva_amount: Optional[float] = None
     iva_percentage: Optional[float] = Field(default=None, ge=0, le=100)
-    total_with_iva: Optional[float] = Field(default=None, ge=0)
+    total_with_iva: Optional[float] = None
     irpf_percentage: Optional[float] = Field(default=None, ge=0, le=100)
-    irpf_amount: Optional[float] = Field(default=None, ge=0)
-    final_total: Optional[float] = Field(default=None, ge=0)
-    foreign_amount: Optional[float] = Field(default=None, ge=0)
-    foreign_total: Optional[float] = Field(default=None, ge=0)
-    foreign_tax_amount: Optional[float] = Field(default=None, ge=0)
-    foreign_tax_eur: Optional[float] = Field(default=None, ge=0)
+    irpf_amount: Optional[float] = None
+    final_total: Optional[float] = None
+    foreign_amount: Optional[float] = None
+    foreign_total: Optional[float] = None
+    foreign_tax_amount: Optional[float] = None
+    foreign_tax_eur: Optional[float] = None
     phone: Optional[str] = Field(default=None, max_length=50)
     email: Optional[str] = Field(default=None, max_length=200)
     contact_name: Optional[str] = Field(default=None, max_length=200)

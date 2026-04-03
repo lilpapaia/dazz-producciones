@@ -347,6 +347,9 @@ const ReviewTicket = () => {
             {ticket.from_supplier_portal && ticket.is_autoinvoice && (
               <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-sm text-xs font-bold">AUTO</span>
             )}
+            {ticket.final_total < 0 && (
+              <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-sm text-xs font-bold uppercase">ABONO</span>
+            )}
             {ticket.is_foreign && (
               <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-sm text-xs font-bold uppercase border border-blue-500/30 flex items-center gap-1">
                 🌍 INTERNACIONAL
