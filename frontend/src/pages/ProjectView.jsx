@@ -511,7 +511,11 @@ const ProjectView = () => {
                 <div
                   key={ticket.id}
                   onClick={() => navigate(`/tickets/${ticket.id}/review`)}
-                  className="bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-sm p-4 cursor-pointer transition-all hover:shadow-lg hover:shadow-amber-500/10"
+                  className={`rounded-sm p-4 cursor-pointer transition-all ${
+                    ticket.provider === 'Sin proveedor' || ticket.date === 'Sin fecha'
+                      ? 'bg-red-500/10 border border-red-500/30 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10'
+                      : 'bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10'
+                  }`}
                 >
                   {/* Flex container con wrap para que nombre use todo el ancho */}
                   <div className="flex items-start gap-3 flex-wrap">
@@ -536,6 +540,9 @@ const ProjectView = () => {
                         )}
                         {ticket.final_total < 0 && (
                           <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-sm text-xs font-bold uppercase">ABONO</span>
+                        )}
+                        {(ticket.provider === 'Sin proveedor' || ticket.date === 'Sin fecha') && (
+                          <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-sm text-xs font-bold uppercase">ERROR IA</span>
                         )}
                         {ticket.ia_warnings && (
                           <span className="text-amber-400 flex-shrink-0" title={ticket.ia_warnings}>⚠️</span>
