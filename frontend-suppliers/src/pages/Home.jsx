@@ -181,7 +181,7 @@ const Home = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {(inv.status === 'PENDING' || inv.status === 'OC_PENDING') ? (
+                      {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'APPROVED') ? (
                         <button onClick={(e) => { e.stopPropagation(); setDeleteModal(inv); }}
                           className="w-7 h-7 lg:w-8 lg:h-8 border border-red-400/20 rounded-md flex items-center justify-center text-red-400 hover:bg-red-400/10 transition-colors">
                           <Trash2 size={13} strokeWidth={1.5} />
@@ -199,7 +199,7 @@ const Home = () => {
           </div>
 
           <p className="px-4 lg:px-0 text-[10px] text-zinc-600 mb-20 lg:mb-8">
-            Approved and paid invoices cannot be deleted — they are already in accounting.
+            Paid invoices cannot be deleted — they are already in accounting.
           </p>
 
           {/* FAB */}
@@ -394,7 +394,7 @@ const Home = () => {
                     <Download size={12} /> Download PDF
                   </a>
                 )}
-                {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING') && (
+                {(viewer.status === 'PENDING' || viewer.status === 'OC_PENDING' || viewer.status === 'APPROVED') && (
                   <button onClick={() => { setViewer(null); setDeleteModal(viewer); }}
                     className="text-[12px] text-red-400 border border-red-400/25 px-3 py-1.5 rounded hover:bg-red-400/10 transition-colors flex items-center gap-1.5">
                     <Trash2 size={12} /> Delete

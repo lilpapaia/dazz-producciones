@@ -389,6 +389,15 @@ const ReviewTicket = () => {
                 <ExternalLink size={18} />
                 <span className="hidden md:inline text-sm font-semibold">Proveedores</span>
               </button>
+            ) : ticket.payment_status === 'PAGADO ADMIN' ? (
+              <button
+                disabled
+                className="flex items-center gap-2 px-3 py-2 bg-zinc-800/50 text-zinc-600 border border-zinc-700 rounded-sm opacity-30 cursor-not-allowed"
+                title="Factura pagada — no se puede eliminar"
+              >
+                <Trash2 size={18} />
+                <span className="hidden md:inline text-sm font-semibold">Pagada</span>
+              </button>
             ) : (
               <button
                 onClick={() => { setSupplierDeleteModal(true); setDeleteReason(''); }}

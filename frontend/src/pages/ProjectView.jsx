@@ -594,6 +594,17 @@ const ProjectView = () => {
                           >
                             <ExternalLink size={18} />
                           </button>
+                        ) : ticket.payment_status === 'PAGADO ADMIN' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showError('Factura ya pagada, no se puede eliminar');
+                            }}
+                            className="p-2 text-zinc-500 opacity-30 cursor-not-allowed"
+                            title="Factura pagada — no se puede eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         ) : (
                           <button
                             onClick={(e) => {

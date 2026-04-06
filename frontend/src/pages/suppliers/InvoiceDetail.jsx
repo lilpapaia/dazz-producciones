@@ -443,7 +443,7 @@ const InvoiceDetail = () => {
                 {acting ? 'Procesando...' : 'Marcar como pagada'}
               </button>
             )}
-            {(invoice.status === 'PENDING' || invoice.status === 'OC_PENDING') && (
+            {(invoice.status === 'PENDING' || invoice.status === 'OC_PENDING' || invoice.status === 'APPROVED') && (
               <button onClick={() => setDeleteModal(true)} disabled={acting}
                 className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-400/25 font-semibold py-2.5 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 <Trash2 size={13} /> Eliminar factura

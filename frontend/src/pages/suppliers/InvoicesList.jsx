@@ -245,7 +245,7 @@ const InvoicesList = () => {
                       <RotateCcw size={13} strokeWidth={1.5} />
                     </button>
                   )}
-                  {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') && (
+                  {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED' || inv.status === 'APPROVED') && (
                     <button onClick={(e) => { e.stopPropagation(); if (inv.status === 'DELETE_REQUESTED') { setActionModal({ invoice: inv, action: 'confirm_delete' }); } else { setActionModal({ invoice: inv, action: 'delete' }); } }}
                       className="w-[30px] h-[30px] flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10">
                       <Trash2 size={13} strokeWidth={1.5} />
@@ -315,7 +315,7 @@ const InvoicesList = () => {
                         {inv.status === 'PAID' && <span className="text-[13px] text-zinc-600">Cerrada</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">
-                        {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED') ? (
+                        {(inv.status === 'PENDING' || inv.status === 'OC_PENDING' || inv.status === 'DELETE_REQUESTED' || inv.status === 'APPROVED') ? (
                           <button onClick={(e) => { e.stopPropagation(); if (inv.status === 'DELETE_REQUESTED') { setActionModal({ invoice: inv, action: 'confirm_delete' }); } else { setActionModal({ invoice: inv, action: 'delete' }); } }}
                             className="w-7 h-7 flex items-center justify-center border border-red-400/20 rounded text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-colors">
                             <Trash2 size={12} strokeWidth={1.5} />
