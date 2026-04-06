@@ -67,7 +67,8 @@ const UploadPage = () => {
       } catch (err) {
         const isTimeout = err.code === 'ERR_CANCELED' || err.name === 'AbortError';
         const detail = err.response?.data?.detail;
-        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [isTimeout ? 'Timeout — server did not respond in 60 seconds' : (detail || 'Upload failed')] } };
+        const timeoutSecs = Math.round(getUploadTimeout(updated[i].file) / 1000);
+        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [isTimeout ? `Timeout — server did not respond in ${timeoutSecs} seconds` : (detail || 'Upload failed')] } };
       }
       if (!mountedRef.current) return;
       setFiles([...updated]);

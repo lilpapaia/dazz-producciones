@@ -169,11 +169,12 @@ const UploadTickets = () => {
             error: detail.message
           });
         } else {
+          const timeoutSecs = Math.round(getUploadTimeout(file) / 1000);
           newResults.push({
             file: file.name,
             success: false,
             error: isTimeout
-              ? 'Timeout — el servidor no respondió en 60 segundos'
+              ? `Timeout — el servidor no respondió en ${timeoutSecs} segundos`
               : typeof detail === 'string' ? detail : detail?.message || 'Error al procesar'
           });
           newFailedFiles.push(file);
