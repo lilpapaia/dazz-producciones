@@ -99,7 +99,7 @@ def get_or_create_project_for_oc(
         send_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         creative_code=oc_number,
         company=billing_name,
-        owner_company_id=oc_prefix.billing_company_id,
+        owner_company_id=oc_prefix.company_id,
         owner_id=admin_user.id,
         responsible=admin_user.username or admin_user.name,
         invoice_type=f"TALENT{year}",
