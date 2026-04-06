@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadTicket, getProject } from '../services/api';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw, ExternalLink } from 'lucide-react';
 import { showWarning } from '../utils/toast';
 import { getCurrencySymbol } from '../utils/currency';
 
 const MAX_FILES_PER_BATCH = 15;
-
-// BUG-56: Dynamic timeout based on file size (60s base, +15s per 5MB over 5MB, max 180s)
-const getUploadTimeout = (file) => {
-  const base = 60000;
-  const extra = Math.max(0, file.size - 5 * 1024 * 1024) / (5 * 1024 * 1024) * 15000;
-  return Math.min(base + Math.ceil(extra), 180000);
-};
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const UPLOAD_TIMEOUT_MS = 120000; // 120s fixed
 
 const UploadTickets = () => {
   const { id } = useParams();
@@ -24,6 +19,7 @@ const UploadTickets = () => {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [currentFileName, setCurrentFileName] = useState('');
   const [failedFiles, setFailedFiles] = useState([]);
+  const [oversizedFile, setOversizedFile] = useState(null);
   const [project, setProject] = useState(null);
 
   // EXTRA: Load project to show last uploaded file
@@ -59,6 +55,14 @@ const UploadTickets = () => {
 
   // append=true → acumula sobre los existentes (no reemplaza)
   const processFiles = async (selectedFiles, append = false) => {
+    // Validar tamaño máximo 10MB — mostrar modal con links a compresores
+    const oversized = selectedFiles.find(f => f.size > MAX_FILE_SIZE);
+    if (oversized) {
+      setOversizedFile({ name: oversized.name, size: (oversized.size / (1024 * 1024)).toFixed(1), isPdf: oversized.type === 'application/pdf' });
+      selectedFiles = selectedFiles.filter(f => f.size <= MAX_FILE_SIZE);
+      if (selectedFiles.length === 0) return;
+    }
+
     // CAP-1: Limit files per batch
     const currentCount = append ? files.length : 0;
     const slotsAvailable = MAX_FILES_PER_BATCH - currentCount;
@@ -144,9 +148,8 @@ const UploadTickets = () => {
       setCurrentFileName(file.name);
 
       try {
-        // BUG-56: Dynamic timeout based on file size
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), getUploadTimeout(file));
+        const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
         const response = await uploadTicket(id, file, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -169,12 +172,11 @@ const UploadTickets = () => {
             error: detail.message
           });
         } else {
-          const timeoutSecs = Math.round(getUploadTimeout(file) / 1000);
           newResults.push({
             file: file.name,
             success: false,
             error: isTimeout
-              ? `Timeout — el servidor no respondió en ${timeoutSecs} segundos`
+              ? 'Timeout — el servidor no respondió en 120 segundos'
               : typeof detail === 'string' ? detail : detail?.message || 'Error al procesar'
           });
           newFailedFiles.push(file);
@@ -233,7 +235,7 @@ const UploadTickets = () => {
               Arrastra archivos aquí o elige una opción
             </p>
             <p className="text-sm text-zinc-500 mb-6 font-mono">
-              Acepta: JPG, PNG, PDF • <span className="text-amber-400">Máximo 30MB</span> por archivo • <span className="text-amber-400">Máximo {MAX_FILES_PER_BATCH} archivos</span> por lote
+              Acepta: JPG, PNG, PDF • <span className="text-amber-400">Máximo 10MB</span> por archivo • <span className="text-amber-400">Máximo {MAX_FILES_PER_BATCH} archivos</span> por lote
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
@@ -508,6 +510,45 @@ const UploadTickets = () => {
           )}
         </div>
       </main>
+
+      {/* Modal: archivo demasiado grande */}
+      {oversizedFile && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setOversizedFile(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-zinc-100 mb-2">Archivo demasiado grande</h3>
+            <p className="text-sm text-zinc-300 mb-1">
+              <span className="font-semibold">{oversizedFile.name}</span> ({oversizedFile.size}MB) supera el límite de 10MB.
+            </p>
+            <p className="text-sm text-zinc-400 mb-4">Comprímelo gratis antes de subirlo:</p>
+            <div className="space-y-2 mb-4">
+              <a
+                href="https://www.ilovepdf.com/compress_pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 rounded-sm transition-colors text-sm font-medium"
+              >
+                <ExternalLink size={16} />
+                Comprimir PDF
+              </a>
+              <a
+                href="https://www.iloveimg.com/compress-image"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 rounded-sm transition-colors text-sm font-medium"
+              >
+                <ExternalLink size={16} />
+                Comprimir imagen
+              </a>
+            </div>
+            <button
+              onClick={() => setOversizedFile(null)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold py-3 rounded-sm transition-colors"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CSS para animación shimmer */}
       <style>{`

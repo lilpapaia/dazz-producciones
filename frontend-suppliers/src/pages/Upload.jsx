@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadInvoice, getProfile } from '../services/api';
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User } from 'lucide-react';
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User, ExternalLink } from 'lucide-react';
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ const UploadPage = () => {
   const [uploading, setUploading] = useState(false);
   const [rejected, setRejected] = useState('');
   const [currentIdx, setCurrentIdx] = useState(-1);
+  const [oversizedFile, setOversizedFile] = useState(null);
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
@@ -30,11 +31,14 @@ const UploadPage = () => {
   const addFiles = (fileList) => {
     setRejected('');
     const all = Array.from(fileList);
-    const tooBig = all.filter(f => f.size > 10 * 1024 * 1024);
-    const wrongType = all.filter(f => f.type !== 'application/pdf' && f.size <= 10 * 1024 * 1024);
-    const valid = all.filter(f => f.type === 'application/pdf' && f.size <= 10 * 1024 * 1024);
-    if (tooBig.length) setRejected(`${tooBig.length} file(s) too large (max 10MB)`);
-    else if (wrongType.length) setRejected(`${wrongType.length} file(s) rejected — only PDF accepted`);
+    const oversized = all.find(f => f.size > 10 * 1024 * 1024);
+    if (oversized) {
+      setOversizedFile({ name: oversized.name, size: (oversized.size / (1024 * 1024)).toFixed(1) });
+    }
+    const sized = all.filter(f => f.size <= 10 * 1024 * 1024);
+    const wrongType = sized.filter(f => f.type !== 'application/pdf');
+    const valid = sized.filter(f => f.type === 'application/pdf');
+    if (wrongType.length) setRejected(`${wrongType.length} file(s) rejected — only PDF accepted`);
     if (!valid.length) return;
     setFiles(prev => [...prev, ...valid.map(f => ({ id: crypto.randomUUID(), file: f, status: 'pending', result: null }))]);
   };
@@ -42,12 +46,7 @@ const UploadPage = () => {
   const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (!uploading && e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
   const removeFile = (id) => setFiles(prev => prev.filter(f => f.id !== id));
 
-  // BUG-56: Dynamic timeout based on file size (60s base, +15s per 5MB over 5MB, max 180s)
-  const getUploadTimeout = (file) => {
-    const base = 60000;
-    const extra = Math.max(0, file.size - 5 * 1024 * 1024) / (5 * 1024 * 1024) * 15000;
-    return Math.min(base + Math.ceil(extra), 180000);
-  };
+  const UPLOAD_TIMEOUT_MS = 120000;
 
   const handleUploadAll = async () => {
     setUploading(true);
@@ -60,15 +59,14 @@ const UploadPage = () => {
       setFiles([...updated]);
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), getUploadTimeout(updated[i].file));
+        const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
         const { data } = await uploadInvoice(updated[i].file, { signal: controller.signal });
         clearTimeout(timeoutId);
         updated[i] = { ...updated[i], status: 'success', result: data };
       } catch (err) {
         const isTimeout = err.code === 'ERR_CANCELED' || err.name === 'AbortError';
         const detail = err.response?.data?.detail;
-        const timeoutSecs = Math.round(getUploadTimeout(updated[i].file) / 1000);
-        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [isTimeout ? `Timeout — server did not respond in ${timeoutSecs} seconds` : (detail || 'Upload failed')] } };
+        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [isTimeout ? 'Timeout — server did not respond in 120 seconds' : (detail || 'Upload failed')] } };
       }
       if (!mountedRef.current) return;
       setFiles([...updated]);
@@ -232,6 +230,44 @@ const UploadPage = () => {
           <div className="flex gap-2">
             <button onClick={reset} className="flex-1 text-xs py-3 rounded-[10px] bg-[#27272a] border border-zinc-700 text-zinc-300">Upload more</button>
             <button onClick={() => navigate('/')} className="flex-1 text-xs py-3 rounded-[10px] bg-amber-500 text-zinc-950 font-bold">View invoices</button>
+          </div>
+        </div>
+      )}
+      {/* Modal: file too large */}
+      {oversizedFile && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setOversizedFile(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-zinc-100 mb-2">File too large</h3>
+            <p className="text-sm text-zinc-300 mb-1">
+              <span className="font-semibold">{oversizedFile.name}</span> ({oversizedFile.size}MB) exceeds the 10MB limit.
+            </p>
+            <p className="text-sm text-zinc-400 mb-4">Compress it for free before uploading:</p>
+            <div className="space-y-2 mb-4">
+              <a
+                href="https://www.ilovepdf.com/compress_pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 rounded-[10px] transition-colors text-sm font-medium"
+              >
+                <ExternalLink size={16} />
+                Compress PDF
+              </a>
+              <a
+                href="https://www.iloveimg.com/compress-image"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 rounded-[10px] transition-colors text-sm font-medium"
+              >
+                <ExternalLink size={16} />
+                Compress image
+              </a>
+            </div>
+            <button
+              onClick={() => setOversizedFile(null)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold py-3 rounded-[10px] transition-colors"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

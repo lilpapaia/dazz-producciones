@@ -47,14 +47,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 # BUG-47: Reject oversized request bodies before they consume memory
-MAX_BODY_SIZE = 30 * 1024 * 1024  # 30MB
+MAX_BODY_SIZE = 15 * 1024 * 1024  # 15MB (frontend validates at 10MB, backend has safety margin)
 
 class MaxBodySizeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > MAX_BODY_SIZE:
             from starlette.responses import JSONResponse
-            return JSONResponse(status_code=413, content={"detail": "File too large. Maximum size is 30MB."})
+            return JSONResponse(status_code=413, content={"detail": "File too large. Maximum size is 15MB."})
         return await call_next(request)
 
 app.add_middleware(MaxBodySizeMiddleware)
