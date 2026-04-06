@@ -107,6 +107,24 @@ async def create_project(
         if pending_invoices:
             db.commit()
             logger.info(f"Auto-linked {len(pending_invoices)} OC_PENDING invoices to project {db_project.creative_code}")
+
+        # BUG-60: Auto-link orphaned APPROVED invoices (approved before project existed, or after project deletion)
+        from app.models.suppliers import Supplier
+        from app.services.supplier_integration import create_ticket_from_supplier_invoice
+        orphaned = db.query(SupplierInvoice).filter(
+            SupplierInvoice.oc_number.ilike(db_project.creative_code),
+            SupplierInvoice.status == InvoiceStatus.APPROVED,
+            SupplierInvoice.project_id.is_(None),
+        ).all()
+        for inv in orphaned:
+            inv.project_id = db_project.id
+            inv.company_id = db_project.owner_company_id
+            supplier = db.query(Supplier).filter(Supplier.id == inv.supplier_id).first()
+            if supplier:
+                create_ticket_from_supplier_invoice(db, inv, supplier, db_project)
+        if orphaned:
+            db.commit()
+            logger.info(f"Auto-linked {len(orphaned)} orphaned APPROVED invoices to project {db_project.creative_code}")
     except Exception as e:
         logger.warning(f"OC auto-link failed: {e}")
 
@@ -403,6 +421,19 @@ async def delete_project(
     # Guardar info ANTES de eliminar (para logging)
     project_code = project.creative_code
     tickets_count = 0
+
+    # BUG-59: Unlink supplier invoices before deleting (keep OC intact, remove project link)
+    try:
+        from app.models.suppliers import SupplierInvoice
+        supplier_invoices = db.query(SupplierInvoice).filter(
+            SupplierInvoice.project_id == project_id
+        ).all()
+        for inv in supplier_invoices:
+            inv.project_id = None
+        if supplier_invoices:
+            logger.info(f"Unlinked {len(supplier_invoices)} supplier invoices from project {project_id}")
+    except Exception as e:
+        logger.warning(f"Error unlinking supplier invoices: {e}")
 
     # 1. BORRAR TODOS LOS TICKETS DEL PROYECTO (con sus archivos en Cloudinary)
     from app.models.database import Ticket

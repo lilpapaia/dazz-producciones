@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { uploadTicket } from '../services/api';
+import { uploadTicket, getProject } from '../services/api';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw } from 'lucide-react';
 import { showWarning } from '../utils/toast';
 import { getCurrencySymbol } from '../utils/currency';
 
 const MAX_FILES_PER_BATCH = 15;
-const UPLOAD_TIMEOUT_MS = 60000;
+
+// BUG-56: Dynamic timeout based on file size (60s base, +15s per 5MB over 5MB, max 180s)
+const getUploadTimeout = (file) => {
+  const base = 60000;
+  const extra = Math.max(0, file.size - 5 * 1024 * 1024) / (5 * 1024 * 1024) * 15000;
+  return Math.min(base + Math.ceil(extra), 180000);
+};
 
 const UploadTickets = () => {
   const { id } = useParams();
@@ -18,6 +24,12 @@ const UploadTickets = () => {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [currentFileName, setCurrentFileName] = useState('');
   const [failedFiles, setFailedFiles] = useState([]);
+  const [project, setProject] = useState(null);
+
+  // EXTRA: Load project to show last uploaded file
+  useEffect(() => {
+    getProject(id).then(r => setProject(r.data)).catch(() => {});
+  }, [id]);
 
   // BUG-54: Block navigation while uploading
   useEffect(() => {
@@ -132,9 +144,9 @@ const UploadTickets = () => {
       setCurrentFileName(file.name);
 
       try {
-        // TIMEOUT: Abort after 60s
+        // BUG-56: Dynamic timeout based on file size
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+        const timeoutId = setTimeout(() => controller.abort(), getUploadTimeout(file));
 
         const response = await uploadTicket(id, file, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -258,6 +270,11 @@ const UploadTickets = () => {
               </label>
             </div>
             <p className="text-xs text-zinc-600 mt-4">💡 "Tomar Foto" abre la cámara en móvil</p>
+            {project?.last_uploaded_file && (
+              <p className="text-xs text-zinc-500 mt-2 truncate">
+                Último archivo subido: <span className="text-zinc-400">{project.last_uploaded_file}</span>
+              </p>
+            )}
           </div>
 
           {/* Lista archivos seleccionados */}

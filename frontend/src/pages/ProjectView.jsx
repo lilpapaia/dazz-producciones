@@ -304,12 +304,6 @@ const ProjectView = () => {
               SUBIR
             </button>
 
-            {project.last_uploaded_file && (
-              <span className="hidden md:inline text-zinc-400 text-sm truncate max-w-xs" title={project.last_uploaded_file}>
-                Último archivo: {project.last_uploaded_file}
-              </span>
-            )}
-
             {/* BOTÓN CERRAR (solo si EN CURSO) */}
             {project.status === 'en_curso' && (
               <button
@@ -566,8 +560,19 @@ const ProjectView = () => {
                           </p>
                         </div>
 
-                        {/* INT-1: Conditional action button based on ticket source and role */}
-                        {!ticket.from_supplier_portal ? (
+                        {/* BUG-57: Disable delete actions when project is closed */}
+                        {project.status === 'cerrado' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showError('Reabre el proyecto para poder eliminar tickets');
+                            }}
+                            className="p-2 text-zinc-500 opacity-30 cursor-not-allowed"
+                            title="Proyecto cerrado — reabre para eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        ) : !ticket.from_supplier_portal ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

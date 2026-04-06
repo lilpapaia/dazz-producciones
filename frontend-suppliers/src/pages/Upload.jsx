@@ -42,6 +42,13 @@ const UploadPage = () => {
   const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (!uploading && e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
   const removeFile = (id) => setFiles(prev => prev.filter(f => f.id !== id));
 
+  // BUG-56: Dynamic timeout based on file size (60s base, +15s per 5MB over 5MB, max 180s)
+  const getUploadTimeout = (file) => {
+    const base = 60000;
+    const extra = Math.max(0, file.size - 5 * 1024 * 1024) / (5 * 1024 * 1024) * 15000;
+    return Math.min(base + Math.ceil(extra), 180000);
+  };
+
   const handleUploadAll = async () => {
     setUploading(true);
     const updated = [...files];
@@ -53,7 +60,7 @@ const UploadPage = () => {
       setFiles([...updated]);
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const timeoutId = setTimeout(() => controller.abort(), getUploadTimeout(updated[i].file));
         const { data } = await uploadInvoice(updated[i].file, { signal: controller.signal });
         clearTimeout(timeoutId);
         updated[i] = { ...updated[i], status: 'success', result: data };
