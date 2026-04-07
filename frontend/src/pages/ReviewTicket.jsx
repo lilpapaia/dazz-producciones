@@ -251,6 +251,7 @@ const ReviewTicket = () => {
   const isExtractionFailed = ticket?.provider === 'Sin proveedor' || ticket?.date === 'Sin fecha';
   const pages = getPages();
   const totalPages = pages.length;
+  const isPdfFallback = pages.length === 1 && (pages[0].includes('/raw/') || pages[0].endsWith('.pdf'));
   
   // Detectar swipe en móvil para cambiar de foto
   const handleTouchStart = (e) => {
@@ -480,24 +481,32 @@ const ReviewTicket = () => {
           {pages.length > 0 && (
             <div className="bg-zinc-950 border border-zinc-700 rounded-sm overflow-hidden">
               
-              {/* Imagen principal */}
-              <div
-                className="relative cursor-zoom-in group"
-                onClick={() => setShowLightbox(true)}
-              >
-                <img
-                  src={pages[currentPage]}
-                  alt={`Página ${currentPage + 1}`}
-                  className="w-full max-h-96 object-contain bg-zinc-900"
+              {/* Imagen principal o PDF iframe */}
+              {isPdfFallback ? (
+                <iframe
+                  src={pages[0]}
+                  title="PDF"
+                  className="w-full h-96 bg-zinc-900"
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg">
-                      <ZoomIn size={24} />
+              ) : (
+                <div
+                  className="relative cursor-zoom-in group"
+                  onClick={() => setShowLightbox(true)}
+                >
+                  <img
+                    src={pages[currentPage]}
+                    alt={`Página ${currentPage + 1}`}
+                    className="w-full max-h-96 object-contain bg-zinc-900"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-amber-500 text-zinc-950 p-3 rounded-full shadow-lg">
+                        <ZoomIn size={24} />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Controles navegación - DEBAJO de la imagen, centrado */}
               <div className="px-4 py-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-center">
@@ -546,7 +555,7 @@ const ReviewTicket = () => {
           )}
 
           {/* LIGHTBOX */}
-          {showLightbox && pages.length > 0 && (
+          {showLightbox && pages.length > 0 && !isPdfFallback && (
             <div
               className="fixed inset-0 !m-0 bg-black z-50 flex items-center justify-center"
               style={{

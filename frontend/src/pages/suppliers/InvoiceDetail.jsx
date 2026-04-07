@@ -259,15 +259,8 @@ const InvoiceDetail = () => {
               )}
             </div>
           ) : invoice.file_url && (
-            <div onClick={() => window.open(invoice.file_url, '_blank')} className="bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden cursor-pointer group">
-              <div className="bg-zinc-950 flex flex-col items-center justify-center py-16 gap-3">
-                <svg className="w-14 h-14 text-red-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                </svg>
-                <span className="text-xs text-zinc-400 group-hover:text-amber-400 transition-colors flex items-center gap-1.5">
-                  <ExternalLink size={12} /> Abrir PDF en nueva pestaña
-                </span>
-              </div>
+            <div className="bg-zinc-950 border border-zinc-700 rounded-sm overflow-hidden">
+              <iframe src={invoice.file_url} title="PDF" className="w-full h-96 bg-zinc-900" />
             </div>
           )}
 
