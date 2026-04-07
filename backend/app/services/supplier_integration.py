@@ -11,7 +11,7 @@ import logging
 from datetime import date, datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import update
+from sqlalchemy import case, update
 from sqlalchemy.orm import Session
 
 from app.models.database import (
@@ -253,10 +253,9 @@ def create_ticket_from_supplier_invoice(
 # ---------------------------------------------------------------------------
 
 def delete_ticket_for_invoice(db: Session, supplier_invoice_id: int) -> None:
-    """Find the DAZZ ticket linked to *supplier_invoice_id* and either
-    soft-void it (if already reviewed) or hard-delete it.
+    """Find the DAZZ ticket linked to *supplier_invoice_id* and hard-delete it.
 
-    In both cases the parent project totals are decremented atomically.
+    The parent project totals are decremented atomically.
     The caller is responsible for calling ``db.commit()``.
     """
 
@@ -279,8 +278,14 @@ def delete_ticket_for_invoice(db: Session, supplier_invoice_id: int) -> None:
             update(Project)
             .where(Project.id == project_id)
             .values(
-                tickets_count=Project.tickets_count - 1,
-                total_amount=Project.total_amount - amount,
+                tickets_count=case(
+                    (Project.tickets_count > 1, Project.tickets_count - 1),
+                    else_=0,
+                ),
+                total_amount=case(
+                    (Project.total_amount > amount, Project.total_amount - amount),
+                    else_=0,
+                ),
             )
         )
 

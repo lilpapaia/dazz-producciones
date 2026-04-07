@@ -72,10 +72,18 @@ async def get_statistics_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
+    # BOSS filter: restrict to their companies (same as /complete and other endpoints)
+    boss_cids = None
+    if current_user.role == UserRole.BOSS:
+        boss_cids = get_user_company_ids(current_user, db)
+
     # PERF-M6: Cuando no hay quarter, calcular sumas en SQL directo
     # Con quarter, necesitamos parsear date strings en Python (campo date es String, no Date)
     if quarter:
-        all_tickets = db.query(Ticket).join(Project).filter(Project.year == str(year)).all()
+        q = db.query(Ticket).join(Project).filter(Project.year == str(year))
+        if boss_cids:
+            q = q.filter(Project.owner_company_id.in_(boss_cids))
+        all_tickets = q.all()
         all_tickets = filter_tickets_by_quarter(all_tickets, quarter)
         intl = [t for t in all_tickets if t.geo_classification in ['UE', 'INTERNACIONAL']]
         international_spent = sum(t.final_total for t in intl)
@@ -83,17 +91,19 @@ async def get_statistics_overview(
         filtered = [t for t in all_tickets if t.geo_classification == geo_filter] if geo_filter else all_tickets
         total_spent = sum(t.final_total for t in filtered)
     else:
-        base_filter = [Ticket.project_id == Project.id, Project.year == str(year)]
+        boss_extra = [Project.owner_company_id.in_(boss_cids)] if boss_cids else []
         geo_extra = [Ticket.geo_classification == geo_filter] if geo_filter else []
         total_spent = float(db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).join(Project).filter(
-            Project.year == str(year), *geo_extra).scalar())
-        intl_filter = [Project.year == str(year), Ticket.geo_classification.in_(['UE', 'INTERNACIONAL'])]
+            Project.year == str(year), *geo_extra, *boss_extra).scalar())
+        intl_filter = [Project.year == str(year), Ticket.geo_classification.in_(['UE', 'INTERNACIONAL']), *boss_extra]
         international_spent = float(db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).join(Project).filter(
             *intl_filter).scalar())
         iva_reclamable = float(db.query(func.coalesce(func.sum(Ticket.foreign_tax_eur), 0.0)).join(Project).filter(
             *intl_filter).scalar())
 
     projects_query = db.query(Project).filter(Project.year == str(year))
+    if boss_cids:
+        projects_query = projects_query.filter(Project.owner_company_id.in_(boss_cids))
     projects_total = projects_query.count()
     projects_closed = projects_query.filter(Project.status == ProjectStatus.CERRADO).count()
 
