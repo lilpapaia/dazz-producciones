@@ -861,8 +861,12 @@ const SupplierDetail = () => {
                 <X size={18} /></button>
             </div>
           </div>
-          <div className="flex-1 min-h-0">
-            <iframe src={certUrl} className="w-full h-full bg-white" title="Certificado bancario" />
+          <div className="flex-1 min-h-0 flex items-center justify-center bg-zinc-950">
+            {certUrl && (certUrl.includes('/image/upload/') || /\.(jpg|jpeg|png|webp)$/i.test(certUrl)) ? (
+              <img src={certUrl} alt="Certificado bancario" className="max-w-full max-h-full object-contain" />
+            ) : (
+              <iframe src={certUrl} className="w-full h-full bg-white" title="Certificado bancario" />
+            )}
           </div>
         </div>
       )}
