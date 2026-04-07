@@ -246,6 +246,8 @@ const ReviewTicket = () => {
   if (loading) return <LoadingSpinner size="lg" fullPage />;
 
   const isSupplierTicket = ticket?.from_supplier_portal === true;
+  const isProjectClosed = ticket?.project_status === 'cerrado';
+  const supplierFieldsDisabled = isSupplierTicket && !isAdmin;
   const isExtractionFailed = ticket?.provider === 'Sin proveedor' || ticket?.date === 'Sin fecha';
   const pages = getPages();
   const totalPages = pages.length;
@@ -370,7 +372,16 @@ const ReviewTicket = () => {
             )}
 
             {/* Botón Eliminar/Gestionar - DERECHA - Responsive */}
-            {!isSupplierTicket ? (
+            {isProjectClosed ? (
+              <button
+                onClick={() => showError('Reabre el proyecto para poder eliminar tickets')}
+                className="flex items-center gap-2 px-3 py-2 bg-zinc-800/50 text-zinc-600 border border-zinc-700 rounded-sm opacity-30 cursor-not-allowed"
+                title="Proyecto cerrado — reabre para eliminar"
+              >
+                <Trash2 size={18} />
+                <span className="hidden md:inline text-sm font-semibold">Cerrado</span>
+              </button>
+            ) : !isSupplierTicket ? (
               <button
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
@@ -1002,7 +1013,8 @@ const ReviewTicket = () => {
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">ESTATUS FACTURA</label>
               <select value={ticket.invoice_status || ''} onChange={(e) => setTicket({...ticket, invoice_status: e.target.value})}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500">
+                disabled={supplierFieldsDisabled}
+                className={`w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500${supplierFieldsDisabled ? ' opacity-60 cursor-not-allowed' : ''}`}>
                 <option value="">Seleccionar...</option>
                 {invoiceStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
@@ -1012,6 +1024,7 @@ const ReviewTicket = () => {
               {!customPayment ? (
                 <select
                   value={paymentStatusOptions.includes(ticket.payment_status) ? ticket.payment_status : (ticket.payment_status ? '__custom__' : '')}
+                  disabled={supplierFieldsDisabled}
                   onChange={(e) => {
                     if (e.target.value === '__custom__') {
                       setCustomPayment(true);
@@ -1020,7 +1033,7 @@ const ReviewTicket = () => {
                       setTicket({...ticket, payment_status: e.target.value});
                     }
                   }}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+                  className={`w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500${supplierFieldsDisabled ? ' opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <option value="">Seleccionar...</option>
                   {paymentStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -1031,11 +1044,12 @@ const ReviewTicket = () => {
                   <input
                     type="text"
                     autoFocus
+                    disabled={supplierFieldsDisabled}
                     value={ticket.payment_status || ''}
                     onChange={(e) => setTicket({...ticket, payment_status: e.target.value})}
                     onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
                     placeholder="Escribe el estatus de pago..."
-                    className="flex-1 min-w-0 bg-zinc-950 border border-amber-500 rounded-sm px-3 py-2.5 text-zinc-100 focus:outline-none text-sm"
+                    className={`flex-1 min-w-0 bg-zinc-950 border border-amber-500 rounded-sm px-3 py-2.5 text-zinc-100 focus:outline-none text-sm${supplierFieldsDisabled ? ' opacity-60 cursor-not-allowed' : ''}`}
                   />
                   <button
                     onClick={() => { setCustomPayment(false); setTicket({...ticket, payment_status: ''}); }}

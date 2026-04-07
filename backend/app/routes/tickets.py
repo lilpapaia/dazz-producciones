@@ -282,6 +282,7 @@ async def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user
     project = ticket.project
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    ticket.project_status = project.status
     return ticket
 
 
@@ -360,6 +361,8 @@ async def request_supplier_ticket_deletion(
         raise HTTPException(400, "This ticket is not from the supplier portal")
     if not can_access_project(current_user, ticket.project, db):
         raise HTTPException(403, "Not enough permissions")
+    if ticket.payment_status == "PAGADO ADMIN":
+        raise HTTPException(400, "Cannot request deletion of a paid invoice")
 
     ticket.invoice_status = "RECIBIDO PERO ERRONEO"
 

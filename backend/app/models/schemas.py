@@ -244,6 +244,7 @@ class TicketResponse(TicketBase):
     supplier_id: Optional[int] = None
     supplier_invoice_id: Optional[int] = None
     is_autoinvoice: bool = False
+    project_status: Optional[str] = None
 
     class Config:
         from_attributes = True
