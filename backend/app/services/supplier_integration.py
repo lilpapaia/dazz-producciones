@@ -8,7 +8,7 @@ Three helpers that bridge the supplier portal with the main expense tracker:
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import update
@@ -18,6 +18,8 @@ from app.models.database import (
     Company, OCPrefix, Project, ProjectStatus, Ticket, TicketType,
 )
 from app.models.suppliers import Supplier, SupplierInvoice
+from app.services.exchange_rate import get_historical_exchange_rate
+from app.services.geographic_classifier import classify_geography
 from app.services.supplier_ai import format_date_for_response
 
 logger = logging.getLogger(__name__)
@@ -185,15 +187,54 @@ def create_ticket_from_supplier_invoice(
         # Traceability
         notes="Auto: factura proveedor",
     )
+
+    # Foreign currency conversion (same logic as tickets.py upload)
+    if invoice.is_foreign and invoice.currency and invoice.currency != "EUR":
+        ticket.foreign_amount = invoice.base_amount
+        ticket.foreign_total = invoice.final_total
+        ticket.foreign_tax_amount = invoice.iva_amount
+        ticket.country_code = getattr(invoice, "country_code", None)
+        ticket.geo_classification = (
+            classify_geography(ticket.country_code) if ticket.country_code else "INTERNACIONAL"
+        )
+        rate_date = invoice.date_parsed
+        if not rate_date and invoice.date:
+            try:
+                parts = invoice.date.split("-")
+                rate_date = date(int(parts[0]), int(parts[1]), int(parts[2]))
+            except Exception:
+                rate_date = None
+        rate = get_historical_exchange_rate(invoice.currency, "EUR", rate_date)
+        if rate:
+            ticket.exchange_rate = rate
+            ticket.exchange_rate_date = rate_date
+            ticket.base_amount = round(invoice.base_amount * rate, 2)
+            ticket.iva_amount = round(invoice.iva_amount * rate, 2)
+            ticket.total_with_iva = round(ticket.base_amount + ticket.iva_amount, 2)
+            ticket.irpf_amount = round((invoice.irpf_amount or 0) * rate, 2)
+            ticket.final_total = round(invoice.final_total * rate, 2)
+            ticket.foreign_tax_eur = round(invoice.iva_amount * rate, 2)
+    elif invoice.is_foreign and invoice.currency == "EUR":
+        # Foreign but EUR (e.g. EU country)
+        ticket.foreign_amount = invoice.base_amount
+        ticket.foreign_total = invoice.final_total
+        ticket.foreign_tax_amount = invoice.iva_amount
+        ticket.foreign_tax_eur = invoice.iva_amount
+        ticket.exchange_rate = 1.0
+        ticket.country_code = getattr(invoice, "country_code", None)
+        ticket.geo_classification = (
+            classify_geography(ticket.country_code) if ticket.country_code else "UE"
+        )
+
     db.add(ticket)
 
-    # Atomically update project counters
+    # Atomically update project counters (use ticket.final_total which may be EUR-converted)
     db.execute(
         update(Project)
         .where(Project.id == project.id)
         .values(
             tickets_count=Project.tickets_count + 1,
-            total_amount=Project.total_amount + invoice.final_total,
+            total_amount=Project.total_amount + ticket.final_total,
         )
     )
 
