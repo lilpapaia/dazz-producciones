@@ -21,11 +21,12 @@ const SuppliersLayout = () => {
     .then(r => { setStats(r.data); setFetchError(false); })
     .catch(() => { setFetchError(true); });
 
-  useEffect(() => { fetchStats(); }, []);
   useEffect(() => {
+    fetchStats();
+    if (location.pathname !== '/suppliers') return;
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [location.pathname]);
 
   const isActive = (path, exact) => {
     if (exact) return location.pathname === path;

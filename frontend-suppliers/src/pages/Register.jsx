@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { validateToken, registerSupplier, uploadBankCert, validateBankCertIban, checkOcForRegistration } from '../services/api';
 import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
@@ -7,9 +7,8 @@ import { LegalDocumentModal, PrivacyPolicyContent, AgencyContractContent } from 
 
 const Register = () => {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
   const { login } = useAuth();
-  const token = params.get('token') || '';
+  const token = new URLSearchParams(window.location.search).get('token') || '';
 
   const [step, setStep] = useState(1); // 1: details, 2: banking, 3: password, 4: legal
   const [tokenValid, setTokenValid] = useState(null);
@@ -32,13 +31,18 @@ const Register = () => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
 
+  // Strip token from URL to prevent leaking via browser history/referrer
+  useEffect(() => {
+    if (token) window.history.replaceState({}, '', '/register');
+  }, []);
+
   useEffect(() => {
     if (!token) { setTokenValid(false); return; }
     validateToken(token).then(({ data }) => {
       setTokenValid(data.valid);
       if (data.valid) { setInvitation(data); setForm(f => ({ ...f, name: data.name || '' })); }
     }).catch(() => setTokenValid(false));
-  }, [token]);
+  }, []);
 
   // Check OC when entering step 4
   useEffect(() => {

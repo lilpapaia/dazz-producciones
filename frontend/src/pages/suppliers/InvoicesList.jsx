@@ -59,12 +59,16 @@ const InvoicesList = () => {
     localStorage.setItem('recentSearches_invoices', JSON.stringify(updated));
   };
 
+  useEffect(() => {
+    getCompanies().then(c => setCompanies(c.data)).catch(() => {});
+  }, []);
+
   const load = () => {
     const params = { limit: 200 };
     if (statusFilter) params.status = statusFilter;
     if (companyFilter) params.company_id = companyFilter;
-    Promise.all([getAllInvoices(params), getCompanies()])
-      .then(([inv, c]) => { setInvoices(inv.data); setCompanies(c.data); })
+    getAllInvoices(params)
+      .then(inv => setInvoices(inv.data))
       .catch(() => {})
       .finally(() => setLoading(false));
   };
