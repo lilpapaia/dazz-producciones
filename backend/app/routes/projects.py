@@ -83,7 +83,7 @@ async def create_project(
                 )
 
     # Crear proyecto (company es campo legacy NOT NULL, rellenar con nombre de empresa)
-    db_project = Project(**project.dict(exclude={"company"}), owner_id=current_user.id, status=ProjectStatus.EN_CURSO, company=company.name)
+    db_project = Project(**project.model_dump(exclude={"company"}), owner_id=current_user.id, status=ProjectStatus.EN_CURSO, company=company.name)
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
@@ -253,7 +253,7 @@ async def update_project(
                 )
 
     # Actualizar
-    update_data = project_update.dict(exclude_unset=True)
+    update_data = project_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(project, key, value)
     db.commit()

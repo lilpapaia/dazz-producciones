@@ -8,7 +8,6 @@ y sus propios refresh tokens.
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -17,6 +16,9 @@ from dotenv import load_dotenv
 
 from config.database import get_db
 from app.models.suppliers import Supplier, SupplierRefreshToken
+
+# QUAL-2: Import shared password utils from auth.py (single CryptContext)
+from app.services.auth import verify_password, get_password_hash, _DUMMY_HASH, _generate_token  # noqa: F401 — re-exported
 
 load_dotenv()
 
@@ -28,16 +30,7 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 SUPPLIER_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hora (doc sección 11c)
 SUPPLIER_REFRESH_TOKEN_EXPIRE_DAYS = 7
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
 
 
 def create_supplier_access_token(supplier_id: int, email: str) -> str:
@@ -50,9 +43,6 @@ def create_supplier_access_token(supplier_id: int, email: str) -> str:
         "exp": expire,
     }
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-from app.services.auth import _generate_token
 
 
 def create_supplier_refresh_token(db: Session, supplier_id: int) -> str:

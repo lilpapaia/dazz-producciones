@@ -18,6 +18,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Configurar environment de test ANTES de importar la app
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only-not-production")
 os.environ.setdefault("ENVIRONMENT", "development")
+# Forzar SQLite local para tests (evita que load_dotenv() cargue DATABASE_URL de Railway)
+os.environ.pop("DATABASE_URL", None)
+
+# Pre-load dotenv BEFORE any app import to prevent config/database.py from setting DATABASE_URL
+from dotenv import load_dotenv
+load_dotenv()
+# Remove DATABASE_URL again in case .env set it
+os.environ.pop("DATABASE_URL", None)
+
+# Fix Windows event loop policy for pytest-asyncio + starlette TestClient
+import asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
@@ -81,23 +94,8 @@ def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Resetear TODOS los rate limiters para evitar 429 entre tests
-    for limiter_ref in [app.state.limiter]:
-        try:
-            limiter_ref.reset()
-            limiter_ref._storage.reset()
-            limiter_ref._storage.storage.clear()
-            limiter_ref._storage.expirations.clear()
-        except Exception:
-            pass
-    try:
-        from app.routes.auth import limiter as auth_limiter
-        auth_limiter.reset()
-        auth_limiter._storage.reset()
-        auth_limiter._storage.storage.clear()
-        auth_limiter._storage.expirations.clear()
-    except Exception:
-        pass
+    # QUAL-4: Disable rate limiting in tests instead of resetting internals
+    app.state.limiter.enabled = False
 
     with TestClient(app) as c:
         yield c

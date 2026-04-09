@@ -57,13 +57,13 @@ api.interceptors.response.use(
         processQueue(null, data.access_token);
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return api(original);
-      } catch {
-        processQueue(error);
+      } catch (refreshError) {
+        processQueue(refreshError);
         localStorage.removeItem('supplier_token');
         localStorage.removeItem('supplier_refresh_token');
         localStorage.removeItem('supplier_data');
         window.location.href = '/login';
-        return Promise.reject(error);
+        return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }

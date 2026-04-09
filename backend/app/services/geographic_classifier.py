@@ -184,7 +184,3 @@ def is_iva_reclamable(country_code: str) -> bool:
     
     # Solo NACIONAL no es reclamable
     return classification != 'NACIONAL'
-
-
-    
-    print("\n✅ Tests completados")

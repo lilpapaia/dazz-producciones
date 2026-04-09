@@ -296,7 +296,7 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     old_total = ticket.final_total
     was_error = (ticket.provider == "Error en extracción" and old_total == 0.0)
-    update_data = ticket_update.dict(exclude_unset=True)
+    update_data = ticket_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(ticket, key, value)
     if "final_total" in update_data:
