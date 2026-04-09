@@ -179,6 +179,7 @@ const Dashboard = () => {
 
   const [projects, setProjects] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [companiesError, setCompaniesError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -224,10 +225,11 @@ const Dashboard = () => {
 
   const loadCompanies = async () => {
     try {
+      setCompaniesError(false);
       const response = await getCompanies();
       setCompanies(response.data);
-    } catch (error) {
-      console.error('Error loading companies:', error);
+    } catch {
+      setCompaniesError(true);
     }
   };
 
@@ -363,6 +365,13 @@ const Dashboard = () => {
             </div>
 
             {/* ── TABS por empresa ── */}
+            {companiesError && (
+              <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded p-2.5 text-[12px] flex items-center gap-2 mb-3">
+                Error al cargar empresas
+                <button onClick={loadCompanies} className="text-amber-500 hover:text-amber-400 ml-1 font-semibold">Reintentar</button>
+              </div>
+            )}
+
             <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
               {/* Tab "Todas" */}
               <button

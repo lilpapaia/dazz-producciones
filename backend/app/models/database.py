@@ -53,7 +53,7 @@ class OCPrefix(Base):
     billing_company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     description = Column(String, nullable=True)
     number_digits = Column(Integer, default=3)
-    year_format = Column(String, default="2026")
+    year_format = Column(String, default=lambda: str(datetime.now(timezone.utc).year))
     permanent_oc = Column(Boolean, default=False)
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -44,7 +44,7 @@ function App() {
             <Route path="*" element={
               <div className="min-h-screen bg-[#09090b] flex items-center justify-center flex-col gap-3">
                 <span className="font-['Bebas_Neue'] text-5xl text-zinc-800">404</span>
-                <a href="/" className="text-amber-500 text-xs">Go home</a>
+                <Link to="/" className="text-amber-500 text-xs">Go home</Link>
               </div>
             } />
           </Routes>

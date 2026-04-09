@@ -108,8 +108,15 @@ const UploadPage = () => {
         </div>
       )}
 
+      {/* Loading profile */}
+      {!profile && (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
       {/* Drop zone */}
-      {!allDone && (!profile || profile.iban_masked) && (
+      {!allDone && profile && profile.iban_masked && (
         <div
           onDragOver={e => { e.preventDefault(); if (!uploading) setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
