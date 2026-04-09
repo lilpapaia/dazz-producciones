@@ -887,7 +887,11 @@ async def reject_invoice_deletion(
     if invoice.status != InvoiceStatus.DELETE_REQUESTED:
         raise HTTPException(400, "Invoice is not in DELETE_REQUESTED status")
 
-    invoice.status = InvoiceStatus.PENDING if invoice.oc_number else InvoiceStatus.OC_PENDING
+    if invoice.previous_status:
+        invoice.status = InvoiceStatus(invoice.previous_status)
+    else:
+        invoice.status = InvoiceStatus.PENDING if invoice.oc_number else InvoiceStatus.OC_PENDING
+    invoice.previous_status = None
     invoice.delete_reason = None
 
     supplier = db.query(Supplier).filter(Supplier.id == invoice.supplier_id).first()

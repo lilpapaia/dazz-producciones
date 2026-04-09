@@ -4,10 +4,8 @@ from app.models.database import User, Company, UserRole
 
 
 def _load_user_companies(user: User, db: Session) -> List[Company]:
-    """Recarga companies desde DB para evitar DetachedInstanceError."""
-    from sqlalchemy.orm import joinedload
-    u = db.query(User).options(joinedload(User.companies)).filter(User.id == user.id).first()
-    return u.companies if u else []
+    """Returns user companies (already loaded via joinedload in get_current_user)."""
+    return user.companies if user else []
 
 
 def validate_company_access(user: User, company_id: int, db: Session = None) -> bool:

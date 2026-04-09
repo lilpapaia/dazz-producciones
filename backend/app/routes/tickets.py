@@ -2,7 +2,7 @@ import logging
 import hashlib
 from fastapi import APIRouter, Body, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import update
+from sqlalchemy import update, case
 from typing import List, Optional
 import asyncio
 import os, json
@@ -333,9 +333,16 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     # 2. BORRAR DE BASE DE DATOS
     # T5: Si era ticket de error (nunca se sumó), no restar count
     is_error_ticket = (ticket.provider == "Error en extracción" and ticket.final_total == 0.0)
+    decrement = 0 if is_error_ticket else 1
     db.execute(update(Project).where(Project.id == ticket.project_id).values(
-        tickets_count=Project.tickets_count - (0 if is_error_ticket else 1),
-        total_amount=Project.total_amount - ticket.final_total,
+        tickets_count=case(
+            (Project.tickets_count > decrement, Project.tickets_count - decrement),
+            else_=0,
+        ),
+        total_amount=case(
+            (Project.total_amount > ticket.final_total, Project.total_amount - ticket.final_total),
+            else_=0,
+        ),
     ))
     db.delete(ticket)
     db.commit()
@@ -373,6 +380,7 @@ async def request_supplier_ticket_deletion(
             SupplierInvoice.id == ticket.supplier_invoice_id
         ).first()
         if invoice and invoice.status not in (InvoiceStatus.PAID, InvoiceStatus.DELETE_REQUESTED):
+            invoice.previous_status = invoice.status.value
             invoice.status = InvoiceStatus.DELETE_REQUESTED
             invoice.delete_reason = reason or "Solicitado desde proyecto DAZZ"
 

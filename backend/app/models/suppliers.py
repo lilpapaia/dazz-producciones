@@ -144,6 +144,7 @@ class SupplierInvoice(Base):
     status = Column(Enum(InvoiceStatus), default=InvoiceStatus.PENDING, nullable=False, index=True)
     rejection_reason = Column(Text, nullable=True)
     delete_reason = Column(Text, nullable=True)
+    previous_status = Column(String, nullable=True)  # Status before DELETE_REQUESTED
     ia_validation_result = Column(Text, nullable=True)
     is_autoinvoice = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

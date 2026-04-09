@@ -4,24 +4,23 @@ Funciones centralizadas de permisos y acceso.
 Unifica la lógica duplicada que existía en projects.py y tickets.py.
 """
 from typing import List
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from app.models.database import User, Project, UserRole
 
 
 def get_user_company_ids(user: User, db: Session) -> List[int]:
     """
-    Obtiene IDs de empresas del usuario, recargando desde DB
-    para evitar DetachedInstanceError.
+    Obtiene IDs de empresas del usuario.
+    user.companies ya está cargado con joinedload desde get_current_user.
 
     Args:
         user: Usuario autenticado
-        db: Sesión de base de datos
+        db: Sesión de base de datos (mantenido por compatibilidad de firma)
 
     Returns:
         Lista de IDs de empresas asignadas al usuario
     """
-    u = db.query(User).options(joinedload(User.companies)).filter(User.id == user.id).first()
-    return [c.id for c in u.companies] if u else []
+    return [c.id for c in user.companies] if user else []
 
 
 def can_access_project(user: User, project: Project, db: Session) -> bool:

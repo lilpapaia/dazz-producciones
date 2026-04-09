@@ -758,6 +758,7 @@ async def request_invoice_deletion(
     if invoice.status not in (InvoiceStatus.PENDING, InvoiceStatus.OC_PENDING, InvoiceStatus.APPROVED):
         raise HTTPException(400, "Only PENDING, OC_PENDING or APPROVED invoices can request deletion")
 
+    invoice.previous_status = invoice.status.value
     invoice.status = InvoiceStatus.DELETE_REQUESTED
     invoice.delete_reason = body.reason
 

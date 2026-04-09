@@ -12,7 +12,7 @@ setup_logging()
 
 logger = logging.getLogger(__name__)
 
-from database_config import engine
+from config.database import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics, companies
 from app.routes import suppliers as suppliers_admin, supplier_portal, autoinvoice
@@ -309,6 +309,13 @@ async def startup_event():
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_version VARCHAR(10)"))
             # UX-LAST: Track last uploaded file per project
             conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS last_uploaded_file VARCHAR"))
+            # QW-2: Save previous status before DELETE_REQUESTED for correct restore on reject
+            conn.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS previous_status VARCHAR"))
+            # C-1: Unique index on autoinvoice numbers as safety net against race conditions
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_autoinvoice_unique_number "
+                "ON supplier_invoices (invoice_number) WHERE is_autoinvoice = TRUE"
+            ))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")
