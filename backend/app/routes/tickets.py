@@ -303,9 +303,13 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
         diff = ticket.final_total - old_total
         # T5: Si era ticket de error (no sumado al proyecto), sumar count + total completo
         count_diff = 1 if was_error and ticket.final_total > 0 else 0
+        new_total = Project.total_amount + diff
         db.execute(update(Project).where(Project.id == ticket.project_id).values(
             tickets_count=Project.tickets_count + count_diff,
-            total_amount=Project.total_amount + diff,
+            total_amount=case(
+                (new_total > 0, new_total),
+                else_=0,
+            ),
         ))
     db.commit()
     db.refresh(ticket)

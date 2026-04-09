@@ -328,6 +328,12 @@ async def startup_event():
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_autoinvoice_unique_number "
                 "ON supplier_invoices (invoice_number) WHERE is_autoinvoice = TRUE"
             ))
+            # INT-1: Unique constraint on creative_code (PostgreSQL only — WHERE not supported on SQLite)
+            if is_postgres:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_projects_creative_code_unique "
+                    "ON projects (creative_code) WHERE creative_code IS NOT NULL"
+                ))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")
