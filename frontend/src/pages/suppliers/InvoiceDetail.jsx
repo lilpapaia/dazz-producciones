@@ -143,7 +143,13 @@ const InvoiceDetail = () => {
     </div>
   );
 
-  if (!invoice) return null;
+  if (!invoice) return (
+    <div className="text-center py-12">
+      <p className="text-zinc-500 text-sm mb-3">Factura no encontrada</p>
+      <button onClick={() => navigate('/suppliers/invoices')}
+        className="text-amber-500 hover:text-amber-400 text-sm">← Volver a facturas</button>
+    </div>
+  );
 
   // Parse file_pages (ReviewTicket pattern)
   let pages = [];

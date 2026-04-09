@@ -9,6 +9,7 @@ const ChangeIban = () => {
   const [newIban, setNewIban] = useState('');
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
@@ -19,7 +20,8 @@ const ChangeIban = () => {
     setSending(true);
     try {
       await requestIbanChange(newIban.trim(), file);
-      navigate('/profile');
+      setSubmitted(true);
+      setTimeout(() => navigate('/profile'), 1500);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to submit IBAN change request');
     } finally {
@@ -76,6 +78,12 @@ const ChangeIban = () => {
           <div className="text-[11px] text-zinc-600 mt-1">The AI will verify that the IBAN on the certificate matches the one entered above</div>
         </div>
       </div>
+
+      {submitted && (
+        <div className="bg-green-400/[.08] text-green-400 border border-green-400/[.15] rounded-lg p-3 text-[13px] mb-4 text-center font-semibold">
+          IBAN change submitted for review
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-xs mb-3">{error}</div>

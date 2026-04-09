@@ -24,6 +24,8 @@ const ProjectView = () => {
   const [reopeningProject, setReopeningProject] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+  const [deleteTicketId, setDeleteTicketId] = useState(null);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
 
   // Edit modal
   const [editModal, setEditModal] = useState(false);
@@ -115,17 +117,17 @@ const ProjectView = () => {
     setShowSuggestions(false);
   };
 
-  const handleDeleteTicket = async (ticketId) => {
-    if (!window.confirm('¿Eliminar este ticket?')) return;
-
+  const handleDeleteTicket = (ticketId) => setDeleteTicketId(ticketId);
+  const confirmDeleteTicket = async () => {
     try {
-      await deleteTicket(ticketId);
+      await deleteTicket(deleteTicketId);
       showSuccess('Ticket eliminado');
       loadTickets();
       loadProject();
     } catch (error) {
       showError('Error al eliminar ticket');
     }
+    setDeleteTicketId(null);
   };
 
   const handleCloseProject = () => {
@@ -133,14 +135,14 @@ const ProjectView = () => {
     navigate(`/projects/${id}/close-review`);
   };
 
-  const handleReopenProject = async () => {
-    if (!window.confirm('¿Reabrir proyecto?')) return;
-
+  const handleReopenProject = () => setShowReopenDialog(true);
+  const confirmReopenProject = async () => {
+    setShowReopenDialog(false);
     setReopeningProject(true);
     try {
       await reopenProject(id);
       showSuccess('Proyecto reabierto correctamente');
-      loadProject(); // Recargar para actualizar estado
+      loadProject();
     } catch (error) {
       showError('Error al reabrir proyecto');
     } finally {
@@ -728,6 +730,26 @@ const ProjectView = () => {
         confirmText="Eliminar Proyecto"
         cancelText="Cancelar"
         type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteTicketId}
+        onClose={() => setDeleteTicketId(null)}
+        onConfirm={confirmDeleteTicket}
+        title="¿Eliminar ticket?"
+        message="Este ticket será eliminado permanentemente."
+        confirmText="Eliminar"
+        type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showReopenDialog}
+        onClose={() => setShowReopenDialog(false)}
+        onConfirm={confirmReopenProject}
+        title="¿Reabrir proyecto?"
+        message={`El proyecto "${project?.creative_code}" se reabrirá y podrás volver a subir tickets.`}
+        confirmText="Reabrir"
+        type="warning"
       />
 
       {/* Modal editar proyecto */}

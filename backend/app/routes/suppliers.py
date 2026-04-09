@@ -1072,6 +1072,10 @@ async def dashboard_stats(
         SupplierInvoice.status == InvoiceStatus.PAID,
         SupplierInvoice.updated_at >= month_start).scalar() or 0.0
 
+    paid_count_month = db.query(func.count(SupplierInvoice.id)).filter(
+        SupplierInvoice.status == InvoiceStatus.PAID,
+        SupplierInvoice.updated_at >= month_start).scalar() or 0
+
     unread = db.query(func.count(SupplierNotification.id)).filter(
         SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
         SupplierNotification.is_read == False).scalar() or 0
@@ -1081,6 +1085,7 @@ async def dashboard_stats(
         approved_this_month=approved_month,
         active_suppliers=active,
         total_paid_this_month=float(paid_month),
+        paid_invoices_this_month=paid_count_month,
         unread_notifications=unread,
     )
 

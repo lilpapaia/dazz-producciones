@@ -195,8 +195,8 @@ const Dashboard = () => {
     lang: 'es-ES',
     onResult: useCallback((transcript) => {
       setSearchTerm(transcript);
-      const saved = localStorage.getItem('recentSearches');
-      const recent = saved ? JSON.parse(saved) : [];
+      let recent = [];
+      try { const saved = localStorage.getItem('recentSearches'); if (saved) recent = JSON.parse(saved); } catch { /* corrupted */ }
       const updated = [transcript, ...recent.filter(s => s !== transcript)].slice(0, 5);
       setRecentSearches(updated);
       localStorage.setItem('recentSearches', JSON.stringify(updated));
@@ -232,8 +232,10 @@ const Dashboard = () => {
   };
 
   const loadRecentSearches = () => {
-    const saved = localStorage.getItem('recentSearches');
-    if (saved) setRecentSearches(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem('recentSearches');
+      if (saved) setRecentSearches(JSON.parse(saved));
+    } catch { /* corrupted localStorage */ }
   };
 
   const saveRecentSearch = (term) => {

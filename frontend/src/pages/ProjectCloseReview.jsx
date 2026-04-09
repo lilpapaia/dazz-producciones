@@ -4,6 +4,7 @@ import { getProject, getProjectTickets, closeProjectWithEmails, getUsernames } f
 import { showSuccess, showError, showWarning } from '../utils/toast';
 import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import EmailChipsInput from '../components/EmailChipsInput';
+import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 import { getCurrencySymbol } from '../utils/currency';
@@ -17,6 +18,7 @@ const ProjectCloseReview = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState([]);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -58,15 +60,16 @@ const ProjectCloseReview = () => {
     return user?.email || null;
   };
 
-  const handleConfirmClose = async () => {
-    // Validar que haya al menos un email
+  const handleConfirmClose = () => {
     if (emailRecipients.length === 0) {
       showWarning('Debes añadir al menos un destinatario de email');
       return;
     }
+    setShowCloseDialog(true);
+  };
 
-    if (!window.confirm(`¿Confirmar cierre? Se enviará email a ${emailRecipients.length} destinatario(s) y se descargará Excel.`)) return;
-
+  const confirmClose = async () => {
+    setShowCloseDialog(false);
     setSending(true);
     try {
       // Llamada backend con emails personalizados
@@ -328,6 +331,16 @@ const ProjectCloseReview = () => {
           </button>
         </div>
       </main>
+
+      <ConfirmDialog
+        isOpen={showCloseDialog}
+        onClose={() => setShowCloseDialog(false)}
+        onConfirm={confirmClose}
+        title="¿Cerrar proyecto?"
+        message={`Se enviará email a ${emailRecipients.length} destinatario(s) y se descargará el Excel de gastos.`}
+        confirmText="Cerrar y enviar"
+        type="warning"
+      />
     </div>
   );
 };

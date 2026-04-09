@@ -7,6 +7,7 @@ const RequestDeactivation = () => {
   const navigate = useNavigate();
   const [reason, setReason] = useState('');
   const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
@@ -15,7 +16,8 @@ const RequestDeactivation = () => {
     setSending(true);
     try {
       await requestDeactivation({ reason: reason.trim() });
-      navigate('/profile');
+      setSubmitted(true);
+      setTimeout(() => navigate('/profile'), 1500);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to submit deactivation request');
     }
@@ -51,6 +53,12 @@ const RequestDeactivation = () => {
           className="w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2.5 rounded-[7px] focus:border-amber-500 outline-none resize-none"
         />
       </div>
+
+      {submitted && (
+        <div className="bg-green-400/[.08] text-green-400 border border-green-400/[.15] rounded-lg p-3 text-[13px] mb-4 text-center font-semibold">
+          Deactivation request sent
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-xs mb-3">{error}</div>

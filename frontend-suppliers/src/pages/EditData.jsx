@@ -8,6 +8,7 @@ const EditData = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,7 +28,8 @@ const EditData = () => {
     setError('');
     try {
       await requestDataChange({ name: name.trim(), phone: phone.trim(), address: address.trim() });
-      navigate('/profile');
+      setSubmitted(true);
+      setTimeout(() => navigate('/profile'), 1500);
     } catch (err) {
       if (err.response?.status !== 401) {
         setError('Failed to submit changes. Please try again.');
@@ -63,6 +65,12 @@ const EditData = () => {
         <Info size={12} className="flex-shrink-0 mt-0.5" strokeWidth={1.5} />
         Email and NIF/CIF cannot be changed. Contact admin@dazzcreative.com for assistance.
       </div>
+
+      {submitted && (
+        <div className="bg-green-400/[.08] text-green-400 border border-green-400/[.15] rounded-lg p-3 text-[13px] mb-4 text-center font-semibold">
+          Changes submitted for review
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded-lg p-2.5 text-[12px] mb-4">{error}</div>

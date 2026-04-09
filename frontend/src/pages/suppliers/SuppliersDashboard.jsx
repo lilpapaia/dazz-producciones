@@ -117,7 +117,7 @@ const SuppliersDashboard = () => {
             {[
               { label: 'Pendiente', value: stats?.pending_invoices || 0, color: 'bg-amber-500', text: 'text-amber-400' },
               { label: 'Aprobada', value: stats?.approved_this_month || 0, color: 'bg-green-400', text: 'text-green-400' },
-              { label: 'Pagada', value: stats?.total_paid_this_month > 0 ? Math.ceil(stats.total_paid_this_month / 100) : 0, color: 'bg-green-300', text: 'text-green-300' },
+              { label: 'Pagada', value: stats?.paid_invoices_this_month || 0, color: 'bg-green-300', text: 'text-green-300' },
             ].map((s, i) => {
               const maxVal = Math.max(...[stats?.pending_invoices || 0, stats?.approved_this_month || 0, 10]);
               const pct = maxVal > 0 ? Math.min((s.value / maxVal) * 100, 100) : 0;

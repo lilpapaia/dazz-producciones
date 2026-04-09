@@ -32,7 +32,7 @@ const Navbar = () => {
             <Link
               to="/dashboard"
               className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
-                isActive('/dashboard')
+                (isActive('/dashboard') || location.pathname === '/')
                   ? 'bg-amber-500 text-zinc-950'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
               }`}

@@ -149,6 +149,7 @@ class DashboardResponse(BaseModel):
     approved_this_month: int
     active_suppliers: int
     total_paid_this_month: float
+    paid_invoices_this_month: int = 0
     unread_notifications: int
 
 
