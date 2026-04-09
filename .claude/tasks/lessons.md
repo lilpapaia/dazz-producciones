@@ -376,6 +376,93 @@ Statistics/
 
 ---
 
+## 2026-04-09: [Refactor] - Borrar código sin verificar imports rompe producción
+
+**Error:** CLEAN-6 borró `_DUMMY_HASH` de `supplier_auth.py`, pero `supplier_portal.py:33` lo importaba de ahí. Resultado: `ImportError` en producción.
+**Causa raíz:** Se asumió que `_DUMMY_HASH` no se usaba en `supplier_auth.py` (era cierto — no se usaba DENTRO del archivo). Pero se re-exportaba y otros archivos lo importaban DESDE `supplier_auth`.
+**Solución:** QUAL-2 consolidó los imports correctamente: `supplier_auth.py` importa de `auth.py` y re-exporta con `# noqa: F401`.
+**Regla:** Antes de borrar CUALQUIER función, constante o variable de un archivo, hacer `grep -r "nombre"` en TODO el proyecto. Verificar no solo uso directo sino también re-exports e imports transitivos.
+**Prevención:**
+- `grep -r "from app.services.supplier_auth import"` antes de tocar supplier_auth.py
+- Si un símbolo se importa en el archivo, verificar si otros archivos lo importan DESDE este archivo
+- Patrón seguro: importar + re-exportar con `# noqa: F401` para mantener la cadena
+
+---
+
+## 2026-04-09: [Backend] - case() floor a 0 en decrementos de contadores de proyecto
+
+**Error:** `delete_ticket` decrementaba `tickets_count` y `total_amount` directamente (`Project.tickets_count - 1`), lo que podía resultar en valores negativos si los contadores estaban desincronizados.
+**Causa raíz:** `delete_ticket_for_invoice` (supplier_integration.py) ya tenía `case()` floor, pero `delete_ticket` (tickets.py) y `update_ticket` no.
+**Solución:** Aplicar `case((Project.total_amount > amount, Project.total_amount - amount), else_=0)` en los 3 sitios.
+**Regla:** SIEMPRE usar `case()` floor a 0 cuando se decrementan `tickets_count` o `total_amount`. Los 3 sitios obligatorios: `delete_ticket`, `delete_ticket_for_invoice`, `update_ticket`.
+**Prevención:**
+- Si añades un nuevo sitio que modifica contadores de proyecto, copiar el patrón case() de los existentes
+- SQLAlchemy `case()` funciona igual en SQLite y PostgreSQL
+
+---
+
+## 2026-04-09: [Backend] - previous_status antes de DELETE_REQUESTED
+
+**Error:** `reject_invoice_deletion` restauraba siempre a PENDING, perdiendo el estado APPROVED si la factura fue aprobada antes de solicitar borrado.
+**Causa raíz:** No se guardaba el estado previo antes de transicionar a DELETE_REQUESTED.
+**Solución:** Nuevo campo `previous_status` en SupplierInvoice. Se guarda en 2 sitios (tickets.py y supplier_portal.py) ANTES de cambiar a DELETE_REQUESTED. Se restaura al rechazar.
+**Regla:** Siempre guardar `invoice.previous_status = invoice.status.value` ANTES de cambiar a DELETE_REQUESTED. Al rechazar, restaurar desde previous_status con fallback a PENDING.
+**Prevención:** Si añades un nuevo sitio que cambie status a DELETE_REQUESTED, no olvidar guardar previous_status
+
+---
+
+## 2026-04-09: [Security] - Magic bytes validation obligatorio en uploads
+
+**Error:** Solo se validaba extensión y MIME type en uploads de imágenes. Ambos son client-supplied y spoofables. Un archivo malicioso podía pasar como `.jpg`.
+**Causa raíz:** `validate_file_upload` solo chequeaba extensión + content_type + tamaño. PDFs tenían magic bytes (`%PDF`) pero imágenes no.
+**Solución:** Función `detect_file_type()` que verifica JPEG (FF D8 FF), PNG (89 PNG), PDF (%PDF), WebP (RIFF+WEBP), HEIC (ftyp). Se rechaza si los bytes no coinciden con la extensión.
+**Regla:** TODO upload debe pasar por validación de magic bytes. No confiar en extensión ni MIME type.
+**Prevención:** Si añades un nuevo tipo de archivo, añadir su firma de magic bytes a `detect_file_type()`
+
+---
+
+## 2026-04-09: [Frontend] - Polling condicional por pathname
+
+**Error:** `SuppliersLayout` hacía polling cada 30s incluso en rutas hijas (SupplierDetail, InvoiceDetail) donde los datos no se mostraban. `Layout` del portal hacía `getSummary()` en cada cambio de ruta.
+**Causa raíz:** useEffect con `[]` o `[pathname]` sin condición de ruta.
+**Solución:** `if (pathname !== '/suppliers') return;` antes de crear el interval. Fetch al montar siempre (para badges), interval solo en la página correcta.
+**Regla:** Polling con setInterval solo en la ruta que muestra los datos. Usar `pathname` para condicionar. Siempre limpiar interval en cleanup.
+**Prevención:**
+- Patrón: `useEffect(() => { fetch(); if (pathname !== targetPath) return; const i = setInterval(fetch, 60000); return () => clearInterval(i); }, [pathname]);`
+- Para notificaciones, añadir `document.visibilitychange` para pausar cuando tab no visible
+
+---
+
+## 2026-04-09: [Frontend] - Feedback UX obligatorio en toda acción
+
+**Error:** Múltiples páginas silenciaban errores (console.error only), no mostraban toasts de éxito, o tenían botones sin loading state.
+**Causa raíz:** Patrón `catch(error) { console.error(error) }` sin feedback al usuario. Formularios que navegan sin confirmar éxito.
+**Solución:** (1) Error banners con botón "Reintentar" en Dashboard, Users, ProjectView. (2) Success banners con delay+navigate en EditData, ChangeIban, RequestDeactivation. (3) disabled+loading text en botones de delete.
+**Regla:** TODA acción async debe tener: loading state (disabled + texto), error state (banner visible), success state (toast o banner). NUNCA catch vacío o solo console.error.
+**Prevención:** Checklist para cada endpoint en frontend: ¿loading? ¿error visible? ¿success feedback? ¿doble-tap prevenido?
+
+---
+
+## 2026-04-09: [Auditoría] - Verificar hallazgos contra código real antes de actuar
+
+**Error:** La auditoría inicial reportó 96 hallazgos. Al verificar contra el código real, 5 eran falsos positivos (stale closure que no existía, print a nivel módulo que estaba dentro de función, fetch en cada navegación que solo era en cambio de supplierId, etc.).
+**Causa raíz:** Los subagentes de auditoría reportaron basándose en líneas parciales sin leer contexto completo.
+**Solución:** Ronda de verificación con subagentes que leen el código exacto y confirman CORRECT/WRONG/PARTIALLY CORRECT.
+**Regla:** SIEMPRE verificar hallazgos de auditoría contra el código real antes de implementar fixes. Un falso positivo "arreglado" puede introducir un bug nuevo.
+**Prevención:** Después de cada auditoría, lanzar agentes de verificación que lean las líneas exactas y confirmen cada hallazgo
+
+---
+
+## 2026-04-09: [Arquitectura] - Un solo archivo de config BD
+
+**Error:** Existían dos archivos de config de BD: `database_config.py` y `config/database.py`. Ambos creaban engine, SessionLocal, y get_db() independientemente. Peor: uno tenía el fix `postgres://` → `postgresql://` y el otro no.
+**Causa raíz:** Se creó el segundo archivo sin borrar el primero. main.py importaba de uno, las rutas del otro.
+**Solución:** Consolidar en `config/database.py` con el fix postgres://, pool config, y logging. Borrar database_config.py. Actualizar import en main.py.
+**Regla:** NUNCA crear un segundo archivo de config de BD. Toda la config de engine/pool/session debe estar en `config/database.py`. Si necesitas cambiar la config, editar ese archivo.
+**Prevención:** Si ves dos archivos que crean `engine` o `SessionLocal`, es un bug — consolidar inmediatamente
+
+---
+
 ## Template para futuras lecciones
 
 ```

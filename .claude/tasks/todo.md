@@ -8,7 +8,8 @@
 > **Sistema OCs:** 2026-03-28 (tabla oc_prefixes + OCSelector componente)
 > **Pytest suite:** 2026-03-30 (301 tests, 298 passed, 15 módulos, mocks completos)
 > **Sesión bugs+features:** 2026-03-31 (15 commits, 18 bugs, 3 features, prompt IA, dual moneda)
-> **Última actualización:** 2026-03-31
+> **Auditoría exhaustiva v5:** 2026-04-09 (7 opus subagentes, 91 hallazgos verificados → 67 resueltos, 13 commits, 10 sprints)
+> **Última actualización:** 2026-04-10
 
 ---
 

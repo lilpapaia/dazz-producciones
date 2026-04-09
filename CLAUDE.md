@@ -2,7 +2,7 @@
 
 > **Centro de Control del Proyecto** - Sistema gestión gastos con IA  
 > **Estado:** ✅ Producción activa - Railway + Vercel  
-> **Última actualización:** 2026-03-11
+> **Última actualización:** 2026-04-10
 
 ---
 
@@ -212,15 +212,15 @@ text-amber-500  /* Accents dorados */
 
 ### 8. PostgreSQL Auto-Switch
 ```python
-# config/database.py
+# config/database.py (ÚNICO archivo de config BD — database_config.py NO debe existir)
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:  # Railway
-    engine = create_engine(DATABASE_URL)
+if DATABASE_URL:  # Railway — incluye fix postgres:// → postgresql://
+    engine = create_engine(DATABASE_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
 else:  # Local
     engine = create_engine("sqlite:///./dazz_producciones.db")
 ```
 **Por qué:** Desarrollo fácil (SQLite), producción robusta (PostgreSQL)  
-**Resultado:** Mismo código dos entornos
+**Resultado:** Mismo código dos entornos. Un solo engine/pool compartido
 
 ---
 
@@ -234,15 +234,34 @@ else:  # Local
 5. **Hacer cambios directo GitHub web + local** - Conflictos Git
 6. **Quotes largas de search results** - Copyright: máximo 15 palabras
 7. **Cambiar estructura BD sin migración** - Rompe producción
+8. **Guardar IBANs en plaintext** - Siempre Fernet encryption o no guardar
+9. **Usar window.confirm()** - Siempre ConfirmDialog custom (dark theme)
+10. **Borrar código sin grep -r** - Un import roto tumba producción
+11. **Silenciar errores API con catch vacío** - Mostrar error al usuario
+12. **Polling global sin condición de ruta** - Solo en la página que lo necesita
+13. **Duplicar funciones entre auth.py y supplier_auth.py** - Importar siempre de auth.py
+14. **Hardcodear años** (ej: `default="2026"`) - Usar `datetime.now().year`
+15. **Usar `application/octet-stream`** como MIME permitido - Demasiado permisivo
+16. **Mezclar importes monetarios con conteos** en el mismo gráfico
 
 ### ✅ SIEMPRE hacer:
 1. **Plan-first:** Analizar → Proponer → WAIT APPROVAL → Ejecutar
 2. **Verificar antes de completo:** Test que funciona antes marcar done
 3. **Actualizar lessons.md:** Si encontraste bug, documenta cómo prevenir
-4. **Usar joinedload:** Evitar N+1 queries (projects + tickets)
+4. **Usar joinedload:** Evitar N+1 queries (projects + tickets + owner_company)
 5. **Validar backend:** Pydantic schemas + permisos por rol
 6. **Responsive design:** Mobile-first (mayoría usuarios móvil)
 7. **Git workflow:** Pull → Code → Commit → Push
+8. **case() floor a 0** en decrementos de tickets_count y total_amount (3 sitios)
+9. **previous_status** antes de cambiar a DELETE_REQUESTED (2 sitios: tickets.py, supplier_portal.py)
+10. **Refresh interceptor con guard URLs** login/refresh en AMBOS frontends
+11. **Magic bytes validation** en uploads (JPEG, PNG, PDF, WebP, HEIC)
+12. **Feedback UX obligatorio:** loading + error + success en TODA acción
+13. **Botones async con disabled + loading** para evitar doble-tap
+14. **useMemo** para context Provider values y valores computados costosos
+15. **useCallback** para funciones en contextos y pasadas como props
+16. **Unique constraints** en campos de negocio (creative_code, invoice_number)
+17. **Verificar 6 sitios de borrado** si cambias estados permitidos (InvoicesList, InvoiceDetail, SupplierDetail, Home portal, supplier_portal.py, suppliers.py)
 
 ---
 
@@ -258,17 +277,22 @@ def create_project(project: schemas.ProjectCreate, db: Session) -> Project:
 if not user:
     raise HTTPException(status_code=404, detail="User not found")
 
+# Pydantic v2: .model_dump() NO .dict()
+update_data = ticket_update.model_dump(exclude_unset=True)
+db_project = Project(**project.model_dump(exclude={"company"}), ...)
+
+# lifespan context manager (NO @app.on_event("startup"))
+@asynccontextmanager
+async def lifespan(app):
+    # migrations here
+    yield
+app = FastAPI(lifespan=lifespan)
+
+# SQLAlchemy: from sqlalchemy.orm import declarative_base (NO sqlalchemy.ext.declarative)
+
 # Docstrings funciones complejas
 def extract_ticket_data(file_path: str) -> dict:
-    """
-    Extrae datos de ticket con Claude AI.
-    
-    Args:
-        file_path: Ruta archivo ticket
-    
-    Returns:
-        dict con: proveedor, fecha, importes, moneda, país
-    """
+    """Extrae datos de ticket con Claude AI."""
 ```
 
 ### Frontend (React)
@@ -404,39 +428,20 @@ def can_access_project(user: User, project: Project) -> bool:
 
 ---
 
-## 🧪 TESTING (PENDIENTE - 0% coverage)
+## 🧪 TESTING
 
-### Backend (pytest)
+### Backend (pytest) — 335 tests, 16 módulos
 ```bash
-# Setup pendiente
-pip install pytest pytest-cov
-
-# Estructura target
-backend/tests/
-├── conftest.py          # Fixtures
-├── test_auth.py         # Login, JWT, roles
-├── test_projects.py     # CRUD, cierre
-├── test_tickets.py      # Upload, IA
-├── test_statistics.py   # Stats, IVA
-└── test_companies.py    # Permisos multi-tenant
-
-# Run
 pytest --cov=app --cov-report=html
+
+# Módulos: auth, projects, tickets, statistics, users, companies,
+# permissions, roles, security, suppliers (admin + portal),
+# autoinvoice, OCs, schemas, ticket_upload
 ```
 
-### Frontend (Playwright)
+### Frontend (Playwright) — Pendiente
 ```bash
 # Setup pendiente
-npm install -D @playwright/test
-
-# Estructura target
-frontend/tests/
-├── login.spec.js        # Auth flow
-├── project.spec.js      # Crear → Upload → Review → Cerrar
-├── statistics.spec.js   # Filtros → Gráficos → PDF
-└── mobile.spec.js       # PWA install, camera
-
-# Run
 npx playwright test
 ```
 
@@ -445,14 +450,14 @@ npx playwright test
 ## 📊 MÉTRICAS Y MONITOREO
 
 ### Performance Targets
-- **Initial bundle:** <200KB (actual: ~350KB) ⚠️
-- **Statistics render:** <100ms (actual: ~300ms) ⚠️
-- **API response:** <200ms average
-- **Database queries:** <50ms average
+- **Initial bundle:** <200KB (actual: ~332KB, 63% reducción desde 893KB) ✅
+- **Statistics render:** <100ms (refactorizado en 13 módulos con memo) ✅
+- **API response:** <200ms average ✅
+- **Database queries:** GROUP BY + joinedload optimizados ✅
 
-### Coverage Targets
-- **Backend tests:** 70%+ (actual: 0%) 🔴
-- **Frontend E2E:** 10+ flujos críticos (actual: 0) 🔴
+### Coverage
+- **Backend tests:** 335 tests, 16 módulos ✅
+- **Frontend E2E:** Pendiente (Playwright) 🔴
 
 ### Monitoreo Railway
 - **Logs:** Railway dashboard → Deployments → Logs
@@ -532,19 +537,18 @@ BREVO_API_KEY=xkeysib-...
 
 ## 📝 PRÓXIMOS PASOS (Ver .claude/tasks/todo.md)
 
-### Sprint 1 - Optimizaciones
-- [ ] Refactorizar Statistics.jsx (500+ líneas)
-- [ ] Optimizar queries N+1 (joinedload)
-- [ ] Code splitting frontend (lazy load rutas)
+### ✅ Completado
+- [x] Refactorizar Statistics.jsx (892 → 13 módulos)
+- [x] Optimizar queries N+1 (joinedload + GROUP BY)
+- [x] Code splitting frontend (893KB → 332KB)
+- [x] Tests backend (335 tests, 16 módulos)
+- [x] Auditoría exhaustiva v5 (91 hallazgos, 67 resueltos, 13 commits)
 
-### Sprint 2 - Testing
-- [ ] Tests unitarios backend (pytest, 70%+ coverage)
+### Pendiente
 - [ ] Tests E2E frontend (Playwright, flujos críticos)
-
-### Sprint 3 - Features
+- [ ] GitHub Actions CI/CD
 - [ ] Push notifications PWA
-- [ ] Dashboard analytics
-- [ ] Búsqueda avanzada global
+- [ ] Alembic para migraciones (reemplazar ALTER TABLE en startup)
 
 ---
 
@@ -556,6 +560,6 @@ BREVO_API_KEY=xkeysib-...
 
 ---
 
-**Última actualización:** 2026-03-11  
+**Última actualización:** 2026-04-10  
 **Versión:** v3.0  
 **Estado:** ✅ Producción activa - Optimización continua
