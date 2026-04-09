@@ -122,14 +122,22 @@ const ReviewTicket = () => {
 
   const loadTicket = async () => {
     try {
-      const response = await getTicket(id);
+      // PERF-4: Launch both requests in parallel when project ID is known from URL
+      const ticketPromise = getTicket(id);
+      const earlyProjectTicketsPromise = projectIdFromUrl
+        ? getProjectTickets(projectIdFromUrl)
+        : null;
+
+      const response = await ticketPromise;
       const currentTicket = response.data;
       setTicket(currentTicket);
       initialTicketRef.current = JSON.stringify(currentTicket);
-      
+
       // Cargar todos los tickets del proyecto para navegación
       try {
-        const projectTickets = await getProjectTickets(currentTicket.project_id);
+        const projectTickets = earlyProjectTicketsPromise
+          ? await earlyProjectTicketsPromise
+          : await getProjectTickets(currentTicket.project_id);
         let ticketsToShow = projectTickets.data;
         
         // Si venimos de estadísticas, filtrar solo tickets internacionales

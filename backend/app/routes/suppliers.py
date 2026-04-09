@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status, Query, Requ
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc, case
+from sqlalchemy import func, desc, case, and_
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
@@ -348,38 +348,41 @@ async def list_suppliers(
 
 
 def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
-    """Build a full SupplierResponse with computed fields."""
-    inv_count = db.query(func.count(SupplierInvoice.id)).filter(
-        SupplierInvoice.supplier_id == s.id).scalar()
-    pending = db.query(func.count(SupplierInvoice.id)).filter(
-        SupplierInvoice.supplier_id == s.id,
-        SupplierInvoice.status == InvoiceStatus.PENDING,
-    ).scalar()
+    """Build a full SupplierResponse with computed fields.
+    PERF-2: Consolidated from 7 queries down to 2-3."""
 
+    # Query 1: Invoice aggregates (count, pending count, last created_at)
+    inv_agg = db.query(
+        func.count(SupplierInvoice.id),
+        func.count(case((SupplierInvoice.status == InvoiceStatus.PENDING, 1))),
+        func.max(SupplierInvoice.created_at),
+    ).filter(SupplierInvoice.supplier_id == s.id).first()
+    inv_count, pending, last_inv = inv_agg if inv_agg else (0, 0, None)
+
+    # Query 2: Notification aggregates (last created_at, pending actions count)
+    notif_agg = db.query(
+        func.max(SupplierNotification.created_at),
+        func.count(case((and_(
+            SupplierNotification.is_read == False,
+            SupplierNotification.title.in_(PENDING_TITLES),
+        ), 1))),
+    ).filter(
+        SupplierNotification.related_supplier_id == s.id,
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+    ).first()
+    last_notif, pa_count = notif_agg if notif_agg else (None, 0)
+
+    # Query 3 (conditional): OC + Company via join
     oc_number = None
     company_name = None
     if s.oc_id:
-        oc = db.query(SupplierOC).filter(SupplierOC.id == s.oc_id).first()
-        if oc:
-            oc_number = oc.oc_number
-            if oc.company_id:
-                co = db.query(Company).filter(Company.id == oc.company_id).first()
-                company_name = co.name if co else None
+        oc_data = db.query(SupplierOC.oc_number, Company.name).outerjoin(
+            Company, SupplierOC.company_id == Company.id
+        ).filter(SupplierOC.id == s.oc_id).first()
+        if oc_data:
+            oc_number, company_name = oc_data
 
-    # Last activity: most recent notification or invoice for this supplier
-    last_notif = db.query(func.max(SupplierNotification.created_at)).filter(
-        SupplierNotification.related_supplier_id == s.id).scalar()
-    last_inv = db.query(func.max(SupplierInvoice.created_at)).filter(
-        SupplierInvoice.supplier_id == s.id).scalar()
     last_activity = max(filter(None, [last_notif, last_inv, s.created_at]))
-
-    # Pending actions count
-    pa_count = db.query(func.count(SupplierNotification.id)).filter(
-        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
-        SupplierNotification.is_read == False,
-        SupplierNotification.related_supplier_id == s.id,
-        SupplierNotification.title.in_(PENDING_TITLES),
-    ).scalar() or 0
 
     return SupplierResponse(
         id=s.id, name=s.name, email=s.email, nif_cif=s.nif_cif,
@@ -393,7 +396,7 @@ def _build_supplier_response(s: Supplier, db: Session) -> SupplierResponse:
         created_at=s.created_at, updated_at=s.updated_at,
         last_activity=last_activity,
         invoices_count=inv_count, pending_invoices=pending,
-        has_pending_actions=pa_count > 0 or not s.ia_cert_verified,
+        has_pending_actions=(pa_count or 0) > 0 or not s.ia_cert_verified,
         ia_cert_verified=s.ia_cert_verified,
     )
 

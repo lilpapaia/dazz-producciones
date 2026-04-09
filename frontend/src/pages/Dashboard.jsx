@@ -292,18 +292,22 @@ const Dashboard = () => {
   const filteredProjects = useMemo(() => getFilteredProjects(), [projects, activeTab, companies, statusFilter, searchTerm, isAdmin]);
   const suggestions = useMemo(() => filteredProjects.slice(0, 5), [filteredProjects]);
 
-  // Stats por empresa para las tabs
-  const getCompanyStats = (company) => {
-    const compProjects = projects.filter(p =>
-      (p.owner_company?.name || p.company) === company.name
-    );
-    return {
-      total: compProjects.length,
-      activos: compProjects.filter(p => p.status === 'en_curso').length,
-      cerrados: compProjects.filter(p => p.status === 'cerrado').length,
-      importe: compProjects.reduce((sum, p) => sum + (p.total_amount || 0), 0),
-    };
-  };
+  // Stats por empresa para las tabs (precomputed map)
+  const companyStatsMap = useMemo(() => {
+    const map = {};
+    companies.forEach(company => {
+      const compProjects = projects.filter(p =>
+        (p.owner_company?.name || p.company) === company.name
+      );
+      map[company.id] = {
+        total: compProjects.length,
+        activos: compProjects.filter(p => p.status === 'en_curso').length,
+        cerrados: compProjects.filter(p => p.status === 'cerrado').length,
+        importe: compProjects.reduce((sum, p) => sum + (p.total_amount || 0), 0),
+      };
+    });
+    return map;
+  }, [projects, companies]);
 
   const allStats = useMemo(() => ({
     total: projects.length,
@@ -322,8 +326,7 @@ const Dashboard = () => {
     const activeStats = activeTab === 'all'
       ? allStats
       : (() => {
-          const company = companies.find(c => c.id === activeTab);
-          return company ? getCompanyStats(company) : allStats;
+          return companyStatsMap[activeTab] || allStats;
         })();
 
     return (
@@ -384,7 +387,7 @@ const Dashboard = () => {
 
               {/* Tab por empresa */}
               {companies.map(company => {
-                const stats = getCompanyStats(company);
+                const stats = companyStatsMap[company.id];
                 const isActive = activeTab === company.id;
                 return (
                   <button

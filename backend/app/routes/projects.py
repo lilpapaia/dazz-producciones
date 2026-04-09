@@ -487,18 +487,22 @@ async def recalculate_project_totals(
     """BUG-52: Recalculate tickets_count and total_amount for all projects from actual ticket data."""
     from app.models.database import Ticket
 
+    # PERF-1: Single GROUP BY instead of 2 queries per project
+    aggregates = db.query(
+        Ticket.project_id,
+        func.count(Ticket.id),
+        func.coalesce(func.sum(Ticket.final_total), 0.0),
+    ).filter(
+        Ticket.provider != "Error en extracción",
+    ).group_by(Ticket.project_id).all()
+
+    totals = {row[0]: (row[1], float(row[2])) for row in aggregates}
+
     projects = db.query(Project).all()
     fixed = []
 
     for project in projects:
-        real_count = db.query(func.count(Ticket.id)).filter(
-            Ticket.project_id == project.id,
-            Ticket.provider != "Error en extracción",
-        ).scalar()
-        real_total = db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).filter(
-            Ticket.project_id == project.id,
-            Ticket.provider != "Error en extracción",
-        ).scalar()
+        real_count, real_total = totals.get(project.id, (0, 0.0))
 
         if project.tickets_count != real_count or abs((project.total_amount or 0) - real_total) > 0.01:
             logger.warning(

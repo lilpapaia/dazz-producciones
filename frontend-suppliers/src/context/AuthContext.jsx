@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { logoutSupplier } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -18,24 +18,26 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (data) => {
+  const login = useCallback((data) => {
     localStorage.setItem('supplier_token', data.access_token);
     localStorage.setItem('supplier_refresh_token', data.refresh_token);
     localStorage.setItem('supplier_data', JSON.stringify(data.supplier));
     setSupplier(data.supplier);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     const rt = localStorage.getItem('supplier_refresh_token');
     if (rt) { try { await logoutSupplier(rt); } catch { /* ignore */ } }
     localStorage.removeItem('supplier_token');
     localStorage.removeItem('supplier_refresh_token');
     localStorage.removeItem('supplier_data');
     setSupplier(null);
-  };
+  }, []);
+
+  const value = useMemo(() => ({ supplier, login, logout, loading }), [supplier, login, logout, loading]);
 
   return (
-    <AuthContext.Provider value={{ supplier, login, logout, loading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
