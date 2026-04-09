@@ -21,6 +21,11 @@ const Layout = ({ children }) => {
 
   useEffect(() => {
     getSummary().then(r => setUnread(r.data.unread_notifications || 0)).catch(() => {});
+    if (pathname !== '/') return;
+    const interval = setInterval(() => {
+      getSummary().then(r => setUnread(r.data.unread_notifications || 0)).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
   }, [pathname]);
 
   const handleLogout = async () => { await logout(); navigate('/login'); };

@@ -116,10 +116,13 @@ async def create_project(
             SupplierInvoice.status == InvoiceStatus.APPROVED,
             SupplierInvoice.project_id.is_(None),
         ).all()
+        # PERF-11: Batch load suppliers instead of 1 query per orphan
+        supplier_ids = list({inv.supplier_id for inv in orphaned})
+        suppliers_map = {s.id: s for s in db.query(Supplier).filter(Supplier.id.in_(supplier_ids)).all()} if supplier_ids else {}
         for inv in orphaned:
             inv.project_id = db_project.id
             inv.company_id = db_project.owner_company_id
-            supplier = db.query(Supplier).filter(Supplier.id == inv.supplier_id).first()
+            supplier = suppliers_map.get(inv.supplier_id)
             if supplier:
                 create_ticket_from_supplier_invoice(db, inv, supplier, db_project)
         if orphaned:
@@ -184,7 +187,7 @@ async def get_project(
 ):
     """Obtener proyecto por ID (con validación de acceso por empresa)"""
 
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).options(joinedload(Project.owner_company)).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

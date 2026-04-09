@@ -85,16 +85,14 @@ const SupplierDetail = () => {
       getSupplier(id),
       getAllInvoices({ supplier_id: id }),
       getNotifications({ supplier_id: id, limit: 50 }),
-    ]).then(([s, inv, notifs]) => {
+      getPendingActions(id).catch(() => ({ data: [] })),
+    ]).then(([s, inv, notifs, pa]) => {
       setSupplier(s.data);
       setInvoices(inv.data || []);
       setHistory(notifs.data || []);
+      setPendingActions(pa.data || []);
     }).catch(() => navigate('/suppliers/list'))
       .finally(() => setLoading(false));
-
-    getPendingActions(id)
-      .then(pa => setPendingActions(pa.data || []))
-      .catch(e => { console.error('getPendingActions failed:', e); setPendingActions([]); });
   };
 
   useEffect(() => {

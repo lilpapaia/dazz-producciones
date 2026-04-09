@@ -915,6 +915,19 @@ async def reject_invoice_deletion(
 # NOTIFICATIONS
 # ============================================
 
+@router.get("/notifications/unread-count")
+async def get_unread_notifications_count(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Lightweight polling endpoint — returns only the unread count."""
+    count = db.query(func.count(SupplierNotification.id)).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.ADMIN,
+        SupplierNotification.is_read == False,
+    ).scalar() or 0
+    return {"count": count}
+
+
 @router.get("/notifications/all", response_model=List[NotificationResponse])
 async def list_notifications(
     unread_only: bool = False,

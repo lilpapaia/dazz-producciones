@@ -57,7 +57,7 @@ const ProjectCard = ({ project, navigate, activeTab, companies }) => (
 
 // ── Barra de búsqueda + filtros (hoisted) ──
 const SearchAndFilters = ({
-  projects, statusFilter, setStatusFilter, searchTerm, handleSearchChange,
+  stats, statusFilter, setStatusFilter, searchTerm, handleSearchChange,
   showSuggestions, suggestions, navigate, saveRecentSearch, recentSearches,
   setSearchTerm, setShowSuggestions, clearSearch, handleSearchSubmit,
   startVoiceSearch, isListening, searchRef,
@@ -65,9 +65,9 @@ const SearchAndFilters = ({
   <div className="flex flex-col md:flex-row md:items-center gap-4">
     <div className="flex gap-2 overflow-x-auto">
       {[
-        { key: 'all', label: 'TODOS', count: projects.length },
-        { key: 'en_curso', label: 'EN CURSO', count: projects.filter(p => p.status === 'en_curso').length },
-        { key: 'cerrado', label: 'CERRADOS', count: projects.filter(p => p.status === 'cerrado').length },
+        { key: 'all', label: 'TODOS', count: stats.total },
+        { key: 'en_curso', label: 'EN CURSO', count: stats.activos },
+        { key: 'cerrado', label: 'CERRADOS', count: stats.cerrados },
       ].map(f => (
         <button
           key={f.key}
@@ -434,7 +434,7 @@ const Dashboard = () => {
 
             {/* Filtros + búsqueda */}
             <SearchAndFilters
-              projects={projects} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              stats={activeStats} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               searchTerm={searchTerm} handleSearchChange={handleSearchChange}
               showSuggestions={showSuggestions} suggestions={suggestions}
               navigate={navigate} saveRecentSearch={saveRecentSearch}
@@ -507,7 +507,7 @@ const Dashboard = () => {
           </div>
 
           <SearchAndFilters
-              projects={projects} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              stats={allStats} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
               searchTerm={searchTerm} handleSearchChange={handleSearchChange}
               showSuggestions={showSuggestions} suggestions={suggestions}
               navigate={navigate} saveRecentSearch={saveRecentSearch}

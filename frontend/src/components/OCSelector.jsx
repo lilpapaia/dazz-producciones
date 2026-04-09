@@ -29,7 +29,7 @@ const OCSelector = ({ companyId: externalCompanyId, permanentOnly = false, allow
   const [validating, setValidating] = useState(false);
 
   useEffect(() => {
-    if (!permanentOnly) getCompanies().then(r => setCompanies(r.data)).catch(() => {});
+    if (!permanentOnly && !externalCompanyId) getCompanies().then(r => setCompanies(r.data)).catch(() => {});
     getOCPrefixes(permanentOnly).then(r => {
       setPrefixes(r.data);
       if (permanentOnly && r.data.length > 0) setSelectedPrefix(r.data[0].prefix);

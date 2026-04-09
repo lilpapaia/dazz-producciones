@@ -51,8 +51,17 @@ const SupplierNotifications = () => {
     };
     setLoading(true);
     doLoad();
-    const interval = setInterval(doLoad, 30000);
-    return () => clearInterval(interval);
+    // PERF-8: Poll every 60s, pause when tab not visible
+    let interval = setInterval(doLoad, 60000);
+    const handleVisibility = () => {
+      clearInterval(interval);
+      if (document.visibilityState === 'visible') {
+        doLoad();
+        interval = setInterval(doLoad, 60000);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
   }, []);
 
   const handleMarkRead = async (id) => {
