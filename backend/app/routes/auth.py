@@ -269,9 +269,12 @@ async def login(
 
 
 @router.post("/refresh", response_model=schemas.RefreshTokenResponse)
+@limiter.limit("10/minute")
 async def refresh_access_token(
+    request: Request,
     request_body: schemas.RefreshTokenRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    response: Response = None,
 ):
     """Renovar access token usando un refresh token válido"""
     refresh_token = validate_refresh_token(db, request_body.refresh_token)

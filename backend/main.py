@@ -42,6 +42,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' https://res.cloudinary.com data:; "
+            "connect-src 'self' https://api.anthropic.com https://res.cloudinary.com; "
+            "frame-src 'self' https://res.cloudinary.com; "
+            "font-src 'self'"
+        )
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -307,6 +316,9 @@ async def startup_event():
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_accepted_at TIMESTAMP"))
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS privacy_policy_version VARCHAR(10)"))
             conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS contract_version VARCHAR(10)"))
+            # SEC-1: Account lockout for supplier login (same pattern as users)
+            conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0"))
+            conn.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP"))
             # UX-LAST: Track last uploaded file per project
             conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS last_uploaded_file VARCHAR"))
             # QW-2: Save previous status before DELETE_REQUESTED for correct restore on reject

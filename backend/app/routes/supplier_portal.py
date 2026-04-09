@@ -254,16 +254,39 @@ async def login_supplier(
     body: LoginRequest,
     db: Session = Depends(get_db),
 ):
-    supplier = db.query(Supplier).filter(Supplier.email == body.email).first()
+    supplier = db.query(Supplier).filter(Supplier.email == body.email.lower()).first()
+
+    # SEC-1: Check account lockout before attempting auth
+    if supplier and supplier.locked_until:
+        if supplier.locked_until > datetime.now(timezone.utc):
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.")
+        else:
+            supplier.failed_login_attempts = 0
+            supplier.locked_until = None
+            db.commit()
 
     if not supplier:
         verify_password(body.password, _DUMMY_HASH)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+
     if not verify_password(body.password, supplier.hashed_password):
+        # SEC-1: Increment failed attempts, lock after 5
+        supplier.failed_login_attempts = (supplier.failed_login_attempts or 0) + 1
+        if supplier.failed_login_attempts >= 5:
+            supplier.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+            logger.warning(f"Supplier account locked: id={supplier.id} after 5 failed attempts")
+        db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
     if not supplier.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account deactivated")
+
+    # SEC-1: Successful login — reset counter
+    if supplier.failed_login_attempts and supplier.failed_login_attempts > 0:
+        supplier.failed_login_attempts = 0
+        supplier.locked_until = None
+        db.commit()
 
     access_token = create_supplier_access_token(supplier.id, supplier.email)
     refresh_token = create_supplier_refresh_token(db, supplier.id)
@@ -280,9 +303,12 @@ async def login_supplier(
 
 
 @router.post("/refresh")
+@limiter.limit("10/minute")
 async def refresh_token(
+    request: Request,
     body: RefreshRequest,
     db: Session = Depends(get_db),
+    response: Response = None,
 ):
     rt = validate_supplier_refresh_token(db, body.refresh_token)
     if not rt:

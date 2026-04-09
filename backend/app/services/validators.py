@@ -44,11 +44,47 @@ ALLOWED_MIME_TYPES = {
     'image/heif',       # iPhone fotos modernas (variante)
     'image/webp',       # Capturas Chrome/Android
     'application/pdf',
-    'application/octet-stream',  # Fallback genérico de algunos dispositivos
 }
 
 # Caracteres peligrosos para path traversal
 DANGEROUS_PATH_CHARS = ['..', '~', '/', '\\']
+
+# Magic bytes signatures for file type validation
+MAGIC_SIGNATURES = {
+    'jpeg': b'\xff\xd8\xff',
+    'png':  b'\x89PNG',
+    'pdf':  b'%PDF',
+    'webp_riff': b'RIFF',
+    'webp_marker': b'WEBP',
+}
+
+
+def detect_file_type(header: bytes) -> Optional[str]:
+    """Detect real file type from magic bytes. Returns type name or None."""
+    if len(header) < 8:
+        return None
+    if header[:3] == MAGIC_SIGNATURES['jpeg']:
+        return 'jpeg'
+    if header[:4] == MAGIC_SIGNATURES['png']:
+        return 'png'
+    if header[:4] == MAGIC_SIGNATURES['pdf']:
+        return 'pdf'
+    if header[:4] == MAGIC_SIGNATURES['webp_riff'] and header[8:12] == MAGIC_SIGNATURES['webp_marker']:
+        return 'webp'
+    # HEIC/HEIF: ftyp box at offset 4
+    if header[4:8] == b'ftyp':
+        return 'heic'
+    return None
+
+
+# Map detected types to allowed extensions
+_TYPE_TO_EXTENSIONS = {
+    'jpeg': {'.jpg', '.jpeg'},
+    'png':  {'.png'},
+    'pdf':  {'.pdf'},
+    'webp': {'.webp'},
+    'heic': {'.heic', '.heif'},
+}
 
 
 # ============================================
@@ -114,10 +150,24 @@ async def validate_file_upload(
             detail=f"Tipo de archivo {file.content_type} no permitido"
         )
     
-    # Leer contenido para validar tamaño
+    # Leer contenido para validar tamaño y magic bytes
     contents = await file.read()
     file_size = len(contents)
-    
+
+    # SEC-3: Validate magic bytes — reject files that don't match their claimed type
+    detected = detect_file_type(contents[:12])
+    if detected is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de archivo no reconocido — los bytes del archivo no coinciden con ningún tipo permitido"
+        )
+    valid_exts = _TYPE_TO_EXTENSIONS.get(detected, set())
+    if file_ext and file_ext not in valid_exts:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Extensión '{file_ext}' no coincide con el contenido real del archivo ({detected})"
+        )
+
     # Resetear puntero del archivo
     await file.seek(0)
     

@@ -98,6 +98,8 @@ class Supplier(Base):
     contract_version = Column(String(10), nullable=True)
     notes_internal = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))
