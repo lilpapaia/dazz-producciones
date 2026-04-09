@@ -10,7 +10,7 @@ import tempfile
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import hashlib
@@ -98,14 +98,22 @@ async def check_oc_for_registration(
     if not invitation:
         raise HTTPException(400, "Invalid or expired token")
 
-    # Primary: match by NIF (reliable)
+    # Primary: match by NIF (reliable) — single SQL query instead of Python loop
     if nif:
         normalized = _normalize_nif(nif)
         if normalized:
-            ocs_with_nif = db.query(SupplierOC).filter(SupplierOC.nif_cif != None).all()
-            for oc in ocs_with_nif:
-                if _normalize_nif(oc.nif_cif) == normalized:
-                    return {"has_oc": True}
+            sql_norm = func.upper(func.replace(func.replace(func.replace(
+                SupplierOC.nif_cif, ' ', ''), '-', ''), '.', ''))
+            match = db.query(SupplierOC.id).filter(
+                SupplierOC.nif_cif != None,
+                or_(
+                    sql_norm == normalized,
+                    sql_norm == 'ES' + normalized,
+                    func.substr(sql_norm, 3) == normalized,
+                ),
+            ).first()
+            if match:
+                return {"has_oc": True}
 
     # Fallback: match by talent_name (case-insensitive)
     if name:
