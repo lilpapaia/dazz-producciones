@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, Bell, UserPlus, FilePlus } from 'lucide-react';
-import { getSuppliersDashboard, getNotifications } from '../../services/suppliersApi';
+import { getSuppliersDashboard } from '../../services/suppliersApi';
 
 const NAV_ITEMS = [
   { path: '/suppliers', label: 'Dashboard', icon: LayoutDashboard, exact: true },

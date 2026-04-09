@@ -423,12 +423,6 @@ def _resolve_oc_as_project(
     return "NOT_FOUND", company_id, None
 
 
-CERT_IBAN_PROMPT = """Analyze this bank certificate PDF and extract the IBAN number.
-Return ONLY a JSON object with a single field:
-{"iban": "ESXX XXXX XXXX XXXX XXXX XXXX"}
-If no IBAN is found, return: {"iban": null}
-No explanations, no markdown."""
-
 CERT_VALIDATION_PROMPT = """Analyze this PDF document and determine:
 
 1. Is this a BANK CERTIFICATE (certificado de titularidad bancaria)?

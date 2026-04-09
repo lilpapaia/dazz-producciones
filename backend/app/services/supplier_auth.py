@@ -29,7 +29,6 @@ SUPPLIER_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hora (doc sección 11c)
 SUPPLIER_REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-_DUMMY_HASH = pwd_context.hash("dummy-timing-attack-protection")
 security = HTTPBearer()
 
 

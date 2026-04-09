@@ -121,31 +121,6 @@ def log_login_failed(
     )
 
 
-def log_error_500(
-    endpoint: str,
-    error_message: str,
-    user_email: Optional[str] = None,
-    stack_trace: Optional[str] = None
-):
-    """Log de error 500 (crash del servidor)"""
-    details = {
-        "endpoint": endpoint,
-        "error": error_message
-    }
-    
-    if stack_trace:
-        # Limitar stack trace a primeras 3 líneas
-        stack_lines = stack_trace.split('\n')[:3]
-        details["stack"] = " | ".join(stack_lines)
-    
-    log_critical(
-        event_type="ERROR 500 - CRASH",
-        emoji="🔥",
-        details=details,
-        user_email=user_email
-    )
-
-
 def log_project_deleted(
     project_id: int,
     project_code: str,
@@ -203,47 +178,3 @@ def log_role_changed(
     )
 
 
-def log_exception(
-    exception_type: str,
-    exception_message: str,
-    endpoint: Optional[str] = None,
-    user_email: Optional[str] = None
-):
-    """Log de excepción inesperada"""
-    details = {
-        "tipo": exception_type,
-        "mensaje": exception_message
-    }
-    
-    if endpoint:
-        details["endpoint"] = endpoint
-    
-    log_critical(
-        event_type="EXCEPCIÓN INESPERADA",
-        emoji="💥",
-        details=details,
-        user_email=user_email
-    )
-
-
-def log_file_upload_failed(
-    filename: str,
-    error_message: str,
-    user_email: str,
-    file_size_mb: Optional[float] = None
-):
-    """Log de fallo en subida de archivo"""
-    details = {
-        "archivo": filename,
-        "error": error_message
-    }
-    
-    if file_size_mb:
-        details["tamaño_mb"] = f"{file_size_mb:.2f}MB"
-    
-    log_critical(
-        event_type="ERROR UPLOAD ARCHIVO",
-        emoji="📁",
-        details=details,
-        user_email=user_email
-    )
