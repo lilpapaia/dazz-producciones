@@ -13,6 +13,7 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -37,14 +38,15 @@ const Users = () => {
 
   const loadData = async () => {
     try {
+      setLoadError(false);
       const [usersRes, companiesRes] = await Promise.all([
         getUsers(),
         getCompanies()
       ]);
       setUsers(usersRes.data);
       setCompanies(companiesRes.data);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -185,6 +187,12 @@ const Users = () => {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {loadError && (
+          <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded p-2.5 text-[12px] flex items-center gap-2 mb-4">
+            Error al cargar usuarios
+            <button onClick={loadData} className="text-amber-500 hover:text-amber-400 ml-1 font-semibold">Reintentar</button>
+          </div>
+        )}
         {/* MÓVIL: Header centrado */}
         <div className="flex flex-col items-center text-center gap-4 mb-8 md:hidden">
           <h2 className="text-4xl font-bebas tracking-wider">GESTIÓN DE USUARIOS</h2>

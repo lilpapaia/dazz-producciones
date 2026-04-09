@@ -21,6 +21,7 @@ const ProjectView = () => {
   const [project, setProject] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ticketsError, setTicketsError] = useState(false);
   const [reopeningProject, setReopeningProject] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
@@ -67,21 +68,21 @@ const ProjectView = () => {
     try {
       const response = await getProject(id);
       setProject(response.data);
-    } catch (error) {
-      console.error('Error loading project:', error);
+    } catch {
       showError('Error al cargar proyecto');
       navigate('/dashboard');
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadTickets = async () => {
     try {
+      setTicketsError(false);
       const response = await getProjectTickets(id);
       setTickets(response.data);
-    } catch (error) {
-      console.error('Error loading tickets:', error);
-    } finally {
-      setLoading(false);
+    } catch {
+      setTicketsError(true);
     }
   };
 
@@ -220,7 +221,8 @@ const ProjectView = () => {
   // Sugerencias (primeros 5)
   const suggestions = filteredTickets.slice(0, 5);
 
-  if (loading || !project) return <LoadingSpinner size="lg" fullPage />;
+  if (loading) return <LoadingSpinner size="lg" fullPage />;
+  if (!project) return null;
 
   // ← FIX: mayúsculas correctas (era 'admin' → siempre false)
   const isAdmin = user?.role === ROLES.ADMIN;
@@ -488,7 +490,13 @@ const ProjectView = () => {
 
         {/* Tickets List */}
         <div>
-          {filteredTickets.length === 0 ? (
+          {ticketsError && (
+            <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded p-2.5 text-[12px] flex items-center gap-2 mb-3">
+              Error al cargar tickets
+              <button onClick={loadTickets} className="text-amber-500 hover:text-amber-400 ml-1 font-semibold">Reintentar</button>
+            </div>
+          )}
+          {filteredTickets.length === 0 && !ticketsError ? (
             ticketSearch ? (
               <EmptyState
                 message="No se encontraron tickets"

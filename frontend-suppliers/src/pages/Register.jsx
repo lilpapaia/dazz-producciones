@@ -59,6 +59,7 @@ const Register = () => {
 
   const handleSubmit = async () => {
     setError('');
+    if (!form.name.trim()) { setError('Name is required'); return; }
     if (form.password !== form.confirmPassword) { setError('Passwords do not match'); return; }
     if (form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
     if (!/[A-Z]/.test(form.password)) { setError('Password must contain at least one uppercase letter'); return; }

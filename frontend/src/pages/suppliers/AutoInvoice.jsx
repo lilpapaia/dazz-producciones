@@ -35,6 +35,7 @@ const AutoInvoice = () => {
 
   const [sending, setSending] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
@@ -149,7 +150,10 @@ const AutoInvoice = () => {
   };
 
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-[13px] px-3 py-2.5 rounded focus:border-amber-500 outline-none";
+  const invalidCls = "w-full bg-zinc-800 border border-red-500 text-zinc-100 text-[13px] px-3 py-2.5 rounded focus:border-amber-500 outline-none";
   const labelCls = "text-[10px] text-zinc-400 tracking-widest uppercase font-semibold mb-1 block";
+  const invalidLabelCls = "text-[10px] text-red-400 tracking-widest uppercase font-semibold mb-1 block";
+  const v = (filled) => showValidation && !filled;  // validation helper
 
   return (
     <div>
@@ -202,8 +206,8 @@ const AutoInvoice = () => {
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Empresa emisora</div>
             <div className="mb-2">
-              <label className={labelCls}>Empresa DAZZ *</label>
-              <select value={companyId} onChange={e => setCompanyId(e.target.value)} className={`${inputCls} appearance-none`}>
+              <label className={v(companyId) ? invalidLabelCls : labelCls}>Empresa DAZZ *</label>
+              <select value={companyId} onChange={e => setCompanyId(e.target.value)} className={`${v(companyId) ? invalidCls : inputCls} appearance-none`}>
                 <option value="">Seleccionar empresa</option>
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -262,11 +266,11 @@ const AutoInvoice = () => {
           <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4">
             <div className="text-[9px] text-zinc-500 tracking-widest uppercase mb-3 font-semibold">Detalles de la factura</div>
             <div className="mb-2">
-              <label className={labelCls}>Concepto *</label>
-              <input value={concept} onChange={e => setConcept(e.target.value)} placeholder="Servicios de creación de contenido · Campaña Nike Q4 2026" className={inputCls} />
+              <label className={v(concept.trim()) ? invalidLabelCls : labelCls}>Concepto *</label>
+              <input value={concept} onChange={e => setConcept(e.target.value)} placeholder="Servicios de creación de contenido · Campaña Nike Q4 2026" className={v(concept.trim()) ? invalidCls : inputCls} />
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <div><label className={labelCls}>Importe base *</label><input type="number" step="0.01" value={baseAmount} onChange={e => setBaseAmount(e.target.value)} placeholder="1520.00" className={`${inputCls} font-mono`} /></div>
+              <div><label className={v(base > 0) ? invalidLabelCls : labelCls}>Importe base *</label><input type="number" step="0.01" value={baseAmount} onChange={e => setBaseAmount(e.target.value)} placeholder="1520.00" className={`${v(base > 0) ? invalidCls : inputCls} font-mono`} /></div>
               <div>
                 <label className={labelCls}>IVA % *</label>
                 <select value={ivaPercent} onChange={e => setIvaPercent(e.target.value)} className={`${inputCls} appearance-none`}>
@@ -279,8 +283,8 @@ const AutoInvoice = () => {
                   <option value="0">0%</option><option value="7">7%</option><option value="15">15%</option><option value="19">19%</option>
                 </select>
               </div>
-              <div><label className={labelCls}>Fecha *</label><input value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={inputCls} /></div>
-              <div><label className={labelCls}>Nº Factura *</label><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className={`${inputCls} font-mono`} /></div>
+              <div><label className={v(invoiceDate.trim()) ? invalidLabelCls : labelCls}>Fecha *</label><input value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={v(invoiceDate.trim()) ? invalidCls : inputCls} /></div>
+              <div><label className={v(invoiceNumber.trim()) ? invalidLabelCls : labelCls}>Nº Factura *</label><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className={`${v(invoiceNumber.trim()) ? invalidCls : inputCls} font-mono`} /></div>
               <div><label className={labelCls}>OC *</label>
                 <OCSelector companyId={companyId ? parseInt(companyId) : null} allowExisting onSelect={(oc, prefixData) => { setOcNumber(oc); setSelectedPrefixPermanent(!!prefixData?.permanent_oc); }} onClear={() => { setOcNumber(''); setSelectedPrefixPermanent(false); }} />
               </div>
@@ -367,11 +371,24 @@ const AutoInvoice = () => {
               className="w-full text-[13px] text-zinc-300 border border-zinc-700 py-2.5 rounded hover:bg-zinc-800 transition-colors disabled:opacity-40 mb-1.5">
               {previewing ? 'Generating...' : 'Vista previa PDF'}
             </button>
-            <button onClick={handleGenerate} disabled={!canSubmit || sending}
-              className="w-full text-[13px] bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-2.5 rounded transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+            <button onClick={canSubmit ? handleGenerate : () => setShowValidation(true)} disabled={sending}
+              className={`w-full text-[13px] font-bold py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${canSubmit ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950' : 'bg-amber-500/40 text-zinc-950/60 cursor-default'} disabled:opacity-40`}>
               <Send size={13} />
               {sending ? 'Generating...' : 'Generar y enviar'}
             </button>
+            {showValidation && !canSubmit && (
+              <p className="text-[11px] text-red-400 text-center mt-2">
+                Faltan: {[
+                  !companyId && 'empresa',
+                  !selectedSupplier && 'proveedor',
+                  !concept.trim() && 'concepto',
+                  !(base > 0) && 'importe',
+                  !invoiceNumber.trim() && 'nº factura',
+                  !ocNumber.trim() && 'OC',
+                  !invoiceDate.trim() && 'fecha',
+                ].filter(Boolean).join(', ')}
+              </p>
+            )}
             {selectedSupplier && (
               <div className="text-[11px] text-zinc-600 text-center mt-2">
                 Se enviará por email a {selectedSupplier.email} y aparecerá en su portal

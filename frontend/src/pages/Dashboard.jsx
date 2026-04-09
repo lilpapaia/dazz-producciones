@@ -180,6 +180,7 @@ const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [companiesError, setCompaniesError] = useState(false);
+  const [projectsError, setProjectsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -214,10 +215,11 @@ const Dashboard = () => {
 
   const loadProjects = async () => {
     try {
+      setProjectsError(false);
       const response = await getProjects();
       setProjects(response.data);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
+      setProjectsError(true);
     } finally {
       setLoading(false);
     }
@@ -454,7 +456,13 @@ const Dashboard = () => {
 
         {/* Grid proyectos */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
-          {filteredProjects.length === 0 ? (
+          {projectsError && (
+            <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded p-2.5 text-[12px] flex items-center gap-2 mb-4">
+              Error al cargar proyectos
+              <button onClick={loadProjects} className="text-amber-500 hover:text-amber-400 ml-1 font-semibold">Reintentar</button>
+            </div>
+          )}
+          {filteredProjects.length === 0 && !projectsError ? (
             <EmptyState
               message="No hay proyectos que mostrar"
               action={searchTerm ? { label: "Limpiar búsqueda", onClick: clearSearch } : null}
@@ -525,7 +533,13 @@ const Dashboard = () => {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
-        {filteredProjects.length === 0 ? (
+        {projectsError && (
+          <div className="bg-red-400/[.06] text-red-400 border border-red-400/[.12] rounded p-2.5 text-[12px] flex items-center gap-2 mb-4">
+            Error al cargar proyectos
+            <button onClick={loadProjects} className="text-amber-500 hover:text-amber-400 ml-1 font-semibold">Reintentar</button>
+          </div>
+        )}
+        {filteredProjects.length === 0 && !projectsError ? (
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-12 text-center">
             <p className="text-zinc-400 mb-2">No hay proyectos que mostrar</p>
             {searchTerm && (

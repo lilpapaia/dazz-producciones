@@ -61,8 +61,10 @@ const ReviewTicket = () => {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  useEffect(() => { 
-    loadTicket(); 
+  useEffect(() => {
+    setTicket(null);
+    setLoading(true);
+    loadTicket();
     setCurrentPage(0);
     setCustomPayment(false);
   }, [id]);

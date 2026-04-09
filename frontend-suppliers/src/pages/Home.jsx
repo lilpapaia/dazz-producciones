@@ -30,6 +30,7 @@ const Home = () => {
   const [receivedInvoices, setReceivedInvoices] = useState([]);
   const [receivedLoading, setReceivedLoading] = useState(false);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [viewer, setViewer] = useState(null);
   const [viewerPage, setViewerPage] = useState(0);
 
@@ -62,8 +63,10 @@ const Home = () => {
   });
 
   const handleDelete = async () => {
-    if (!deleteModal || !reason.trim()) return;
+    if (!deleteModal || !reason.trim() || deleting) return;
+    setDeleting(true);
     try { await requestDeleteInvoice(deleteModal.id, reason); } catch { setError('Failed to delete invoice'); }
+    finally { setDeleting(false); }
     setDeleteModal(null); setReason(''); load();
   };
 
@@ -266,7 +269,7 @@ const Home = () => {
                         a.href = URL.createObjectURL(blob);
                         a.download = `${inv.invoice_number}.pdf`;
                         document.body.appendChild(a); a.click(); a.remove();
-                        URL.revokeObjectURL(a.href);
+                        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
                       }} className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors flex items-center gap-1.5">
                         <Download size={12} strokeWidth={1.5} /> Download PDF
                       </button>
@@ -292,8 +295,8 @@ const Home = () => {
               placeholder="e.g. Duplicate invoice, upload error..."
               className="w-full bg-[#27272a] border border-zinc-700 text-zinc-100 text-[13px] p-3 rounded-[10px] focus:border-amber-500 outline-none resize-none mb-3"
             />
-            <button onClick={handleDelete} disabled={!reason.trim()} className="w-full py-3 rounded-[10px] text-sm font-bold bg-red-400/15 text-red-400 border border-red-400/30 disabled:opacity-40 mb-2">
-              Delete
+            <button onClick={handleDelete} disabled={!reason.trim() || deleting} className="w-full py-3 rounded-[10px] text-sm font-bold bg-red-400/15 text-red-400 border border-red-400/30 disabled:opacity-40 mb-2">
+              {deleting ? 'Deleting...' : 'Delete'}
             </button>
             <button onClick={() => { setDeleteModal(null); setReason(''); }} className="w-full py-2.5 rounded-[10px] text-xs bg-[#27272a] border border-zinc-700 text-zinc-300 text-center">
               Cancel
