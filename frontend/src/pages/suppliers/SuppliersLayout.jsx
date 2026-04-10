@@ -93,26 +93,23 @@ const SuppliersLayout = () => {
         <Outlet />
       </main>
 
-      {/* Bottom nav — solo móvil */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around h-[62px] px-2">
-        {NAV_ITEMS.map(item => {
+      {/* Bottom nav — solo móvil (5 items, sin Invitar) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around h-[62px] px-4 safe-area-bottom">
+        {NAV_ITEMS.filter(i => i.path !== '/suppliers/invite').map(item => {
           const active = isActive(item.path, item.exact);
           return (
             <Link
               key={item.path}
               to={item.path}
-              className="flex flex-col items-center gap-1 flex-1 py-1 relative"
+              className="flex items-center justify-center flex-1 py-2 relative"
             >
               <item.icon
-                size={20}
+                size={26}
                 className={active ? 'text-amber-500' : 'text-zinc-600'}
-                strokeWidth={1.5}
+                strokeWidth={active ? 2 : 1.5}
               />
-              <span className={`text-[9px] tracking-wide ${active ? 'text-amber-400' : 'text-zinc-600'}`}>
-                {item.label === 'Invitar proveedor' ? 'Invitar' : item.label}
-              </span>
               {item.badgeKey && stats[item.badgeKey] > 0 && (
-                <span className="absolute top-0 right-3 w-4 h-4 bg-amber-500 rounded-full text-[8px] font-bold text-zinc-950 flex items-center justify-center">
+                <span className="absolute top-1 right-2 w-4.5 h-4.5 min-w-[18px] bg-amber-500 rounded-full text-[9px] font-bold text-zinc-950 flex items-center justify-center">
                   {stats[item.badgeKey]}
                 </span>
               )}

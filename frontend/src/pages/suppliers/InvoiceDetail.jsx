@@ -176,9 +176,9 @@ const InvoiceDetail = () => {
   return (
     <div>
       {/* Header: breadcrumb | nav | status */}
-      <div className="flex flex-col gap-3 mb-4">
+      <div className="flex flex-col items-center gap-3 mb-4">
         {/* Row 1: breadcrumb */}
-        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100">
+        <h1 className="font-['Bebas_Neue'] text-[22px] tracking-wider text-zinc-100 text-center">
           <span onClick={() => navigate(from === 'supplier' && supplierId ? `/suppliers/${supplierId}` : '/suppliers/invoices')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">
             {from === 'supplier'
               ? (() => {
@@ -191,54 +191,51 @@ const InvoiceDetail = () => {
           {' / '}{invoice.invoice_number}
         </h1>
 
-        {/* Row 2: navigation + download + status */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Navigation */}
-          {allIds.length > 1 && currentIdx >= 0 && (
-            <div className="flex items-center gap-1.5">
-              <button onClick={goToPrev} disabled={currentIdx <= 0}
-                className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
-                <ChevronLeft size={20} /> Anterior
-              </button>
-              <span className="font-mono text-sm text-amber-400 px-3 min-w-[50px] text-center">
-                {currentIdx + 1} / {allIds.length}
-              </span>
-              <button onClick={goToNext} disabled={currentIdx >= allIds.length - 1}
-                className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
-                Siguiente <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
-
-          {/* Download + status pill — always right */}
-          <div className="flex items-center gap-2 ml-auto">
-            {invoice.file_url && (
-              <button onClick={async () => {
-                try {
-                  const res = await fetch(invoice.file_url);
-                  const blob = await res.blob();
-                  const a = document.createElement('a');
-                  a.href = URL.createObjectURL(blob);
-                  const supplier = (invoice.supplier_name || invoice.provider_name || 'proveedor').replace(/\s+/g, '_');
-                  const date = invoice.date || '';
-                  a.download = invoice.invoice_number
-                    ? `${supplier}_${date}_${invoice.invoice_number}.pdf`
-                    : `${supplier}_${date}.pdf`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-                } catch { showError('Error al descargar PDF'); }
-              }}
-                className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
-                <Download size={14} /> Descargar PDF
-              </button>
-            )}
-            <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'OC_PENDING' ? 'bg-blue-400' : invoice.status === 'DELETE_REQUESTED' ? 'bg-red-300' : 'bg-amber-500'}`} />
-              {PILL_LABEL[invoice.status] || invoice.status}
+        {/* Row 2: navigation */}
+        {allIds.length > 1 && currentIdx >= 0 && (
+          <div className="flex items-center justify-center gap-1.5">
+            <button onClick={goToPrev} disabled={currentIdx <= 0}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
+              <ChevronLeft size={20} /> Anterior
+            </button>
+            <span className="font-mono text-sm text-amber-400 px-3 min-w-[50px] text-center">
+              {currentIdx + 1} / {allIds.length}
             </span>
+            <button onClick={goToNext} disabled={currentIdx >= allIds.length - 1}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
+              Siguiente <ChevronRight size={20} />
+            </button>
           </div>
+        )}
+
+        {/* Row 3: download + status pill — centered */}
+        <div className="flex items-center justify-center gap-2">
+          {invoice.file_url && (
+            <button onClick={async () => {
+              try {
+                const res = await fetch(invoice.file_url);
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                const supplier = (invoice.supplier_name || invoice.provider_name || 'proveedor').replace(/\s+/g, '_');
+                const date = invoice.date || '';
+                a.download = invoice.invoice_number
+                  ? `${supplier}_${date}_${invoice.invoice_number}.pdf`
+                  : `${supplier}_${date}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+              } catch { showError('Error al descargar PDF'); }
+            }}
+              className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded border border-zinc-700 transition-colors flex items-center gap-1.5">
+              <Download size={14} /> Descargar PDF
+            </button>
+          )}
+          <span className={`text-[10px] font-bold px-3 py-1 rounded border inline-flex items-center gap-1.5 ${PILL[invoice.status] || PILL.PENDING}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${invoice.status === 'PAID' ? 'bg-green-300' : invoice.status === 'APPROVED' ? 'bg-green-400' : invoice.status === 'OC_PENDING' ? 'bg-blue-400' : invoice.status === 'DELETE_REQUESTED' ? 'bg-red-300' : 'bg-amber-500'}`} />
+            {PILL_LABEL[invoice.status] || invoice.status}
+          </span>
         </div>
       </div>
 
