@@ -182,7 +182,7 @@ const InvoiceDetail = () => {
           <span onClick={() => navigate(from === 'supplier' && supplierId ? `/suppliers/${supplierId}` : '/suppliers/invoices')} className="text-zinc-500 cursor-pointer hover:text-amber-400 transition-colors">
             {from === 'supplier'
               ? (() => {
-                  const name = invoice.supplier_name || 'PROVEEDOR';
+                  const name = (invoice.supplier_name || 'PROVEEDOR').toUpperCase();
                   const parts = name.trim().split(/\s+/);
                   return parts.length > 2 ? `${parts[0]} ${parts[1]}` : name;
                 })()
@@ -192,9 +192,9 @@ const InvoiceDetail = () => {
         </h1>
 
         {/* Row 2: navigation + download + status */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Navigation */}
-          {allIds.length > 1 && currentIdx >= 0 ? (
+          {allIds.length > 1 && currentIdx >= 0 && (
             <div className="flex items-center gap-1.5">
               <button onClick={goToPrev} disabled={currentIdx <= 0}
                 className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2.5 min-h-[44px] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs">
@@ -208,10 +208,10 @@ const InvoiceDetail = () => {
                 Siguiente <ChevronRight size={20} />
               </button>
             </div>
-          ) : <div />}
+          )}
 
-          {/* Download + status pill */}
-          <div className="flex items-center gap-2">
+          {/* Download + status pill — always right */}
+          <div className="flex items-center gap-2 ml-auto">
             {invoice.file_url && (
               <button onClick={async () => {
                 try {
