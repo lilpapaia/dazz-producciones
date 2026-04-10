@@ -283,9 +283,11 @@ const AutoInvoice = () => {
                   <option value="0">0%</option><option value="7">7%</option><option value="15">15%</option><option value="19">19%</option>
                 </select>
               </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
               <div><label className={v(invoiceDate.trim()) ? invalidLabelCls : labelCls}>Fecha *</label><input value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className={v(invoiceDate.trim()) ? invalidCls : inputCls} /></div>
               <div><label className={v(invoiceNumber.trim()) ? invalidLabelCls : labelCls}>Nº Factura *</label><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className={`${v(invoiceNumber.trim()) ? invalidCls : inputCls} font-mono`} /></div>
-              <div><label className={labelCls}>OC *</label>
+              <div className="col-span-2 sm:col-span-1"><label className={labelCls}>OC *</label>
                 <OCSelector companyId={companyId ? parseInt(companyId) : null} allowExisting onSelect={(oc, prefixData) => { setOcNumber(oc); setSelectedPrefixPermanent(!!prefixData?.permanent_oc); }} onClear={() => { setOcNumber(''); setSelectedPrefixPermanent(false); }} />
               </div>
             </div>
@@ -306,17 +308,17 @@ const AutoInvoice = () => {
             {showGastos && (
               <div className="grid grid-cols-3 gap-2 mt-3">
                 <div>
-                  <label className={labelCls}>Importe gastos *</label>
+                  <label className={labelCls}>Importe *</label>
                   <input type="number" step="0.01" value={gastosBase} onChange={e => setGastosBase(e.target.value)} placeholder="250.00" className={`${inputCls} font-mono`} />
                 </div>
                 <div>
-                  <label className={labelCls}>IVA gastos %</label>
+                  <label className={labelCls}>IVA %</label>
                   <select value={gastosIvaPct} onChange={e => setGastosIvaPct(e.target.value)} className={`${inputCls} appearance-none`}>
                     <option value="21">21%</option><option value="10">10%</option><option value="4">4%</option><option value="0">0%</option>
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>IRPF gastos %</label>
+                  <label className={labelCls}>IRPF %</label>
                   <input value={`${irpfPercent}%`} disabled className={`${inputCls} opacity-60 cursor-not-allowed`} />
                   <div className="text-[10px] text-zinc-600 mt-0.5">Heredado</div>
                 </div>
