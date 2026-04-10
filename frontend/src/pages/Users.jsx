@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getUsers, registerUser, deleteUser, updateUser, getCompanies } from '../services/api';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import { Plus, Trash2, Edit, Building2 } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
 import { ROLES } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
@@ -307,13 +307,20 @@ const Users = () => {
                 </div>
               </div>
 
-              {/* NUEVO: Selector de empresas */}
-              <CompanyMultiSelect
-                selectedCompanyIds={newUser.company_ids}
-                onChange={(ids) => setNewUser({...newUser, company_ids: ids})}
-                companies={companies}
-                label="Empresas asignadas"
-              />
+              {/* Selector de empresas (BOSS/WORKER) o texto informativo (ADMIN) */}
+              {newUser.role === 'ADMIN' ? (
+                <div className="flex items-center gap-2 py-2">
+                  <Building2 size={14} className="text-zinc-500" />
+                  <span className="text-xs text-zinc-500">Acceso a todas las empresas</span>
+                </div>
+              ) : (
+                <CompanyMultiSelect
+                  selectedCompanyIds={newUser.company_ids}
+                  onChange={(ids) => setNewUser({...newUser, company_ids: ids})}
+                  companies={companies}
+                  label="Empresas asignadas"
+                />
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button
@@ -325,7 +332,7 @@ const Users = () => {
                 </button>
                 <button
                   onClick={handleCreate}
-                  disabled={!newUser.name || !newUser.email || !newUser.username || newUser.company_ids.length === 0 || submitting}
+                  disabled={!newUser.name || !newUser.email || !newUser.username || (newUser.role !== 'ADMIN' && newUser.company_ids.length === 0) || submitting}
                   className="flex-1 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-sm transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
                 >
@@ -430,12 +437,19 @@ const Users = () => {
                   </div>
                 </div>
 
-                <CompanyMultiSelect
-                  selectedCompanyIds={editingUser.company_ids}
-                  onChange={(ids) => setEditingUser({...editingUser, company_ids: ids})}
-                  companies={companies}
-                  label="Empresas asignadas"
-                />
+                {editingUser.role === 'ADMIN' ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <Building2 size={14} className="text-zinc-500" />
+                    <span className="text-xs text-zinc-500">Acceso a todas las empresas</span>
+                  </div>
+                ) : (
+                  <CompanyMultiSelect
+                    selectedCompanyIds={editingUser.company_ids}
+                    onChange={(ids) => setEditingUser({...editingUser, company_ids: ids})}
+                    companies={companies}
+                    label="Empresas asignadas"
+                  />
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <button
@@ -501,7 +515,7 @@ const Users = () => {
                       ))}
                     </div>
                   )}
-                  {(!user.companies || user.companies.length === 0) && (
+                  {user.role !== 'ADMIN' && (!user.companies || user.companies.length === 0) && (
                     <p className="text-xs text-amber-500 mt-2">⚠️ Sin empresas asignadas</p>
                   )}
                 </div>
