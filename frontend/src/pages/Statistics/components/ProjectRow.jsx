@@ -20,9 +20,13 @@ const ProjectRow = memo(({ project, isMobile, indent = false, isExpanded, onTogg
               : <ChevronRight size={18} className="text-zinc-600 flex-shrink-0" />
             }
             <div className="min-w-0">
-              <p className="font-semibold text-sm text-zinc-100 mb-1 truncate">{project.description}</p>
+              <p className="font-semibold text-sm text-zinc-100 mb-1 truncate">
+                {project.description?.startsWith(project.creative_code)
+                  ? project.description.slice(project.creative_code.length).trim() || project.description
+                  : project.description}
+              </p>
               <div className="flex flex-col gap-1 text-xs text-zinc-500">
-                <span className="font-mono">{project.creative_code}</span>
+                <span className="font-mono truncate">{project.creative_code}</span>
                 <span className="bg-zinc-800 px-2 py-0.5 rounded self-start">
                   {claimableTickets.length} ticket{claimableTickets.length !== 1 ? 's' : ''} con IVA reclamable
                 </span>

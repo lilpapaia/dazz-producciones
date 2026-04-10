@@ -11,23 +11,23 @@ const TicketRow = memo(({ ticket, projectId, isMobile, onNavigate }) => (
       isMobile ? 'active:border-blue-500' : 'hover:border-blue-500'
     }`}
   >
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
+    <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
+      <div className="flex items-center gap-3 min-w-0">
         <FileText size={16} className="text-zinc-600 group-hover:text-blue-400 transition-colors flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-zinc-300 group-hover:text-zinc-100">{ticket.provider}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-zinc-300 group-hover:text-zinc-100 truncate">{ticket.provider}</p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs text-zinc-600">{ticket.date}</span>
             {ticket.invoice_number && (
               <>
                 <span className="text-zinc-700">&bull;</span>
-                <span className="text-xs text-zinc-600 font-mono">{ticket.invoice_number}</span>
+                <span className="text-xs text-zinc-600 font-mono truncate">{ticket.invoice_number}</span>
               </>
             )}
           </div>
         </div>
       </div>
-      <div className="text-right flex-shrink-0">
+      <div className={`flex-shrink-0 ${isMobile ? 'flex items-center gap-3 ml-7 flex-wrap' : 'text-right'}`}>
         <p className="text-sm font-bold text-zinc-300">
           {ticket.final_total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}&euro;
         </p>

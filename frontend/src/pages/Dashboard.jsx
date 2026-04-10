@@ -374,7 +374,7 @@ const Dashboard = () => {
               </div>
             )}
 
-            <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide -mx-4 px-4 sm:-mx-6 sm:px-6">
               {/* Tab "Todas" */}
               <button
                 onClick={() => setActiveTab('all')}
