@@ -99,6 +99,8 @@ async def lifespan(app):
                 ))
             # QUAL-7: Clean up plaintext IBANs from historical autoinvoices
             conn.execute(text("UPDATE supplier_invoices SET iban = NULL WHERE iban IS NOT NULL AND is_autoinvoice = TRUE"))
+            # ADMIN users don't need company assignments — they have access to all companies by design
+            conn.execute(text("DELETE FROM user_companies WHERE user_id IN (SELECT id FROM users WHERE role = 'ADMIN')"))
             conn.commit()
         except Exception as e:
             logger.warning(f"Startup migration warning (may be expected on SQLite): {e}")

@@ -521,14 +521,14 @@ const Users = () => {
                 </div>
                 
                 {/* Botones a la derecha */}
-                {user.id !== currentUser?.id && (
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => openEditModal(user)}
-                      className="p-2 bg-blue-900/20 hover:bg-blue-900/30 text-blue-400 hover:text-blue-300 rounded-sm transition-colors border border-blue-900/30"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => openEditModal(user)}
+                    className="p-2 bg-blue-900/20 hover:bg-blue-900/30 text-blue-400 hover:text-blue-300 rounded-sm transition-colors border border-blue-900/30"
+                  >
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  {user.id !== currentUser?.id && (
                     <button
                       onClick={() => setDeleteUserId(user.id)}
                       disabled={submitting}
@@ -536,8 +536,8 @@ const Users = () => {
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           ))}
