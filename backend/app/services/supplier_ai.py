@@ -504,10 +504,10 @@ def _normalize_nif(nif: Optional[str]) -> Optional[str]:
 
 
 def _normalize_iban(iban: Optional[str]) -> Optional[str]:
-    """Normaliza IBAN para comparación: quita espacios, uppercase."""
+    """Normaliza IBAN para comparación: quita TODO excepto letras y números."""
     if not iban:
         return None
-    return iban.strip().upper().replace(" ", "")
+    return re.sub(r'[^A-Z0-9]', '', iban.upper())
 
 
 # ============================================
