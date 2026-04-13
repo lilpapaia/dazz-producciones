@@ -1027,6 +1027,19 @@ const ReviewTicket = () => {
               className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500 resize-none" />
           </div>
 
+          {/* Gasto suplido — solo tickets internos (no proveedor) */}
+          {!ticket.from_supplier_portal && (
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input type="checkbox" checked={ticket.is_suplido || false}
+                onChange={(e) => setTicket({...ticket, is_suplido: e.target.checked})}
+                className="w-4 h-4 rounded border-zinc-600 bg-zinc-950 text-amber-500 focus:ring-amber-500 focus:ring-offset-0 cursor-pointer" />
+              <div>
+                <span className="text-sm text-zinc-300 group-hover:text-zinc-100 transition-colors">Gasto suplido</span>
+                <p className="text-[11px] text-zinc-600">Su importe ya está incluido en otra factura del proyecto. No suma al total.</p>
+              </div>
+            </label>
+          )}
+
           {/* Estados */}
           <div className={customPayment ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4"}>
             <div>

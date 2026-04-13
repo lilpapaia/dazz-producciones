@@ -551,6 +551,9 @@ const ProjectView = () => {
                         {(ticket.provider === 'Sin proveedor' || ticket.date === 'Sin fecha') && (
                           <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-sm text-xs font-bold uppercase">ERROR IA</span>
                         )}
+                        {ticket.is_suplido && (
+                          <span className="bg-zinc-700/50 text-zinc-400 border border-zinc-600/30 px-2 py-0.5 rounded-sm text-xs font-bold">SUPLIDO</span>
+                        )}
                         {ticket.ia_warnings && (
                           <span className="text-amber-400 flex-shrink-0" title={ticket.ia_warnings}>⚠️</span>
                         )}
@@ -558,7 +561,7 @@ const ProjectView = () => {
 
                       {/* Lado derecho: precio y papelera */}
                       <div className="flex items-start gap-3 flex-shrink-0">
-                        <div className="text-right">
+                        <div className={`text-right ${ticket.is_suplido ? 'opacity-40' : ''}`}>
                           <p className="text-xl font-bold text-amber-500">
                             {ticket.is_foreign && ticket.currency !== 'EUR' && ticket.foreign_total
                               ? `${ticket.foreign_total.toFixed(2)}${getCurrencySymbol(ticket.currency)}`

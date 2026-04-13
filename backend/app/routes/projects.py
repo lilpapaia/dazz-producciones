@@ -2,7 +2,7 @@ import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, case
 from typing import List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
@@ -491,10 +491,14 @@ async def recalculate_project_totals(
     from app.models.database import Ticket
 
     # PERF-1: Single GROUP BY instead of 2 queries per project
+    # BUG-69: Exclude suplido tickets from total_amount but count them in tickets_count
     aggregates = db.query(
         Ticket.project_id,
         func.count(Ticket.id),
-        func.coalesce(func.sum(Ticket.final_total), 0.0),
+        func.coalesce(func.sum(case(
+            (Ticket.is_suplido == True, 0.0),
+            else_=Ticket.final_total,
+        )), 0.0),
     ).filter(
         Ticket.provider != "Error en extracción",
     ).group_by(Ticket.project_id).all()

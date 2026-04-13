@@ -216,6 +216,7 @@ class TicketUpdate(BaseModel):
     payment_status: Optional[str] = Field(default=None, max_length=50)
     type: Optional[TicketType] = None
     is_reviewed: Optional[bool] = None
+    is_suplido: Optional[bool] = None
 
 class TicketResponse(TicketBase):
     date: Optional[str] = None  # BUG-28: Override TicketBase min_length=1 — AI extraction failures save date=""
@@ -244,6 +245,7 @@ class TicketResponse(TicketBase):
     supplier_id: Optional[int] = None
     supplier_invoice_id: Optional[int] = None
     is_autoinvoice: bool = False
+    is_suplido: bool = False
     project_status: Optional[str] = None
 
     class Config:

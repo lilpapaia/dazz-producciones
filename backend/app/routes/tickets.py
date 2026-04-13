@@ -295,15 +295,35 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     old_total = ticket.final_total
+    old_suplido = ticket.is_suplido or False
     was_error = (ticket.provider == "Error en extracción" and old_total == 0.0)
     update_data = ticket_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(ticket, key, value)
-    if "final_total" in update_data:
-        diff = ticket.final_total - old_total
-        # T5: Si era ticket de error (no sumado al proyecto), sumar count + total completo
-        count_diff = 1 if was_error and ticket.final_total > 0 else 0
-        new_total = Project.total_amount + diff
+    new_suplido = ticket.is_suplido or False
+
+    # Determine project total adjustment based on is_suplido transition + amount change
+    amount_diff = 0.0
+    count_diff = 0
+    if was_error and ticket.final_total > 0 and not new_suplido:
+        # T5: Error ticket becoming valid and not suplido → add to total
+        count_diff = 1
+        amount_diff = ticket.final_total
+    elif old_suplido and new_suplido:
+        # Was suplido, stays suplido → no change to project total regardless of amount
+        pass
+    elif not old_suplido and new_suplido:
+        # Becoming suplido → subtract old amount from project total
+        amount_diff = -old_total
+    elif old_suplido and not new_suplido:
+        # Leaving suplido → add new amount to project total
+        amount_diff = ticket.final_total
+    elif "final_total" in update_data:
+        # Normal case: not suplido, amount changed → apply diff
+        amount_diff = ticket.final_total - old_total
+
+    if amount_diff != 0 or count_diff != 0:
+        new_total = Project.total_amount + amount_diff
         db.execute(update(Project).where(Project.id == ticket.project_id).values(
             tickets_count=Project.tickets_count + count_diff,
             total_amount=case(
@@ -339,15 +359,18 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
 
     # 2. BORRAR DE BASE DE DATOS
     # T5: Si era ticket de error (nunca se sumó), no restar count
+    # BUG-69: Si es suplido, su importe nunca fue sumado al total
     is_error_ticket = (ticket.provider == "Error en extracción" and ticket.final_total == 0.0)
+    is_suplido = ticket.is_suplido or False
     decrement = 0 if is_error_ticket else 1
+    amount_to_subtract = 0.0 if (is_error_ticket or is_suplido) else ticket.final_total
     db.execute(update(Project).where(Project.id == ticket.project_id).values(
         tickets_count=case(
             (Project.tickets_count > decrement, Project.tickets_count - decrement),
             else_=0,
         ),
         total_amount=case(
-            (Project.total_amount > ticket.final_total, Project.total_amount - ticket.final_total),
+            (Project.total_amount > amount_to_subtract, Project.total_amount - amount_to_subtract),
             else_=0,
         ),
     ))

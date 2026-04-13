@@ -91,6 +91,7 @@ async def lifespan(app):
             conn.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS file_hash VARCHAR(64)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_file_hash ON supplier_invoices (file_hash)"))
             conn.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS country_code VARCHAR(10)"))
+            conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS is_suplido BOOLEAN DEFAULT FALSE"))
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_autoinvoice_unique_number "
                 "ON supplier_invoices (invoice_number) WHERE is_autoinvoice = TRUE"

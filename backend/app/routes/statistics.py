@@ -80,7 +80,7 @@ async def get_statistics_overview(
     # PERF-M6: Cuando no hay quarter, calcular sumas en SQL directo
     # Con quarter, necesitamos parsear date strings en Python (campo date es String, no Date)
     if quarter:
-        q = db.query(Ticket).join(Project).filter(Project.year == str(year))
+        q = db.query(Ticket).join(Project).filter(Project.year == str(year), Ticket.is_suplido != True)
         if boss_cids:
             q = q.filter(Project.owner_company_id.in_(boss_cids))
         all_tickets = q.all()
@@ -93,9 +93,10 @@ async def get_statistics_overview(
     else:
         boss_extra = [Project.owner_company_id.in_(boss_cids)] if boss_cids else []
         geo_extra = [Ticket.geo_classification == geo_filter] if geo_filter else []
+        suplido_filter = [Ticket.is_suplido != True]
         total_spent = float(db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).join(Project).filter(
-            Project.year == str(year), *geo_extra, *boss_extra).scalar())
-        intl_filter = [Project.year == str(year), Ticket.geo_classification.in_(['UE', 'INTERNACIONAL']), *boss_extra]
+            Project.year == str(year), *geo_extra, *boss_extra, *suplido_filter).scalar())
+        intl_filter = [Project.year == str(year), Ticket.geo_classification.in_(['UE', 'INTERNACIONAL']), *boss_extra, *suplido_filter]
         international_spent = float(db.query(func.coalesce(func.sum(Ticket.final_total), 0.0)).join(Project).filter(
             *intl_filter).scalar())
         iva_reclamable = float(db.query(func.coalesce(func.sum(Ticket.foreign_tax_eur), 0.0)).join(Project).filter(
@@ -123,13 +124,13 @@ async def get_monthly_evolution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
-    query = db.query(Ticket).join(Project).filter(Project.year == str(year))
+    query = db.query(Ticket).join(Project).filter(Project.year == str(year), Ticket.is_suplido != True)
     if current_user.role == UserRole.BOSS:
         boss_cids = get_user_company_ids(current_user, db)
         query = query.filter(Project.owner_company_id.in_(boss_cids))
     tickets = query.all()
     monthly_totals = [0.0] * 12
-    
+
     for ticket in tickets:
         try:
             if ticket.date and "/" in ticket.date:
@@ -154,7 +155,7 @@ async def get_currency_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_or_boss)
 ):
-    query = db.query(Ticket).join(Project).filter(Project.year == str(year))
+    query = db.query(Ticket).join(Project).filter(Project.year == str(year), Ticket.is_suplido != True)
     if current_user.role == UserRole.BOSS:
         boss_cids = get_user_company_ids(current_user, db)
         query = query.filter(Project.owner_company_id.in_(boss_cids))
@@ -173,7 +174,8 @@ async def get_foreign_breakdown(
 ):
     query = db.query(Ticket).join(Project).filter(
         Project.year == str(year),
-        Ticket.is_foreign == True
+        Ticket.is_foreign == True,
+        Ticket.is_suplido != True,
     )
     if current_user.role == UserRole.BOSS:
         boss_cids = get_user_company_ids(current_user, db)
@@ -262,7 +264,8 @@ async def get_complete_statistics(
         # Tickets internacionales de los proyectos filtrados
         intl_tickets = db.query(Ticket).filter(
             Ticket.project_id.in_(project_ids),
-            Ticket.is_foreign == True
+            Ticket.is_foreign == True,
+            Ticket.is_suplido != True,
         ).all() if project_ids else []
         if quarter:
             intl_tickets = filter_tickets_by_quarter(intl_tickets, quarter)
@@ -303,13 +306,16 @@ def _calc_overview(project_ids: list, db: Session) -> schemas.StatisticsOverview
         )
 
     # PERF-M6: Sumas calculadas en SQL en vez de cargar todos los tickets en Python
+    # BUG-69: Exclude suplido tickets from all statistics
+    suplido_filter = Ticket.is_suplido != True
     total_spent = db.query(
         func.coalesce(func.sum(Ticket.final_total), 0.0)
-    ).filter(Ticket.project_id.in_(project_ids)).scalar()
+    ).filter(Ticket.project_id.in_(project_ids), suplido_filter).scalar()
 
     intl_filter = [
         Ticket.project_id.in_(project_ids),
-        Ticket.geo_classification.in_(['UE', 'INTERNACIONAL'])
+        Ticket.geo_classification.in_(['UE', 'INTERNACIONAL']),
+        suplido_filter,
     ]
     international_spent = db.query(
         func.coalesce(func.sum(Ticket.final_total), 0.0)
@@ -350,7 +356,7 @@ def _calc_monthly(project_ids: list, geo_filter: Optional[str], db: Session) -> 
     if not project_ids:
         return empty
 
-    q = db.query(Ticket).filter(Ticket.project_id.in_(project_ids))
+    q = db.query(Ticket).filter(Ticket.project_id.in_(project_ids), Ticket.is_suplido != True)
     if geo_filter:
         q = q.filter(Ticket.geo_classification == geo_filter)
     tickets = q.all()
@@ -378,7 +384,7 @@ def _calc_distribution(project_ids: list, quarter: Optional[int], geo_filter: Op
     if not project_ids:
         return []
 
-    tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids)).all()
+    tickets = db.query(Ticket).filter(Ticket.project_id.in_(project_ids), Ticket.is_suplido != True).all()
     if quarter:
         tickets = filter_tickets_by_quarter(tickets, quarter)
     if geo_filter:
@@ -517,7 +523,8 @@ def _get_breakdown_all_companies(year: int, quarter: Optional[int], db: Session,
         .options(joinedload(Ticket.project))
         .filter(
             Project.year == str(year),
-            Ticket.is_foreign == True
+            Ticket.is_foreign == True,
+            Ticket.is_suplido != True,
         )
     )
     if company_ids:
