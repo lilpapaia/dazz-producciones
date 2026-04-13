@@ -227,6 +227,9 @@ const ProjectView = () => {
   // ← FIX: mayúsculas correctas (era 'admin' → siempre false)
   const isAdmin = user?.role === ROLES.ADMIN;
   const isBoss  = user?.role === ROLES.BOSS;
+  const userCompanyIds = (user?.companies || []).map(c => c.id);
+  const isBossOfProject = isBoss && userCompanyIds.includes(project.owner_company_id);
+  const isWorkerOwner = user?.role === ROLES.WORKER && userCompanyIds.includes(project.owner_company_id) && (project.owner_id === user?.id || project.responsible?.toLowerCase() === user?.username?.toLowerCase());
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -582,6 +585,17 @@ const ProjectView = () => {
                           >
                             <Trash2 size={18} />
                           </button>
+                        ) : ticket.payment_status === 'PAGADO ADMIN' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showError('Factura ya pagada, no se puede eliminar');
+                            }}
+                            className="p-2 text-zinc-500 opacity-30 cursor-not-allowed"
+                            title="Factura pagada — no se puede eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         ) : !ticket.from_supplier_portal ? (
                           <button
                             onClick={(e) => {
@@ -603,17 +617,6 @@ const ProjectView = () => {
                             title="Gestionar en proveedores"
                           >
                             <ExternalLink size={18} />
-                          </button>
-                        ) : ticket.payment_status === 'PAGADO ADMIN' ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              showError('Factura ya pagada, no se puede eliminar');
-                            }}
-                            className="p-2 text-zinc-500 opacity-30 cursor-not-allowed"
-                            title="Factura pagada — no se puede eliminar"
-                          >
-                            <Trash2 size={18} />
                           </button>
                         ) : (
                           <button
@@ -669,7 +672,7 @@ const ProjectView = () => {
         <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bebas tracking-wider">INFORMACIÓN DEL PROYECTO</h3>
-            {(isAdmin || isBoss) && project.status !== 'cerrado' && (
+            {(isAdmin || isBossOfProject || isWorkerOwner) && project.status !== 'cerrado' && (
               <button onClick={openEditModal}
                 className="flex items-center gap-1.5 text-[12px] text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded-sm hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
                 <Edit3 size={13} /> Editar
@@ -775,12 +778,20 @@ const ProjectView = () => {
                   className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
               </div>
               <div>
-                <UserAutocomplete
-                  value={editForm.responsible}
-                  onChange={(name) => setEditForm({ ...editForm, responsible: name })}
-                  companyId={project.owner_company_id || null}
-                  label="RESPONSABLE"
-                />
+                {isWorkerOwner && !isAdmin && !isBoss ? (
+                  <div>
+                    <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">RESPONSABLE</label>
+                    <input type="text" value={editForm.responsible} disabled
+                      className="w-full bg-zinc-950 border border-zinc-700 text-zinc-500 text-sm px-3 py-2.5 rounded-sm cursor-not-allowed" />
+                  </div>
+                ) : (
+                  <UserAutocomplete
+                    value={editForm.responsible}
+                    onChange={(name) => setEditForm({ ...editForm, responsible: name })}
+                    companyId={project.owner_company_id || null}
+                    label="RESPONSABLE"
+                  />
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
