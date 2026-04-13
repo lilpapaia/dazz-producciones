@@ -6,6 +6,7 @@ Servicio Cloudinary para almacenamiento de tickets/facturas
 """
 
 import logging
+import re
 import cloudinary
 import cloudinary.uploader
 import os
@@ -160,10 +161,10 @@ def upload_ticket_file(file_path: str, file_name: str, project_id: int, project_
     import uuid as _uuid
     file_ext = Path(file_name).suffix.lower()
     is_pdf = file_ext == '.pdf'
-    oc_slug = (project_oc or f"project_{project_id}").replace(' ', '_')
+    oc_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', (project_oc or f"project_{project_id}"))
     folder = f"dazz-producciones/{oc_slug}"
     short_id = _uuid.uuid4().hex[:8]
-    clean_name = Path(file_name).stem.replace(' ', '_')[:50]
+    clean_name = re.sub(r'[^a-zA-Z0-9_-]', '_', Path(file_name).stem)[:50]
     public_id = f"{clean_name}_{short_id}"
 
     if is_pdf:

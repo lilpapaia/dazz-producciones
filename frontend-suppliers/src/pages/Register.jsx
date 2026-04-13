@@ -34,6 +34,11 @@ const Register = () => {
   // Strip token from URL to prevent leaking via browser history/referrer
   useEffect(() => {
     if (token) window.history.replaceState({}, '', '/register');
+    const meta = document.createElement('meta');
+    meta.name = 'referrer';
+    meta.content = 'no-referrer';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
   }, []);
 
   useEffect(() => {

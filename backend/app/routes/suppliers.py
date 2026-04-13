@@ -653,6 +653,7 @@ async def list_all_invoices(
             status=inv.status.value if inv.status else "PENDING",
             rejection_reason=inv.rejection_reason, delete_reason=inv.delete_reason,
             created_at=inv.created_at,
+            is_autoinvoice=inv.is_autoinvoice or False,
         ))
 
     return result
@@ -744,6 +745,7 @@ async def get_invoice(
         nif_cif=invoice.nif_cif,
         ia_validation_result=invoice.ia_validation_result,
         created_at=invoice.created_at,
+        is_autoinvoice=invoice.is_autoinvoice or False,
     )
 
 

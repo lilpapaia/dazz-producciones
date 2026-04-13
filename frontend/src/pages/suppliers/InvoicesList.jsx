@@ -215,7 +215,6 @@ const InvoicesList = () => {
               <div className="flex items-start justify-between mb-2">
                 <span className="font-mono text-[13px] text-zinc-200">{inv.invoice_number}
                   {inv.is_autoinvoice && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 font-sans font-bold">AUTO</span>}
-                  {inv.from_supplier_portal && !inv.is_autoinvoice && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
                 </span>
                 <span className="font-mono text-[13px] font-semibold text-zinc-100">{inv.final_total?.toFixed(2)} €</span>
               </div>
@@ -286,7 +285,6 @@ const InvoicesList = () => {
                       <td className="px-3 py-2.5 border-b border-white/[.04] font-mono text-[13px] text-zinc-200">
                         {inv.invoice_number}
                         {inv.is_autoinvoice && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 font-sans font-bold">AUTO</span>}
-                        {inv.from_supplier_portal && !inv.is_autoinvoice && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-sans font-bold">PORTAL</span>}
                       </td>
                       <td className="px-3 py-2.5 border-b border-white/[.04] text-[13px] text-zinc-200">{inv.supplier_name}</td>
                       <td className="px-3 py-2.5 border-b border-white/[.04]">

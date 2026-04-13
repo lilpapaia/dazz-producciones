@@ -114,6 +114,8 @@ export const getSummary = () => api.get('/portal/summary');
 export const getNotifications = (params) => api.get('/portal/notifications', { params });
 export const markNotificationRead = (id) => api.put(`/portal/notifications/${id}/read`);
 export const markAllNotificationsRead = () => api.put('/portal/notifications/read-all');
+export const deleteNotification = (id) => api.delete(`/portal/notifications/${id}`);
+export const deleteReadNotifications = () => api.delete('/portal/notifications/read');
 
 // Account actions
 export const requestDataChange = (data) => api.post('/portal/request-data-change', data);

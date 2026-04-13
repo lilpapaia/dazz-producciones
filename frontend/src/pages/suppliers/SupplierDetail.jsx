@@ -375,7 +375,7 @@ const SupplierDetail = () => {
           {supplier.notes_internal && supplier.notes_internal.split('\n').filter(Boolean).map((line, i) => (
             <div key={i} className="flex items-start gap-1.5 bg-zinc-800 rounded p-2 text-[13px] text-zinc-400 mt-1.5 border-l-2 border-amber-500 group">
               <span className="flex-1 whitespace-pre-wrap">{line}</span>
-              <button onClick={() => handleDeleteNote(i)} className="text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" title="Eliminar nota">
+              <button onClick={() => handleDeleteNote(i)} className="text-zinc-600 hover:text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" title="Eliminar nota">
                 <X size={11} />
               </button>
             </div>

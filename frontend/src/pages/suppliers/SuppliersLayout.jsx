@@ -24,8 +24,16 @@ const SuppliersLayout = () => {
   useEffect(() => {
     fetchStats();
     if (location.pathname !== '/suppliers') return;
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
+    let interval = setInterval(fetchStats, 30000);
+    const handleVisibility = () => {
+      clearInterval(interval);
+      if (document.visibilityState === 'visible') {
+        fetchStats();
+        interval = setInterval(fetchStats, 30000);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
   }, [location.pathname]);
 
   const isActive = (path, exact) => {

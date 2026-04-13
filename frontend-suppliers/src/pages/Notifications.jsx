@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../services/api';
-import { Check, X, DollarSign, FileText, Link2, AlertTriangle, Bell } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification, deleteReadNotifications } from '../services/api';
+import { Check, X, DollarSign, FileText, Link2, AlertTriangle, Bell, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const EVENT_ICON = {
   APPROVED:     { icon: Check, cls: 'bg-green-400/10', stroke: 'text-green-400' },
@@ -13,8 +15,14 @@ const EVENT_ICON = {
   REGISTRATION: { icon: Bell, cls: 'bg-amber-500/10', stroke: 'text-amber-500' },
 };
 
-const INVOICE_TYPES = ['NEW_INVOICE', 'APPROVED', 'PAID', 'DELETED', 'OC_LINKED'];
+const INVOICE_TYPES = ['NEW_INVOICE', 'APPROVED', 'PAID', 'DELETED', 'OC_LINKED', 'IA_REJECTED', 'REJECTED'];
 const ACCOUNT_RE = /Data Change|IBAN Change|Deactivation/i;
+
+const getNotifDestination = (n) => {
+  if (INVOICE_TYPES.includes(n.event_type) && !ACCOUNT_RE.test(n.title)) return '/';
+  if (n.event_type === 'REGISTRATION' || ACCOUNT_RE.test(n.title)) return '/profile';
+  return '/';
+};
 
 const timeAgo = (dateStr) => {
   if (!dateStr) return '';
@@ -30,10 +38,12 @@ const timeAgo = (dateStr) => {
 };
 
 const Notifications = () => {
+  const navigate = useNavigate();
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [readFilter, setReadFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [confirmClearRead, setConfirmClearRead] = useState(false);
 
   const load = () => {
     getNotifications({ limit: 100 })
@@ -45,6 +55,7 @@ const Notifications = () => {
   useEffect(() => { load(); }, []);
 
   const unreadCount = notifs.filter(n => !n.is_read).length;
+  const readCount = notifs.filter(n => n.is_read).length;
   const displayed = notifs.filter(n => {
     if (readFilter === 'unread' && n.is_read) return false;
     if (typeFilter === 'all') return true;
@@ -53,23 +64,33 @@ const Notifications = () => {
     return true;
   });
 
-  const handleMarkRead = async (id) => {
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    try {
-      await markNotificationRead(id);
-    } catch {
-      setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
+  const handleClick = async (n) => {
+    if (!n.is_read) {
+      setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+      try { await markNotificationRead(n.id); } catch {
+        setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: false } : x));
+        return;
+      }
     }
+    navigate(getNotifDestination(n));
   };
 
   const handleMarkAllRead = async () => {
     const snapshot = notifs;
     setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
-    try {
-      await markAllNotificationsRead();
-    } catch {
-      setNotifs(snapshot);
-    }
+    try { await markAllNotificationsRead(); } catch { setNotifs(snapshot); }
+  };
+
+  const handleDeleteOne = async (e, id) => {
+    e.stopPropagation();
+    setNotifs(prev => prev.filter(n => n.id !== id));
+    try { await deleteNotification(id); } catch { load(); }
+  };
+
+  const handleClearRead = async () => {
+    const snapshot = notifs;
+    setNotifs(prev => prev.filter(n => !n.is_read));
+    try { await deleteReadNotifications(); } catch { setNotifs(snapshot); }
   };
 
   const chipCls = (active) => `text-[11px] px-2.5 py-1 rounded-full transition-colors ${active ? 'bg-amber-500 text-zinc-950 font-semibold' : 'border border-zinc-700 text-zinc-400'}`;
@@ -85,12 +106,20 @@ const Notifications = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-3 lg:mb-5">
         <h1 className="font-['Bebas_Neue'] text-[18px] lg:text-[22px] tracking-wider text-zinc-100">Notifications</h1>
-        {unreadCount > 0 && (
-          <button onClick={handleMarkAllRead}
-            className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors">
-            Mark all as read
-          </button>
-        )}
+        <div className="flex gap-2">
+          {readCount > 0 && (
+            <button onClick={() => setConfirmClearRead(true)}
+              className="text-[12px] bg-zinc-800 border border-zinc-700 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/10 hover:border-red-500/30 transition-colors">
+              Clear read
+            </button>
+          )}
+          {unreadCount > 0 && (
+            <button onClick={handleMarkAllRead}
+              className="text-[12px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition-colors">
+              Mark all as read
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Read filter */}
@@ -122,8 +151,8 @@ const Notifications = () => {
             const Icon = ev.icon;
             return (
               <div key={n.id}
-                onClick={() => !n.is_read && handleMarkRead(n.id)}
-                className={`flex items-start gap-2 py-3 lg:py-4 border-b border-white/[.04] last:border-0 ${!n.is_read ? 'bg-amber-500/[.02] cursor-pointer -mx-3.5 px-3.5 lg:-mx-5 lg:px-5' : ''}`}>
+                onClick={() => handleClick(n)}
+                className={`flex items-start gap-2 py-3 lg:py-4 border-b border-white/[.04] last:border-0 cursor-pointer group ${!n.is_read ? 'bg-amber-500/[.02] -mx-3.5 px-3.5 lg:-mx-5 lg:px-5' : ''}`}>
                 {!n.is_read ? (
                   <div className="w-[7px] h-[7px] rounded-full bg-amber-500 flex-shrink-0 mt-[5px]" />
                 ) : (
@@ -138,11 +167,29 @@ const Notifications = () => {
                   </div>
                   <div className="text-[11px] text-zinc-600 mt-0.5">{timeAgo(n.created_at)}</div>
                 </div>
+                {n.is_read && (
+                  <button onClick={(e) => handleDeleteOne(e, n.id)}
+                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-zinc-600 hover:text-red-400 transition-all flex-shrink-0"
+                    title="Delete notification">
+                    <Trash2 size={14} strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
             );
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmClearRead}
+        onClose={() => setConfirmClearRead(false)}
+        onConfirm={handleClearRead}
+        title="Clear read notifications"
+        message={`This will permanently delete ${readCount} read notification${readCount !== 1 ? 's' : ''}. Unread notifications will not be affected.`}
+        confirmText="Clear read"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 };

@@ -20,12 +20,19 @@ const Layout = ({ children }) => {
   const initials = supplier?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
 
   useEffect(() => {
-    getSummary().then(r => setUnread(r.data.unread_notifications || 0)).catch(() => {});
+    const doFetch = () => getSummary().then(r => setUnread(r.data.unread_notifications || 0)).catch(() => {});
+    doFetch();
     if (pathname !== '/') return;
-    const interval = setInterval(() => {
-      getSummary().then(r => setUnread(r.data.unread_notifications || 0)).catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
+    let interval = setInterval(doFetch, 30000);
+    const handleVisibility = () => {
+      clearInterval(interval);
+      if (document.visibilityState === 'visible') {
+        doFetch();
+        interval = setInterval(doFetch, 30000);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
   }, [pathname]);
 
   const handleLogout = async () => { await logout(); navigate('/login'); };

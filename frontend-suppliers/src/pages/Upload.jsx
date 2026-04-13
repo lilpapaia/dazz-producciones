@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadInvoice, getProfile } from '../services/api';
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User, ExternalLink } from 'lucide-react';
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User, ExternalLink, RotateCcw } from 'lucide-react';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILES_PER_BATCH = 15;
+const UPLOAD_TIMEOUT_MS = 120000;
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -20,7 +24,7 @@ const UploadPage = () => {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // BUG-54: Block navigation while uploading
+  // Block navigation while uploading
   useEffect(() => {
     if (!uploading) return;
     const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
@@ -31,31 +35,41 @@ const UploadPage = () => {
   const addFiles = (fileList) => {
     setRejected('');
     const all = Array.from(fileList);
-    const oversized = all.find(f => f.size > 10 * 1024 * 1024);
+    const oversized = all.find(f => f.size > MAX_FILE_SIZE);
     if (oversized) {
       setOversizedFile({ name: oversized.name, size: (oversized.size / (1024 * 1024)).toFixed(1) });
     }
-    const sized = all.filter(f => f.size <= 10 * 1024 * 1024);
+    const sized = all.filter(f => f.size <= MAX_FILE_SIZE);
     const wrongType = sized.filter(f => f.type !== 'application/pdf');
     const valid = sized.filter(f => f.type === 'application/pdf');
     if (wrongType.length) setRejected(`${wrongType.length} file(s) rejected — only PDF accepted`);
     if (!valid.length) return;
-    setFiles(prev => [...prev, ...valid.map(f => ({ id: crypto.randomUUID(), file: f, status: 'pending', result: null }))]);
+
+    // Enforce batch limit
+    const slotsAvailable = MAX_FILES_PER_BATCH - files.length;
+    if (slotsAvailable <= 0) {
+      setRejected(`Maximum ${MAX_FILES_PER_BATCH} files per batch reached`);
+      return;
+    }
+    const accepted = valid.slice(0, slotsAvailable);
+    if (accepted.length < valid.length) {
+      setRejected(`Only ${accepted.length} of ${valid.length} files added — maximum ${MAX_FILES_PER_BATCH} per batch`);
+    }
+
+    setFiles(prev => [...prev, ...accepted.map(f => ({ id: crypto.randomUUID(), file: f, status: 'pending', result: null }))]);
   };
 
   const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (!uploading && e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); };
   const removeFile = (id) => setFiles(prev => prev.filter(f => f.id !== id));
 
-  const UPLOAD_TIMEOUT_MS = 120000;
-
-  const handleUploadAll = async () => {
+  const processFiles = async (filesToProcess) => {
     setUploading(true);
-    const updated = [...files];
+    const updated = [...filesToProcess];
     for (let i = 0; i < updated.length; i++) {
       if (!mountedRef.current) return;
       if (updated[i].status !== 'pending') continue;
       setCurrentIdx(i);
-      updated[i].status = 'uploading';
+      updated[i] = { ...updated[i], status: 'uploading' };
       setFiles([...updated]);
       try {
         const controller = new AbortController();
@@ -66,7 +80,16 @@ const UploadPage = () => {
       } catch (err) {
         const isTimeout = err.code === 'ERR_CANCELED' || err.name === 'AbortError';
         const detail = err.response?.data?.detail;
-        updated[i] = { ...updated[i], status: 'error', result: typeof detail === 'object' ? detail : { errors: [isTimeout ? 'Timeout — server did not respond in 120 seconds' : (detail || 'Upload failed')] } };
+        const isDuplicate = err.response?.status === 409 && detail?.code === 'duplicate_hash';
+        updated[i] = {
+          ...updated[i],
+          status: isDuplicate ? 'duplicate' : 'error',
+          result: isDuplicate
+            ? { errors: [detail.message || 'This file was already uploaded'] }
+            : typeof detail === 'object'
+              ? detail
+              : { errors: [isTimeout ? 'Timeout — server did not respond in 120 seconds' : (detail || 'Upload failed')] }
+        };
       }
       if (!mountedRef.current) return;
       setFiles([...updated]);
@@ -77,11 +100,22 @@ const UploadPage = () => {
     }
   };
 
+  const handleUploadAll = () => processFiles(files);
+
+  const handleRetryFailed = () => {
+    setFiles(prev => {
+      const retried = prev.map(f => f.status === 'error' ? { ...f, status: 'pending', result: null } : f);
+      processFiles(retried);
+      return retried;
+    });
+  };
+
   const reset = () => setFiles([]);
   const pendingCount = files.filter(f => f.status === 'pending').length;
   const allDone = files.length > 0 && files.every(f => f.status !== 'pending' && f.status !== 'uploading');
   const successCount = files.filter(f => f.status === 'success').length;
   const errorCount = files.filter(f => f.status === 'error').length;
+  const duplicateCount = files.filter(f => f.status === 'duplicate').length;
 
   return (
     <div className="max-w-2xl lg:max-w-4xl mx-auto pt-4 lg:pt-6 lg:px-6">
@@ -137,7 +171,7 @@ const UploadPage = () => {
             <>
               <UploadIcon size={28} className="text-zinc-600 mx-auto mb-2 lg:mb-3 lg:w-10 lg:h-10" strokeWidth={1.5} />
               <p className="text-sm lg:text-base font-medium text-zinc-300 mb-1">Select your invoice</p>
-              <p className="text-[11px] lg:text-[13px] text-zinc-500">PDF only · Max 10MB · Multiple files allowed</p>
+              <p className="text-[11px] lg:text-[13px] text-zinc-500">PDF only · Max 10MB per file · Max {MAX_FILES_PER_BATCH} files per batch</p>
               <p className="text-[10px] text-zinc-600 mt-2 bg-[#27272a] inline-block px-2.5 py-1 rounded-md">
                 AI will extract and verify all data automatically
               </p>
@@ -184,17 +218,20 @@ const UploadPage = () => {
             <div key={f.id} className={`bg-[#18181b] border rounded-[10px] p-3 lg:p-4 flex items-center gap-3 ${
               f.status === 'success' ? 'border-green-400/20' :
               f.status === 'error' ? 'border-red-400/20' :
+              f.status === 'duplicate' ? 'border-amber-500/20' :
               f.status === 'uploading' ? 'border-amber-500/30' :
               'border-zinc-800'
             }`}>
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                 f.status === 'success' ? 'bg-green-400/10' :
                 f.status === 'error' ? 'bg-red-400/10' :
+                f.status === 'duplicate' ? 'bg-amber-500/10' :
                 f.status === 'uploading' ? 'bg-amber-500/10' :
                 'bg-red-400/[.08]'
               }`}>
                 {f.status === 'success' ? <CheckCircle size={16} className="text-green-400" /> :
                  f.status === 'error' ? <AlertCircle size={16} className="text-red-400" /> :
+                 f.status === 'duplicate' ? <AlertCircle size={16} className="text-amber-500" /> :
                  f.status === 'uploading' ? <Loader2 size={16} className="text-amber-500 animate-spin" /> :
                  <FileText size={16} className="text-red-400" />}
               </div>
@@ -204,6 +241,7 @@ const UploadPage = () => {
                   {f.status === 'pending' && `${(f.file.size / 1024).toFixed(0)} KB`}
                   {f.status === 'uploading' && <span className="text-amber-400">Verifying with AI...</span>}
                   {f.status === 'success' && <span className="text-green-400">Uploaded — {f.result?.status || 'PENDING'}</span>}
+                  {f.status === 'duplicate' && <span className="text-amber-500">{f.result?.errors?.[0] || 'Already uploaded'}</span>}
                   {f.status === 'error' && <span className="text-red-400">{f.result?.errors?.[0] || 'Failed'}</span>}
                 </div>
                 {f.status === 'error' && f.result?.errors?.length > 1 && (
@@ -231,10 +269,19 @@ const UploadPage = () => {
         <div className="px-4 lg:px-0">
           <div className="text-center text-xs text-zinc-400 mb-3">
             {successCount > 0 && <span className="text-green-400">{successCount} uploaded</span>}
-            {successCount > 0 && errorCount > 0 && ' · '}
+            {successCount > 0 && (errorCount > 0 || duplicateCount > 0) && ' · '}
             {errorCount > 0 && <span className="text-red-400">{errorCount} failed</span>}
+            {errorCount > 0 && duplicateCount > 0 && ' · '}
+            {duplicateCount > 0 && <span className="text-amber-500">{duplicateCount} duplicate{duplicateCount !== 1 ? 's' : ''}</span>}
           </div>
           <div className="flex gap-2">
+            {errorCount > 0 && (
+              <button onClick={handleRetryFailed}
+                className="flex-1 text-xs py-3 rounded-[10px] bg-red-500/10 border border-red-500/30 text-red-400 font-semibold flex items-center justify-center gap-1.5">
+                <RotateCcw size={13} strokeWidth={1.5} />
+                Retry {errorCount} failed
+              </button>
+            )}
             <button onClick={reset} className="flex-1 text-xs py-3 rounded-[10px] bg-[#27272a] border border-zinc-700 text-zinc-300">Upload more</button>
             <button onClick={() => navigate('/')} className="flex-1 text-xs py-3 rounded-[10px] bg-amber-500 text-zinc-950 font-bold">View invoices</button>
           </div>
