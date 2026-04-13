@@ -325,6 +325,9 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    if ticket.payment_status == "PAGADO ADMIN":
+        raise HTTPException(status_code=403, detail="No se puede eliminar un ticket con estado de pago PAGADO ADMIN")
+
     # 1. BORRAR ARCHIVOS DE CLOUDINARY PRIMERO
     try:
         from app.services.cloudinary_service import delete_ticket_files
