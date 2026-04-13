@@ -74,6 +74,7 @@ CAMPOS A EXTRAER:
 - final_total: Total final de la factura (base + IVA - IRPF)
 - currency: Código divisa (EUR, USD, GBP, etc.)
 - is_foreign: true si NO es factura española peninsular/Baleares
+- country_code: Código ISO 3166-1 alpha-2 del país del EMISOR (ES, US, GB, FR, DE, etc.). Si es español, "ES".
 - confidence: Nivel de confianza de 0.0 a 1.0
 
 NOTAS IMPORTANTES:
@@ -100,6 +101,7 @@ EJEMPLO RESPUESTA:
   "final_total": 1590.00,
   "currency": "EUR",
   "is_foreign": false,
+  "country_code": "ES",
   "confidence": 0.95
 }"""
 

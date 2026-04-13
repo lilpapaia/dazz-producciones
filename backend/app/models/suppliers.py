@@ -141,6 +141,7 @@ class SupplierInvoice(Base):
     final_total = Column(Float, nullable=False)
     currency = Column(String, default="EUR")
     is_foreign = Column(Boolean, default=False)
+    country_code = Column(String(10), nullable=True)
     file_url = Column(String, nullable=False)
     file_pages = Column(Text, nullable=True)
     status = Column(Enum(InvoiceStatus), default=InvoiceStatus.PENDING, nullable=False, index=True)
@@ -149,6 +150,7 @@ class SupplierInvoice(Base):
     previous_status = Column(String, nullable=True)  # Status before DELETE_REQUESTED
     ia_validation_result = Column(Text, nullable=True)
     is_autoinvoice = Column(Boolean, default=False)
+    file_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc), index=True)

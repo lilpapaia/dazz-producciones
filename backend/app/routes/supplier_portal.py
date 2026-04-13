@@ -569,6 +569,22 @@ async def upload_invoice(
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
 
+    # Duplicate detection by file hash — blocks before AI (saves tokens)
+    file_hash = hashlib.sha256(contents).hexdigest()
+    existing = db.query(SupplierInvoice).filter(
+        SupplierInvoice.supplier_id == supplier.id,
+        SupplierInvoice.file_hash == file_hash,
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "duplicate_hash",
+                "invoice_id": existing.id,
+                "message": f"This file was already uploaded (invoice #{existing.id})"
+            }
+        )
+
     # Save to temp file for AI extraction (Cloudinary upload happens AFTER validation)
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     temp_path = tmp.name
@@ -633,9 +649,11 @@ async def upload_invoice(
             final_total=extracted.get("final_total", 0.0),
             currency=extracted.get("currency", "EUR"),
             is_foreign=extracted.get("is_foreign", False),
+            country_code=extracted.get("country_code"),
             file_url=upload_result["url"],
             status=invoice_status,
             ia_validation_result=json.dumps(validation, default=str),
+            file_hash=file_hash,
         )
         db.add(invoice)
         db.flush()  # Generate invoice.id without committing
@@ -909,6 +927,40 @@ async def mark_all_my_notifications_read(
     ).update({"is_read": True})
     db.commit()
     return {"message": "All notifications marked as read"}
+
+
+@router.delete("/notifications/read")
+async def delete_my_read_notifications(
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """Delete all read notifications for the authenticated supplier."""
+    count = db.query(SupplierNotification).filter(
+        SupplierNotification.recipient_type == NotificationRecipientType.SUPPLIER,
+        SupplierNotification.recipient_id == supplier.id,
+        SupplierNotification.is_read == True,
+    ).delete()
+    db.commit()
+    return {"message": f"{count} read notifications deleted", "deleted_count": count}
+
+
+@router.delete("/notifications/{notification_id}")
+async def delete_my_notification(
+    notification_id: int,
+    supplier: Supplier = Depends(get_current_active_supplier),
+    db: Session = Depends(get_db),
+):
+    """Delete a single notification owned by the authenticated supplier."""
+    notif = db.query(SupplierNotification).filter(
+        SupplierNotification.id == notification_id,
+        SupplierNotification.recipient_type == NotificationRecipientType.SUPPLIER,
+        SupplierNotification.recipient_id == supplier.id,
+    ).first()
+    if not notif:
+        raise HTTPException(404, "Notification not found")
+    db.delete(notif)
+    db.commit()
+    return {"message": "Notification deleted"}
 
 
 # ============================================
