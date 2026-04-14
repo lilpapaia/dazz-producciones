@@ -128,6 +128,8 @@ export const requestIbanChange = (newIban, file) => {
 export const requestDeactivation = (data) => api.post('/portal/request-deactivation', data);
 
 // Legal documents
+export const getRegistrationDocuments = (token, isInfluencer) =>
+  api.get('/portal/registration-documents', { params: { token, is_influencer: isInfluencer } });
 export const getPendingDocuments = () => api.get('/portal/pending-documents');
 export const getMyDocuments = () => api.get('/portal/my-documents');
 export const getLegalDocument = (docId) => api.get(`/portal/legal-document/${docId}`);

@@ -47,6 +47,24 @@ export const confirmDeactivation = (id, notifId) => api.post(`/suppliers/${id}/c
 export const rejectDeactivation = (id, notifId, reason) => api.post(`/suppliers/${id}/reject-deactivation`, { notification_id: notifId, reason });
 export const verifyCert = (id) => api.post(`/suppliers/${id}/verify-cert`);
 
+// Legal Documents
+export const getLegalDocuments = (params) => api.get('/suppliers/legal-documents', { params });
+export const getLegalDocumentStats = () => api.get('/suppliers/legal-documents/stats');
+export const createLegalDocument = (formData, params) =>
+  api.post('/suppliers/legal-documents', formData, { headers: { 'Content-Type': 'multipart/form-data' }, params });
+export const deactivateLegalDocument = (id) => api.delete(`/suppliers/legal-documents/${id}`);
+export const downloadLegalDocument = (id) => api.get(`/suppliers/legal-documents/${id}/download`);
+export const getPendingSuppliers = (docId) => api.get(`/suppliers/legal-documents/${docId}/pending-suppliers`);
+export const getLegalDocInfluencers = () => api.get('/suppliers/legal-documents/influencers');
+export const extractLegalDocText = (file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post('/suppliers/legal-documents/extract-text', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
+export const getSupplierDocuments = (supplierId) => api.get(`/suppliers/${supplierId}/documents`);
+export const inviteWithContract = (formData, params) =>
+  api.post('/suppliers/invite-with-contract', formData, { headers: { 'Content-Type': 'multipart/form-data' }, params });
+
 // Notifications
 export const getNotifications = (params) => api.get('/suppliers/notifications/all', { params });
 export const markNotificationRead = (id) => api.put(`/suppliers/notifications/${id}/read`);

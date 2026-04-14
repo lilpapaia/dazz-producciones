@@ -4,7 +4,7 @@ Prefijo: /suppliers
 """
 
 import logging
-from fastapi import APIRouter, Body, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Query, Request, UploadFile, File
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session, joinedload
@@ -249,6 +249,92 @@ async def invite_supplier(
         email=body.email,
         expires_at=expires_at,
         message="Invitation sent successfully",
+    )
+
+
+@router.post("/invite-with-contract", response_model=InviteResponse, status_code=201)
+async def invite_supplier_with_contract(
+    request: Request,
+    name: str = Query(..., max_length=300),
+    email: str = Query(...),
+    message: Optional[str] = Query(None, max_length=500),
+    contract_content: str = Query(..., description="HTML content for the personalized contract"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Invite a supplier with a personalized contract PDF."""
+    import os, tempfile, asyncio
+    from app.services.validators import validate_pdf_bytes
+    from config.constants import MAX_SUPPLIER_PDF_SIZE
+    from app.models.legal_documents import LegalDocument
+
+    # Same validations as regular invite
+    existing = db.query(Supplier).filter(Supplier.email == email.lower()).first()
+    if existing:
+        raise HTTPException(400, "A supplier with this email already exists")
+
+    pending = db.query(SupplierInvitation).filter(
+        SupplierInvitation.email == email.lower(),
+        SupplierInvitation.used_at == None,
+        SupplierInvitation.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if pending:
+        raise HTTPException(400, "An active invitation already exists for this email")
+
+    # Validate PDF
+    contents = await file.read()
+    validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
+
+    # Create invitation
+    token = _generate_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=72)
+    invitation = SupplierInvitation(
+        email=email.lower(), name=name, token=token,
+        expires_at=expires_at, invited_by=admin.id,
+    )
+    db.add(invitation)
+    db.flush()  # Get invitation.id
+
+    # Upload PDF to R2
+    from app.services.legal_storage import save_legal_doc
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+    try:
+        object_key = await asyncio.to_thread(
+            save_legal_doc, tmp_path, "CONTRACT", 1, None
+        )
+    finally:
+        os.unlink(tmp_path)
+
+    # Create personalized contract document linked to invitation
+    doc = LegalDocument(
+        type="CONTRACT",
+        version=1,
+        title=f"Contrato de Agencia — {name}",
+        content=contract_content,
+        file_url=object_key,
+        file_size=len(contents),
+        uploaded_by=admin.id,
+        is_generic=False,
+        target_invitation_id=invitation.id,
+        is_active=True,
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(invitation)
+
+    # Send email
+    try:
+        send_supplier_invitation(name, email, token, message)
+    except Exception as e:
+        logger.warning(f"Invitation email failed: {e}")
+
+    logger.info(f"Invitation with personalized contract sent to {email} by admin {admin.id}")
+    return InviteResponse(
+        id=invitation.id, name=name, email=email,
+        expires_at=expires_at, message="Invitation sent with personalized contract",
     )
 
 

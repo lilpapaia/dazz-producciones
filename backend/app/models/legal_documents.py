@@ -38,12 +38,14 @@ class LegalDocument(Base):
     is_generic = Column(Boolean, default=True, nullable=False)
     target_supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="CASCADE"), nullable=True)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    target_invitation_id = Column(Integer, ForeignKey("supplier_invitations.id", ondelete="SET NULL"), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     uploader = relationship("User", foreign_keys=[uploaded_by])
     target_supplier = relationship("Supplier", foreign_keys=[target_supplier_id])
+    target_invitation = relationship("SupplierInvitation", foreign_keys=[target_invitation_id])
     company = relationship("Company")
     acceptances = relationship("SupplierDocumentAcceptance", back_populates="document", cascade="all, delete-orphan")
 

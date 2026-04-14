@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Bell, UserPlus, FilePlus } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Bell, UserPlus, FilePlus, FileCheck } from 'lucide-react';
 import { getSuppliersDashboard } from '../../services/suppliersApi';
 
 const NAV_ITEMS = [
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { path: '/suppliers/list', label: 'Proveedores', icon: Users },
   { path: '/suppliers/invoices', label: 'Facturas', icon: FileText },
   { path: '/suppliers/notifications', label: 'Notificaciones', icon: Bell, badgeKey: 'unread_notifications' },
+  { path: '/suppliers/documents', label: 'Documentos', icon: FileCheck },
   { path: '/suppliers/autoinvoice', label: 'Autofactura', icon: FilePlus, section: 'add' },
   { path: '/suppliers/invite', label: 'Invitar proveedor', icon: UserPlus, section: 'add' },
 ];

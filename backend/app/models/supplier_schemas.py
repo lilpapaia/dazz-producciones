@@ -174,6 +174,7 @@ class RegisterRequest(BaseModel):
     gdpr_consent: bool
     privacy_accepted: bool
     contract_accepted: Optional[bool] = None
+    accepted_document_ids: Optional[list[int]] = None  # FEAT-06 Phase 2: dynamic document acceptance
     has_cert_warnings: bool = False
 
     @field_validator("password")
@@ -324,6 +325,47 @@ class SupplierDocumentsResponse(BaseModel):
     is_influencer: bool
     pending: list[PendingDocumentResponse]
     accepted: list[AcceptedDocumentResponse]
+
+
+# FEAT-06 Phase 2 schemas
+
+class DocumentStatsResponse(BaseModel):
+    id: int
+    type: str
+    title: str
+    version: int
+    created_at: datetime
+    total_applicable: int
+    total_accepted: int
+
+
+class PendingSupplierResponse(BaseModel):
+    id: int
+    name: str
+    nif_cif: Optional[str] = None
+    oc_number: Optional[str] = None
+    created_at: datetime
+    last_activity: Optional[datetime] = None
+
+
+class InfluencerContractInfo(BaseModel):
+    id: int
+    name: str
+    nif_cif: Optional[str] = None
+    oc_number: Optional[str] = None
+    contract_version: Optional[int] = None
+    contract_type: Optional[str] = None  # "generic" or "custom"
+    contract_doc_id: Optional[int] = None
+
+
+class RegistrationDocumentResponse(BaseModel):
+    """Document for step 4 registration — includes content HTML."""
+    id: int
+    type: str
+    title: str
+    version: int
+    content: Optional[str] = None
+    file_url: Optional[str] = None
 
 
 class AutoInvoiceRequest(BaseModel):

@@ -103,6 +103,8 @@ async def lifespan(app):
                 "ON legal_documents (type, target_supplier_id) "
                 "WHERE target_supplier_id IS NOT NULL AND is_active = TRUE"
             ))
+            # FEAT-06 Phase 2: target_invitation_id for personalized contracts via invite
+            conn.execute(text("ALTER TABLE legal_documents ADD COLUMN IF NOT EXISTS target_invitation_id INTEGER REFERENCES supplier_invitations(id)"))
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_autoinvoice_unique_number "
                 "ON supplier_invoices (invoice_number) WHERE is_autoinvoice = TRUE"

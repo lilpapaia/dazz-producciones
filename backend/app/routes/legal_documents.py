@@ -17,11 +17,13 @@ from typing import Optional
 from config.database import get_db
 from app.models.database import User
 from app.models.legal_documents import LegalDocument, SupplierDocumentAcceptance, LegalDocumentType
-from app.models.suppliers import Supplier
+from app.models.suppliers import Supplier, SupplierOC, SupplierInvitation, SupplierInvoice
 from app.models.supplier_schemas import (
     LegalDocumentResponse, LegalDocumentDetailResponse,
     PendingDocumentResponse, AcceptedDocumentResponse,
     MyDocumentsResponse, SupplierDocumentsResponse,
+    DocumentStatsResponse, PendingSupplierResponse,
+    InfluencerContractInfo, RegistrationDocumentResponse,
 )
 from app.services.auth import get_current_admin_user
 from app.services.supplier_auth import get_current_active_supplier
@@ -284,6 +286,171 @@ async def get_supplier_documents(
     )
 
 
+@router.get("/suppliers/legal-documents/stats", response_model=list[DocumentStatsResponse])
+async def legal_document_stats(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Stats per active document: total applicable suppliers and total accepted."""
+    from sqlalchemy import func as sqlfunc
+
+    active_docs = db.query(LegalDocument).filter(LegalDocument.is_active == True).all()
+    if not active_docs:
+        return []
+
+    # Count all active suppliers
+    all_suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
+    influencer_ids = {s.id for s in all_suppliers if s.oc_id is not None}
+    all_supplier_ids = {s.id for s in all_suppliers}
+
+    # Pre-fetch all acceptance counts per document
+    acceptance_counts = dict(
+        db.query(SupplierDocumentAcceptance.document_id, sqlfunc.count(SupplierDocumentAcceptance.id))
+        .filter(SupplierDocumentAcceptance.document_id.in_([d.id for d in active_docs]))
+        .group_by(SupplierDocumentAcceptance.document_id)
+        .all()
+    )
+
+    # Build response — skip documents targeted at specific suppliers for custom contracts
+    # that are superseded by generic ones in the stats view
+    result = []
+    for doc in active_docs:
+        if doc.type == "PRIVACY":
+            total = len(all_supplier_ids)
+        elif doc.type in ("CONTRACT", "AUTOCONTROL", "DECLARATION"):
+            if doc.target_supplier_id:
+                total = 1  # personalized doc
+            else:
+                total = len(influencer_ids)
+        else:
+            total = len(all_supplier_ids)
+
+        result.append(DocumentStatsResponse(
+            id=doc.id,
+            type=doc.type,
+            title=doc.title,
+            version=doc.version,
+            created_at=doc.created_at,
+            total_applicable=total,
+            total_accepted=acceptance_counts.get(doc.id, 0),
+        ))
+
+    return result
+
+
+@router.get("/suppliers/legal-documents/{doc_id}/pending-suppliers", response_model=list[PendingSupplierResponse])
+async def legal_document_pending_suppliers(
+    doc_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """List suppliers who have NOT accepted a specific document."""
+    from sqlalchemy import func as sqlfunc
+
+    doc = db.query(LegalDocument).get(doc_id)
+    if not doc or not doc.is_active:
+        raise HTTPException(404, detail="Document not found")
+
+    # Determine applicable suppliers
+    all_suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
+
+    if doc.type == "PRIVACY":
+        applicable = all_suppliers
+    elif doc.target_supplier_id:
+        applicable = [s for s in all_suppliers if s.id == doc.target_supplier_id]
+    else:
+        # Influencer-only docs
+        applicable = [s for s in all_suppliers if s.oc_id is not None]
+
+    if not applicable:
+        return []
+
+    # Get who already accepted
+    accepted_supplier_ids = set(
+        row[0] for row in db.query(SupplierDocumentAcceptance.supplier_id).filter(
+            SupplierDocumentAcceptance.document_id == doc_id,
+        ).all()
+    )
+
+    # Get last activity per supplier (latest invoice updated_at)
+    from sqlalchemy.orm import joinedload
+    pending = []
+    for s in applicable:
+        if s.id in accepted_supplier_ids:
+            continue
+        oc_number = None
+        if s.oc_id:
+            oc = db.query(SupplierOC).get(s.oc_id)
+            oc_number = oc.oc_number if oc else None
+        pending.append(PendingSupplierResponse(
+            id=s.id,
+            name=s.name,
+            nif_cif=s.nif_cif,
+            oc_number=oc_number,
+            created_at=s.created_at,
+            last_activity=s.updated_at,
+        ))
+
+    return pending
+
+
+@router.get("/suppliers/legal-documents/influencers", response_model=list[InfluencerContractInfo])
+async def legal_document_influencers(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """List all influencers with their current contract version info."""
+    influencers = db.query(Supplier).filter(
+        Supplier.is_active == True,
+        Supplier.oc_id != None,
+    ).all()
+
+    if not influencers:
+        return []
+
+    # Get active CONTRACT documents
+    active_contracts = db.query(LegalDocument).filter(
+        LegalDocument.type == "CONTRACT",
+        LegalDocument.is_active == True,
+    ).all()
+
+    generic_contract = next((d for d in active_contracts if d.is_generic), None)
+    custom_contracts = {d.target_supplier_id: d for d in active_contracts if d.target_supplier_id}
+
+    # Get OC numbers in batch
+    oc_ids = [s.oc_id for s in influencers if s.oc_id]
+    ocs = {oc.id: oc for oc in db.query(SupplierOC).filter(SupplierOC.id.in_(oc_ids)).all()} if oc_ids else {}
+
+    result = []
+    for s in influencers:
+        oc = ocs.get(s.oc_id)
+        custom = custom_contracts.get(s.id)
+        if custom:
+            contract_version = custom.version
+            contract_type = "custom"
+            contract_doc_id = custom.id
+        elif generic_contract:
+            contract_version = generic_contract.version
+            contract_type = "generic"
+            contract_doc_id = generic_contract.id
+        else:
+            contract_version = None
+            contract_type = None
+            contract_doc_id = None
+
+        result.append(InfluencerContractInfo(
+            id=s.id,
+            name=s.name,
+            nif_cif=s.nif_cif,
+            oc_number=oc.oc_number if oc else None,
+            contract_version=contract_version,
+            contract_type=contract_type,
+            contract_doc_id=contract_doc_id,
+        ))
+
+    return result
+
+
 @router.post("/suppliers/legal-documents/extract-text")
 @limiter.limit("10/hour")
 async def extract_legal_document_text(
@@ -451,3 +618,61 @@ async def portal_accept_document(
 
     logger.info(f"Supplier {supplier.id} accepted document {doc.id} ({doc.type} v{doc.version})")
     return {"message": "Document accepted", "document_id": doc.id, "type": doc.type}
+
+
+# ============================================
+# REGISTRATION DOCUMENTS (token-based, no auth)
+# ============================================
+
+@router.get("/portal/registration-documents", response_model=list[RegistrationDocumentResponse])
+async def portal_registration_documents(
+    token: str = Query(...),
+    is_influencer: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    """
+    Get legal documents for registration step 4.
+    Uses invitation token (not supplier auth — supplier doesn't exist yet).
+    Returns documents with HTML content for scroll-to-accept modals.
+    """
+    from datetime import timedelta
+
+    # Validate token without consuming it
+    invitation = db.query(SupplierInvitation).filter(
+        SupplierInvitation.token == token,
+        SupplierInvitation.used_at == None,
+        SupplierInvitation.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if not invitation:
+        raise HTTPException(400, detail="Invalid or expired token")
+
+    # Get all active generic documents
+    all_active = db.query(LegalDocument).filter(LegalDocument.is_active == True).all()
+
+    # Check for personalized contract linked to this invitation
+    custom_contract = next(
+        (d for d in all_active if d.type == "CONTRACT" and d.target_invitation_id == invitation.id),
+        None,
+    )
+    has_custom = custom_contract is not None
+
+    result = []
+    for doc in all_active:
+        if doc.type == "PRIVACY" and doc.is_generic:
+            result.append(doc)
+        elif doc.type in ("CONTRACT", "AUTOCONTROL", "DECLARATION"):
+            if not is_influencer:
+                continue
+            if doc.type == "CONTRACT":
+                if doc.is_generic and has_custom:
+                    continue  # Skip generic if custom exists for this invitation
+                if doc.target_supplier_id:
+                    continue  # Skip supplier-targeted docs (not for registration)
+                if doc.target_invitation_id and doc.target_invitation_id != invitation.id:
+                    continue  # Skip other invitations' custom contracts
+            result.append(doc)
+
+    return [RegistrationDocumentResponse(
+        id=d.id, type=d.type, title=d.title, version=d.version,
+        content=d.content, file_url=d.file_url,
+    ) for d in result]

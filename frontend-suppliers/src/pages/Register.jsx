@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { validateToken, registerSupplier, uploadBankCert, validateBankCertIban, checkOcForRegistration } from '../services/api';
-import { CheckCircle, AlertCircle, FileText } from 'lucide-react';
-import { LegalDocumentModal, PrivacyPolicyContent, AgencyContractContent } from '../components/LegalDocuments';
+import { validateToken, registerSupplier, uploadBankCert, validateBankCertIban, checkOcForRegistration, getRegistrationDocuments } from '../services/api';
+import { CheckCircle, AlertCircle, FileText, Loader2 } from 'lucide-react';
+import { LegalDocumentModal } from '../components/LegalDocuments';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -23,13 +23,12 @@ const Register = () => {
   const [ibanStatus, setIbanStatus] = useState(null); // null | 'success' | 'warning'
   const [ibanMessage, setIbanMessage] = useState('');
 
-  // Step 4: Legal documents
+  // Step 4: Legal documents (dynamic)
   const [hasOc, setHasOc] = useState(false);
   const [checkingOc, setCheckingOc] = useState(true);
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [contractAccepted, setContractAccepted] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [showContractModal, setShowContractModal] = useState(false);
+  const [legalDocs, setLegalDocs] = useState([]);       // Documents from backend
+  const [acceptedIds, setAcceptedIds] = useState(new Set()); // IDs user has accepted
+  const [activeModal, setActiveModal] = useState(null);  // doc object shown in modal
 
   // Strip token from URL to prevent leaking via browser history/referrer
   useEffect(() => {
@@ -49,13 +48,17 @@ const Register = () => {
     }).catch(() => setTokenValid(false));
   }, []);
 
-  // Check OC when entering step 4
+  // Check OC + load documents when entering step 4
   useEffect(() => {
     if (step === 4) {
       setCheckingOc(true);
       checkOcForRegistration(form.nif_cif, form.name, token)
-        .then(r => setHasOc(r.data.has_oc))
-        .catch(() => setHasOc(false))
+        .then(r => {
+          setHasOc(r.data.has_oc);
+          return getRegistrationDocuments(token, r.data.has_oc);
+        })
+        .then(r => setLegalDocs(r.data || []))
+        .catch(() => { setHasOc(false); setLegalDocs([]); })
         .finally(() => setCheckingOc(false));
     }
   }, [step]);
@@ -85,6 +88,7 @@ const Register = () => {
         gdpr_consent: true,
         privacy_accepted: true,
         contract_accepted: hasOc ? true : undefined,
+        accepted_document_ids: legalDocs.length > 0 ? [...acceptedIds] : undefined,
       });
       login({ access_token: data.access_token, refresh_token: data.refresh_token, supplier: { id: data.supplier_id, name: form.name, email: invitation.email } });
 
@@ -162,7 +166,10 @@ const Register = () => {
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-md focus:border-amber-500 outline-none";
   const labelCls = "text-[9px] text-zinc-400 tracking-widest uppercase font-semibold mb-1.5 block";
 
-  const canComplete = privacyAccepted && (!hasOc || contractAccepted);
+  // Dynamic: all loaded docs must be accepted; fallback to legacy if no docs loaded
+  const canComplete = legalDocs.length > 0
+    ? legalDocs.every(d => acceptedIds.has(d.id))
+    : true; // Legacy: privacy_accepted + contract_accepted handled by backend
 
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-8">
@@ -337,7 +344,7 @@ const Register = () => {
             </>
           )}
 
-          {/* Step 4: Legal documents */}
+          {/* Step 4: Legal documents (dynamic) */}
           {step === 4 && (
             <>
               <div className="mb-4">
@@ -351,48 +358,29 @@ const Register = () => {
                 </div>
               ) : (
                 <div className="space-y-3 mb-4">
-                  {/* Privacy Policy card */}
-                  <div className="bg-zinc-800 border border-zinc-700 rounded-md p-3.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <FileText size={16} className="text-zinc-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-[13px] text-zinc-200">Privacy Policy</div>
-                        <div className="text-[10px] text-zinc-500">DAZZ CREATIVE — v1.0</div>
-                      </div>
-                    </div>
-                    {privacyAccepted ? (
-                      <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
-                        <CheckCircle size={14} /> Accepted
-                      </span>
-                    ) : (
-                      <button onClick={() => setShowPrivacyModal(true)}
-                        className="text-xs text-amber-500 hover:text-amber-400 font-semibold transition-colors">
-                        Read document
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Agency Contract card (only for influencers) */}
-                  {hasOc && (
-                    <div className="bg-zinc-800 border border-zinc-700 rounded-md p-3.5 flex items-center justify-between">
+                  {legalDocs.map(doc => (
+                    <div key={doc.id} className="bg-zinc-800 border border-zinc-700 rounded-md p-3.5 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <FileText size={16} className="text-zinc-400 flex-shrink-0" />
                         <div>
-                          <div className="text-[13px] text-zinc-200">Agency Contract</div>
-                          <div className="text-[10px] text-zinc-500">DAZZLE MANAGEMENT — v1.0</div>
+                          <div className="text-[13px] text-zinc-200">{doc.title}</div>
+                          <div className="text-[10px] text-zinc-500">v{doc.version}</div>
                         </div>
                       </div>
-                      {contractAccepted ? (
+                      {acceptedIds.has(doc.id) ? (
                         <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
                           <CheckCircle size={14} /> Accepted
                         </span>
                       ) : (
-                        <button onClick={() => setShowContractModal(true)}
+                        <button onClick={() => setActiveModal(doc)}
                           className="text-xs text-amber-500 hover:text-amber-400 font-semibold transition-colors">
                           Read document
                         </button>
                       )}
                     </div>
+                  ))}
+                  {legalDocs.length === 0 && !checkingOc && (
+                    <div className="text-[12px] text-zinc-500 text-center py-4">No legal documents required.</div>
                   )}
                 </div>
               )}
@@ -413,26 +401,19 @@ const Register = () => {
         </div>
       </div>
 
-      {/* Legal modals */}
-      {showPrivacyModal && (
+      {/* Dynamic legal document modal */}
+      {activeModal && (
         <LegalDocumentModal
-          title="PRIVACY POLICY"
-          pdfUrl="/docs/privacy-policy.pdf"
-          onAccept={() => setPrivacyAccepted(true)}
-          onClose={() => setShowPrivacyModal(false)}
+          title={activeModal.title.toUpperCase()}
+          pdfUrl={activeModal.file_url?.startsWith('http') ? activeModal.file_url : null}
+          onAccept={() => setAcceptedIds(prev => new Set([...prev, activeModal.id]))}
+          onClose={() => setActiveModal(null)}
         >
-          <PrivacyPolicyContent />
-        </LegalDocumentModal>
-      )}
-
-      {showContractModal && (
-        <LegalDocumentModal
-          title="AGENCY CONTRACT"
-          pdfUrl="/docs/agency-contract.pdf"
-          onAccept={() => setContractAccepted(true)}
-          onClose={() => setShowContractModal(false)}
-        >
-          <AgencyContractContent />
+          {activeModal.content ? (
+            <div dangerouslySetInnerHTML={{ __html: activeModal.content }} />
+          ) : (
+            <p className="text-zinc-500 text-sm">No content available.</p>
+          )}
         </LegalDocumentModal>
       )}
     </div>

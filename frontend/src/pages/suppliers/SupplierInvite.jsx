@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, CheckCircle, Shield, AlertTriangle } from 'lucide-react';
-import { inviteSupplier, createOC, checkOcNif } from '../../services/suppliersApi';
+import { Send, CheckCircle, Shield, AlertTriangle, FileText, Upload, Eye, Code, Loader2 } from 'lucide-react';
+import { inviteSupplier, createOC, checkOcNif, extractLegalDocText, inviteWithContract } from '../../services/suppliersApi';
 import OCSelector from '../../components/OCSelector';
 import { getCompanies } from '../../services/api';
 
@@ -22,6 +22,14 @@ const SupplierInvite = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+
+  // Personalized contract (optional, only when OC created)
+  const [withContract, setWithContract] = useState(false);
+  const [contractFile, setContractFile] = useState(null);
+  const [contractHtml, setContractHtml] = useState('');
+  const [extractingContract, setExtractingContract] = useState(false);
+  const [showContractRaw, setShowContractRaw] = useState(false);
+  const contractFileRef = useRef(null);
 
   const [sending, setSending] = useState(false);
   const [creatingOC, setCreatingOC] = useState(false);
@@ -56,13 +64,41 @@ const SupplierInvite = () => {
     }
   };
 
+  const handleContractFile = async (f) => {
+    if (!f || f.type !== 'application/pdf') { setError('Solo PDF'); return; }
+    if (f.size > 10 * 1024 * 1024) { setError('Máximo 10MB'); return; }
+    setContractFile(f);
+    setError('');
+    setExtractingContract(true);
+    try {
+      const { data } = await extractLegalDocText(f);
+      setContractHtml(data.html);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Error al extraer texto del contrato');
+      setContractFile(null);
+    }
+    setExtractingContract(false);
+  };
+
   const handleInvite = async (e) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
     setError('');
     setSending(true);
     try {
-      await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
+      if (withContract && contractFile && contractHtml) {
+        // Use invite-with-contract endpoint
+        const form = new FormData();
+        form.append('file', contractFile);
+        await inviteWithContract(form, {
+          name: name.trim(),
+          email: email.trim(),
+          message: message.trim() || undefined,
+          contract_content: contractHtml,
+        });
+      } else {
+        await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
+      }
       setSent(true);
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al enviar invitación');
@@ -76,6 +112,7 @@ const SupplierInvite = () => {
     setTalentName(''); setTalentNif(''); setTalentOC('');
     setOcCreated(false);
     setName(''); setEmail(''); setMessage('');
+    setWithContract(false); setContractFile(null); setContractHtml('');
     setSent(false); setError('');
   };
 
@@ -201,6 +238,77 @@ const SupplierInvite = () => {
               {creatingOC ? 'Creando...' : 'Crear OC →'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ─── PERSONALIZED CONTRACT (optional, after OC created) ─── */}
+      {withOC && ocCreated && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-3">
+          <label className="flex items-center gap-3 cursor-pointer mb-3">
+            <input
+              type="checkbox"
+              checked={withContract}
+              onChange={e => { setWithContract(e.target.checked); if (!e.target.checked) { setContractFile(null); setContractHtml(''); } }}
+              className="w-4 h-4 accent-amber-500 rounded"
+            />
+            <div>
+              <div className="text-[13px] text-zinc-200 font-medium">Adjuntar contrato personalizado</div>
+              <div className="text-[12px] text-zinc-500">Si no adjuntas, se usará el contrato genérico vigente</div>
+            </div>
+          </label>
+
+          {withContract && (
+            <div className="ml-7">
+              {!contractFile ? (
+                <div
+                  onClick={() => contractFileRef.current?.click()}
+                  className="border-2 border-dashed border-zinc-700 rounded-lg p-4 text-center cursor-pointer hover:border-amber-500/50 transition-colors"
+                >
+                  <Upload size={20} className="text-zinc-600 mx-auto mb-1" />
+                  <p className="text-[12px] text-zinc-400">Subir PDF del contrato</p>
+                  <input ref={contractFileRef} type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) handleContractFile(e.target.files[0]); e.target.value = ''; }} className="hidden" />
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2 bg-zinc-800 rounded p-2 mb-2">
+                    <FileText size={13} className="text-amber-400" />
+                    <span className="text-[12px] text-zinc-300 flex-1 truncate">{contractFile.name}</span>
+                    {!extractingContract && (
+                      <button onClick={() => { setContractFile(null); setContractHtml(''); }} className="text-zinc-500 hover:text-zinc-300 text-[11px]">
+                        Cambiar
+                      </button>
+                    )}
+                  </div>
+                  {extractingContract && (
+                    <div className="flex items-center gap-2 text-amber-400 text-[11px] mb-2">
+                      <Loader2 size={12} className="animate-spin" /> Extrayendo texto con IA...
+                    </div>
+                  )}
+                  {contractHtml && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] text-zinc-500">Preview del contrato</span>
+                        <button onClick={() => setShowContractRaw(!showContractRaw)} className="text-[10px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1">
+                          {showContractRaw ? <><Eye size={10} /> Preview</> : <><Code size={10} /> HTML</>}
+                        </button>
+                      </div>
+                      {showContractRaw ? (
+                        <textarea
+                          value={contractHtml}
+                          onChange={e => setContractHtml(e.target.value)}
+                          className="w-full bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-['IBM_Plex_Mono'] p-2 rounded h-[150px] resize-y focus:border-amber-500 outline-none"
+                        />
+                      ) : (
+                        <div className="bg-zinc-950 border border-zinc-800 rounded p-3 max-h-[200px] overflow-y-auto">
+                          <div dangerouslySetInnerHTML={{ __html: contractHtml }} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

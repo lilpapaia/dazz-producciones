@@ -225,6 +225,27 @@ async def register_supplier(
         SupplierNotification.message.contains(invitation.email),
     ).update({"related_supplier_id": supplier.id}, synchronize_session=False)
 
+    # FEAT-06 Phase 2: Create document acceptances + assign invitation docs
+    from app.models.legal_documents import LegalDocument, SupplierDocumentAcceptance
+    if body.accepted_document_ids:
+        # Assign invitation-linked docs to this supplier
+        invitation_docs = db.query(LegalDocument).filter(
+            LegalDocument.target_invitation_id == invitation.id,
+            LegalDocument.is_active == True,
+        ).all()
+        for doc in invitation_docs:
+            doc.target_supplier_id = supplier.id
+
+        # Create acceptance records
+        for doc_id in body.accepted_document_ids:
+            doc = db.query(LegalDocument).get(doc_id)
+            if doc and doc.is_active:
+                db.add(SupplierDocumentAcceptance(
+                    supplier_id=supplier.id,
+                    document_id=doc_id,
+                    accepted_at=datetime.now(timezone.utc),
+                ))
+
     # Notifications (before commit — atomic with supplier creation)
     if body.iban:
         _notify(db, NotificationRecipientType.ADMIN, ADMIN_RECIPIENT_ID, NotificationEventType.REGISTRATION,
