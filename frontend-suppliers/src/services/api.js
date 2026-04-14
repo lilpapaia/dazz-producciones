@@ -127,4 +127,11 @@ export const requestIbanChange = (newIban, file) => {
 };
 export const requestDeactivation = (data) => api.post('/portal/request-deactivation', data);
 
+// Legal documents
+export const getPendingDocuments = () => api.get('/portal/pending-documents');
+export const getMyDocuments = () => api.get('/portal/my-documents');
+export const getLegalDocument = (docId) => api.get(`/portal/legal-document/${docId}`);
+export const getLegalDocDownloadUrl = (docId) => api.get(`/portal/legal-document/${docId}/download`);
+export const acceptDocument = (docId) => api.post(`/portal/accept-document/${docId}`);
+
 export default api;

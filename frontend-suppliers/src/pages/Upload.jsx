@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { uploadInvoice, getProfile } from '../services/api';
+import { useNavigate, Link } from 'react-router-dom';
+import { uploadInvoice, getProfile, getPendingDocuments } from '../services/api';
 import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, X, ChevronLeft, User, ExternalLink, RotateCcw } from 'lucide-react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -18,9 +18,11 @@ const UploadPage = () => {
   const [currentIdx, setCurrentIdx] = useState(-1);
   const [oversizedFile, setOversizedFile] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [pendingDocs, setPendingDocs] = useState(null);
 
   useEffect(() => {
     getProfile().then(r => { if (mountedRef.current) setProfile(r.data); }).catch(() => {});
+    getPendingDocuments().then(r => { if (mountedRef.current) setPendingDocs(r.data); }).catch(() => {});
     return () => { mountedRef.current = false; };
   }, []);
 
@@ -80,6 +82,13 @@ const UploadPage = () => {
       } catch (err) {
         const isTimeout = err.code === 'ERR_CANCELED' || err.name === 'AbortError';
         const detail = err.response?.data?.detail;
+        // FEAT-06: Detect pending legal documents block from backend 403
+        if (err.response?.status === 403 && detail === 'pending_legal_documents') {
+          setPendingDocs([{ id: 0 }]);
+          setUploading(false);
+          setCurrentIdx(-1);
+          return;
+        }
         const isDuplicate = err.response?.status === 409 && detail?.code === 'duplicate_hash';
         updated[i] = {
           ...updated[i],
@@ -127,8 +136,23 @@ const UploadPage = () => {
         <h1 className="font-['Bebas_Neue'] text-[16px] lg:text-[22px] tracking-wider text-zinc-300">Upload invoice</h1>
       </div>
 
+      {/* Pending legal documents — block upload */}
+      {pendingDocs && pendingDocs.length > 0 && (
+        <div className="mx-4 lg:mx-0 bg-amber-500/[.06] border border-amber-500/[.12] rounded-xl p-6 text-center mb-4">
+          <FileText size={28} className="text-amber-400 mx-auto mb-3" strokeWidth={1.5} />
+          <p className="text-sm font-medium text-zinc-200 mb-2">Pending legal documents</p>
+          <p className="text-[12px] text-zinc-400 leading-relaxed mb-3">
+            You must accept all pending legal documents before uploading invoices.
+          </p>
+          <Link to="/documents"
+            className="inline-block bg-amber-500 text-zinc-950 text-[12px] font-bold px-4 py-2 rounded-lg hover:bg-amber-400 transition-colors">
+            Review documents
+          </Link>
+        </div>
+      )}
+
       {/* No IBAN — block upload */}
-      {profile && !profile.iban_masked && (
+      {profile && !profile.iban_masked && !(pendingDocs && pendingDocs.length > 0) && (
         <div className="mx-4 lg:mx-0 bg-amber-500/[.06] border border-amber-500/[.12] rounded-xl p-6 text-center mb-4">
           <AlertCircle size={28} className="text-amber-400 mx-auto mb-3" strokeWidth={1.5} />
           <p className="text-sm font-medium text-zinc-200 mb-2">IBAN required</p>
@@ -150,7 +174,7 @@ const UploadPage = () => {
       )}
 
       {/* Drop zone */}
-      {!allDone && profile && profile.iban_masked && (
+      {!allDone && profile && profile.iban_masked && !(pendingDocs && pendingDocs.length > 0) && (
         <div
           onDragOver={e => { e.preventDefault(); if (!uploading) setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}

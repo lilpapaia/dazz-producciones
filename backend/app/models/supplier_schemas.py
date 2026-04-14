@@ -272,6 +272,60 @@ class DeactivationRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=2000)
 
 
+# ============================================
+# LEGAL DOCUMENTS SCHEMAS (FEAT-06)
+# ============================================
+
+class LegalDocumentResponse(BaseModel):
+    id: int
+    type: str
+    version: int
+    title: str
+    file_size: Optional[int] = None
+    is_generic: bool
+    target_supplier_id: Optional[int] = None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LegalDocumentDetailResponse(LegalDocumentResponse):
+    """Includes content HTML — used for modal display."""
+    content: Optional[str] = None
+    file_url: Optional[str] = None
+
+
+class PendingDocumentResponse(BaseModel):
+    id: int
+    type: str
+    title: str
+    version: int
+
+
+class AcceptedDocumentResponse(BaseModel):
+    id: int
+    type: str
+    title: str
+    version: int
+    accepted_at: datetime
+
+
+class MyDocumentsResponse(BaseModel):
+    pending: list[PendingDocumentResponse]
+    accepted: list[AcceptedDocumentResponse]
+
+
+class SupplierDocumentsResponse(BaseModel):
+    """Admin view: docs for a specific supplier."""
+    supplier_id: int
+    supplier_name: str
+    is_influencer: bool
+    pending: list[PendingDocumentResponse]
+    accepted: list[AcceptedDocumentResponse]
+
+
 class AutoInvoiceRequest(BaseModel):
     company_id: int
     supplier_id: int

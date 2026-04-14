@@ -17,6 +17,7 @@ from config.database import engine
 from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics, companies
 from app.routes import suppliers as suppliers_admin, supplier_portal, autoinvoice
+from app.routes import legal_documents as legal_documents_router
 from app.services.rate_limit import limiter
 
 # QUAL-3: Lifespan context manager (replaces deprecated @app.on_event("startup"))
@@ -92,6 +93,16 @@ async def lifespan(app):
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_file_hash ON supplier_invoices (file_hash)"))
             conn.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS country_code VARCHAR(10)"))
             conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS is_suplido BOOLEAN DEFAULT FALSE"))
+            # FEAT-06: Partial unique indexes for legal_documents
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_legal_doc_generic_active "
+                "ON legal_documents (type) WHERE is_generic = TRUE AND is_active = TRUE"
+            ))
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_legal_doc_supplier_active "
+                "ON legal_documents (type, target_supplier_id) "
+                "WHERE target_supplier_id IS NOT NULL AND is_active = TRUE"
+            ))
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_autoinvoice_unique_number "
                 "ON supplier_invoices (invoice_number) WHERE is_autoinvoice = TRUE"
@@ -139,6 +150,21 @@ async def lifespan(app):
         except Exception as e:
             logger.warning(f"OC prefixes seed warning: {e}")
 
+        # FEAT-06: Seed initial legal documents + migrate existing acceptances
+        try:
+            from app.models.legal_documents import LegalDocument, SupplierDocumentAcceptance, LegalDocumentType
+            from app.models.suppliers import Supplier
+            from sqlalchemy.orm import Session as OrmSession
+            with OrmSession(bind=engine) as session:
+                existing_docs = session.query(LegalDocument).filter(LegalDocument.is_active == True).count()
+                if existing_docs == 0:
+                    _seed_legal_documents(session)
+                    _migrate_existing_acceptances(session)
+                    session.commit()
+                    logger.info("Legal documents seeded + acceptances migrated")
+        except Exception as e:
+            logger.warning(f"Legal documents seed warning: {e}")
+
         if is_postgres:
             conn.execute(text("SELECT pg_advisory_unlock(12345)"))
             conn.commit()
@@ -146,6 +172,234 @@ async def lifespan(app):
     logger.info("Base de datos inicializada")
     logger.info(f"Modo: {ENVIRONMENT}")
     yield
+
+
+# ============================================
+# FEAT-06: Legal documents seed helpers
+# ============================================
+
+SUPPLIER_PORTAL_PDF_BASE = "https://providers.dazzcreative.com/docs"
+
+_PRIVACY_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Portal de Proveedores — Version 1.0 — Abril 2026</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">1. Responsable del tratamiento</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">DIGITAL ADVERTISING SOCIAL SERVICES S.L. (en adelante, "DAZZ CREATIVE" o "la Empresa"), con CIF B-XXXXXXXX y domicilio social en Madrid, España, es la entidad responsable del tratamiento de los datos personales recogidos a través del Portal de Proveedores (en adelante, "el Portal").</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">Contacto del Delegado de Protección de Datos: <span class="text-amber-500">dpo@dazzcreative.com</span></p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">2. Datos personales recogidos</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">A través del Portal, DAZZ CREATIVE recoge y trata los siguientes datos personales de los proveedores:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li><strong class="text-zinc-300">Datos identificativos:</strong> nombre completo o razón social, NIF/CIF, dirección postal, teléfono de contacto, dirección de correo electrónico.</li>
+<li><strong class="text-zinc-300">Datos bancarios:</strong> número de cuenta IBAN y certificado bancario asociado, necesarios para la gestión de pagos.</li>
+<li><strong class="text-zinc-300">Datos fiscales:</strong> información contenida en las facturas emitidas por el proveedor (base imponible, IVA, IRPF, importes totales).</li>
+<li><strong class="text-zinc-300">Datos de acceso:</strong> credenciales de acceso al Portal (email y contraseña cifrada).</li>
+<li><strong class="text-zinc-300">Datos de actividad:</strong> historial de facturas, notificaciones, y acciones realizadas en el Portal.</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">3. Finalidad del tratamiento</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">Los datos personales se tratan con las siguientes finalidades:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li><strong class="text-zinc-300">Gestión de la relación comercial:</strong> registro y administración de proveedores, tramitación de facturas, gestión de pagos y comunicaciones operativas.</li>
+<li><strong class="text-zinc-300">Cumplimiento de obligaciones legales:</strong> obligaciones fiscales y contables conforme a la normativa española vigente (Ley General Tributaria, Código de Comercio).</li>
+<li><strong class="text-zinc-300">Verificación de identidad:</strong> validación de datos bancarios y fiscales mediante certificados y verificación automatizada.</li>
+<li><strong class="text-zinc-300">Comunicaciones relacionadas con el servicio:</strong> notificaciones sobre el estado de facturas, aprobaciones, pagos y cambios en la cuenta del proveedor.</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">4. Base legal del tratamiento</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">El tratamiento de datos se fundamenta en:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li><strong class="text-zinc-300">Ejecución de contrato:</strong> el tratamiento es necesario para la gestión de la relación contractual entre DAZZ CREATIVE y el proveedor (Art. 6.1.b RGPD).</li>
+<li><strong class="text-zinc-300">Obligación legal:</strong> conservación de datos fiscales y contables conforme a la legislación española (Art. 6.1.c RGPD).</li>
+<li><strong class="text-zinc-300">Interés legítimo:</strong> prevención de fraude y seguridad del sistema (Art. 6.1.f RGPD).</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">5. Conservación de datos</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">Los datos personales se conservarán durante los siguientes plazos:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-3 list-disc list-inside space-y-1">
+<li><strong class="text-zinc-300">Datos fiscales y contables:</strong> 6 años desde el último ejercicio fiscal en que se utilizaron, conforme al artículo 30 del Código de Comercio y la Ley General Tributaria.</li>
+<li><strong class="text-zinc-300">Datos de la relación comercial:</strong> mientras se mantenga la relación activa con el proveedor y durante el plazo legal de conservación posterior.</li>
+<li><strong class="text-zinc-300">Datos de acceso al Portal:</strong> mientras la cuenta del proveedor permanezca activa. En caso de desactivación, los datos se conservarán conforme a los plazos legales indicados.</li>
+</ul>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">La desactivación de la cuenta del proveedor no implica la eliminación de datos sujetos a obligación legal de conservación.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">6. Destinatarios de los datos</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">Los datos personales podrán ser comunicados a:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li><strong class="text-zinc-300">Proveedores de servicios tecnológicos:</strong> plataformas de alojamiento (Railway, Vercel), almacenamiento en la nube (Cloudinary, Cloudflare), procesamiento de inteligencia artificial (Anthropic), y servicios de correo electrónico (Brevo). Todos los proveedores cumplen con el RGPD o disponen de cláusulas contractuales tipo.</li>
+<li><strong class="text-zinc-300">Administraciones públicas:</strong> cuando sea requerido por obligación legal (Agencia Tributaria, Seguridad Social).</li>
+<li><strong class="text-zinc-300">Entidades del grupo DAZZ:</strong> DAZZ CREATIVE AUDIOVISUAL S.L. y entidades vinculadas, para la gestión administrativa y contable interna.</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">7. Derechos del interesado</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">El proveedor tiene derecho a:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-3 list-disc list-inside space-y-1">
+<li><strong class="text-zinc-300">Acceso:</strong> conocer qué datos personales se están tratando.</li>
+<li><strong class="text-zinc-300">Rectificación:</strong> solicitar la corrección de datos inexactos o incompletos.</li>
+<li><strong class="text-zinc-300">Supresión:</strong> solicitar la eliminación de datos cuando ya no sean necesarios, sin perjuicio de las obligaciones legales de conservación.</li>
+<li><strong class="text-zinc-300">Limitación del tratamiento:</strong> solicitar la restricción del tratamiento en los casos previstos legalmente.</li>
+<li><strong class="text-zinc-300">Portabilidad:</strong> recibir los datos en un formato estructurado y de uso común.</li>
+<li><strong class="text-zinc-300">Oposición:</strong> oponerse al tratamiento basado en interés legítimo.</li>
+</ul>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Para ejercer estos derechos, el proveedor puede dirigirse a: <span class="text-amber-500">dpo@dazzcreative.com</span> indicando su identidad y el derecho que desea ejercer.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">Asimismo, el interesado tiene derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (www.aepd.es) si considera que sus derechos no han sido debidamente atendidos.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">8. Medidas de seguridad</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">DAZZ CREATIVE aplica las medidas técnicas y organizativas apropiadas para garantizar la seguridad de los datos personales, incluyendo:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li>Cifrado de datos sensibles (IBAN) mediante algoritmo AES-128 (Fernet).</li>
+<li>Certificados bancarios almacenados en infraestructura segura con acceso restringido.</li>
+<li>Contraseñas almacenadas con hash bcrypt, nunca en texto plano.</li>
+<li>Comunicaciones cifradas mediante HTTPS/TLS.</li>
+<li>Control de acceso basado en roles con autenticación JWT.</li>
+<li>Protección contra ataques de fuerza bruta con bloqueo de cuenta y rate limiting.</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">9. Tratamiento automatizado</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">El Portal utiliza sistemas de inteligencia artificial para la extracción automática de datos de facturas y la verificación de datos bancarios. Estas decisiones automatizadas no producen efectos jurídicos sobre el proveedor y están sujetas a revisión manual por parte del equipo de DAZZ CREATIVE.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">El proveedor tiene derecho a solicitar la intervención humana, expresar su punto de vista y impugnar cualquier decisión basada únicamente en el tratamiento automatizado.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">10. Modificaciones</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">DAZZ CREATIVE se reserva el derecho de modificar la presente Política de Privacidad. En caso de modificación sustancial, se notificará al proveedor a través del Portal y/o por correo electrónico. La continuación del uso del Portal tras la notificación implica la aceptación de las modificaciones.</p>
+<p class="text-zinc-500 text-[10px] mb-3">Última actualización: abril de 2026.</p>
+<p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZ CREATIVE © 2026 — Todos los derechos reservados</p>"""
+
+_CONTRACT_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Version 1.0 — Abril 2026</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">1. Partes contratantes</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3"><strong class="text-zinc-300">De una parte,</strong> DAZZLE MANAGEMENT S.L. (en adelante, "la Agencia" o "DAZZLE MGMT"), con CIF B-XXXXXXXX y domicilio social en Madrid, España, representada por D./Dña. _________________, en calidad de Administrador/a.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4"><strong class="text-zinc-300">De otra parte,</strong> el/la Talento cuyas datos se detallan en el formulario de registro del Portal de Proveedores de DAZZ CREATIVE (en adelante, "el Talento" o "el Influencer"), identificado/a mediante su NIF/CIF y datos de contacto proporcionados durante el proceso de alta.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">2. Objeto del contrato</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">El presente contrato tiene por objeto regular la relación de representación y gestión comercial entre la Agencia y el Talento, en virtud de la cual:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li>La Agencia actuará como intermediaria y representante del Talento para la obtención, negociación y gestión de colaboraciones comerciales, campañas publicitarias y proyectos de creación de contenido digital.</li>
+<li>El Talento se compromete a prestar sus servicios profesionales de creación de contenido conforme a las condiciones acordadas para cada proyecto individual.</li>
+<li>La gestión administrativa, fiscal y de facturación se realizará a través del Portal de Proveedores de DAZZ CREATIVE.</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">3. Duración</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">El presente contrato tendrá una duración de UN (1) AÑO desde la fecha de aceptación digital en el Portal de Proveedores, renovándose automáticamente por períodos iguales salvo notificación en contrario por cualquiera de las partes con un preaviso mínimo de TREINTA (30) días naturales antes de la fecha de vencimiento.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">La notificación de no renovación podrá realizarse a través del Portal de Proveedores (solicitud de desactivación de cuenta) o por escrito dirigido a la otra parte.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">4. Obligaciones de la Agencia</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">La Agencia se compromete a:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li>Buscar activamente oportunidades comerciales adecuadas al perfil del Talento.</li>
+<li>Negociar las condiciones económicas y contractuales de cada colaboración en interés del Talento.</li>
+<li>Gestionar la facturación y el cobro de los servicios prestados por el Talento, a través del sistema de autofacturación del Portal cuando corresponda.</li>
+<li>Informar al Talento de todas las oportunidades, condiciones y pagos de forma transparente y en tiempo razonable.</li>
+<li>Garantizar el cumplimiento de la normativa fiscal aplicable en la emisión de facturas y la retención de impuestos.</li>
+<li>Proteger los datos personales del Talento conforme a la Política de Privacidad del Portal y al Reglamento General de Protección de Datos (RGPD).</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">5. Obligaciones del Talento</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">El Talento se compromete a:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-4 list-disc list-inside space-y-1">
+<li>Prestar los servicios acordados para cada proyecto con profesionalidad, puntualidad y conforme a las especificaciones del cliente.</li>
+<li>Mantener actualizados sus datos personales, fiscales y bancarios en el Portal de Proveedores.</li>
+<li>Comunicar a la Agencia cualquier acuerdo o negociación directa con marcas o empresas que pudiera entrar en conflicto con la presente relación de representación.</li>
+<li>No aceptar colaboraciones comerciales gestionadas por la Agencia directamente con el cliente, sin la intermediación de ésta.</li>
+<li>Subir las facturas correspondientes a sus servicios a través del Portal de Proveedores en los plazos establecidos.</li>
+<li>Cumplir con las obligaciones fiscales que le correspondan como profesional autónomo o entidad mercantil.</li>
+</ul>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">6. Condiciones económicas</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1"><strong class="text-zinc-300">6.1 Comisión de la Agencia:</strong> La Agencia percibirá una comisión del ___% sobre el importe bruto facturado por cada colaboración gestionada. Esta comisión se deducirá antes de la liquidación al Talento.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1"><strong class="text-zinc-300">6.2 Facturación:</strong> Las facturas se gestionarán a través del Portal de Proveedores. La Agencia podrá emitir autofacturas en nombre del Talento cuando así se acuerde.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1"><strong class="text-zinc-300">6.3 Plazos de pago:</strong> Los pagos al Talento se realizarán en un plazo máximo de TREINTA (30) días desde la recepción del pago del cliente por parte de la Agencia.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4"><strong class="text-zinc-300">6.4 Retenciones fiscales:</strong> Se aplicarán las retenciones de IRPF que correspondan según la normativa vigente. El Talento será responsable de sus obligaciones tributarias como profesional independiente.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">7. Propiedad intelectual</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1">7.1 El contenido creado por el Talento en el marco de las colaboraciones gestionadas se regirá por los acuerdos específicos de cada proyecto con el cliente final.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1">7.2 Salvo acuerdo expreso en contrario, el Talento conserva los derechos morales sobre su contenido original.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">7.3 La Agencia podrá utilizar el nombre, imagen y extractos del contenido del Talento con fines promocionales de la propia Agencia, previa notificación al Talento.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">8. Confidencialidad</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Ambas partes se comprometen a mantener la confidencialidad sobre los términos económicos de este contrato, las condiciones de las colaboraciones comerciales, y cualquier información de carácter reservado a la que tengan acceso en el desarrollo de la relación contractual.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">Esta obligación de confidencialidad se mantendrá vigente durante la duración del contrato y durante DOS (2) años tras su finalización.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">9. Exclusividad</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1">9.1 El Talento concede a la Agencia la exclusividad de representación para las categorías y mercados acordados durante la vigencia del contrato.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-1">9.2 El Talento podrá mantener colaboraciones directas en categorías no cubiertas por la Agencia, siempre que informe previamente a ésta.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">9.3 En caso de que el Talento reciba ofertas directas de marcas o empresas en categorías gestionadas por la Agencia, deberá redirigirlas a ésta para su gestión.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">10. Resolución del contrato</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-2">El contrato podrá resolverse por las siguientes causas:</p>
+<ul class="text-zinc-400 text-xs leading-relaxed mb-3 list-disc list-inside space-y-1">
+<li>Por mutuo acuerdo de las partes, comunicado por escrito o a través del Portal.</li>
+<li>Por incumplimiento grave de las obligaciones contractuales por cualquiera de las partes.</li>
+<li>Por decisión unilateral de cualquiera de las partes, con un preaviso de TREINTA (30) días.</li>
+<li>Por solicitud de desactivación de cuenta en el Portal de Proveedores.</li>
+</ul>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">En caso de resolución, la Agencia liquidará al Talento los importes pendientes en un plazo máximo de SESENTA (60) días. Las obligaciones de confidencialidad y las relativas a proyectos en curso subsistirán tras la resolución.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">11. Protección de datos</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">El tratamiento de datos personales del Talento se rige por la Política de Privacidad del Portal de Proveedores de DAZZ CREATIVE, que el Talento declara haber leído y aceptado.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">La Agencia se compromete a tratar los datos del Talento exclusivamente para las finalidades descritas en dicha Política y conforme al Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD).</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">12. Legislación aplicable y jurisdicción</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-4">El presente contrato se rige por la legislación española. Para la resolución de cualquier controversia derivada del mismo, las partes se someten a los Juzgados y Tribunales de Madrid, con renuncia expresa a cualquier otro fuero que pudiera corresponderles.</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-2">13. Aceptación digital</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">La aceptación del presente contrato mediante el Portal de Proveedores de DAZZ CREATIVE tiene la misma validez que la firma manuscrita, conforme a la Ley 34/2002 de Servicios de la Sociedad de la Información y la Ley 59/2003 de Firma Electrónica.</p>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Al completar el proceso de registro y aceptar este documento, el Talento declara haber leído, comprendido y aceptado todas las cláusulas del presente contrato.</p>
+<p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZLE MANAGEMENT S.L. © 2026 — Todos los derechos reservados</p>"""
+
+_AUTOCONTROL_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Version 1.0 — Abril 2026</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-4">Código de autocontrol</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Este documento será actualizado próximamente con el contenido definitivo antes del lanzamiento de la plataforma.</p>
+<p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZ CREATIVE © 2026 — Todos los derechos reservados</p>"""
+
+_DECLARATION_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Version 1.0 — Abril 2026</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-4">Declaración responsable del uso del contenido</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Este documento será actualizado próximamente con el contenido definitivo antes del lanzamiento de la plataforma.</p>
+<p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZ CREATIVE © 2026 — Todos los derechos reservados</p>"""
+
+
+def _seed_legal_documents(session):
+    """Seed the 4 initial legal documents."""
+    from app.models.legal_documents import LegalDocument
+
+    docs = [
+        LegalDocument(
+            type="PRIVACY", version=1, title="Política de Privacidad",
+            content=_PRIVACY_HTML,
+            file_url=f"{SUPPLIER_PORTAL_PDF_BASE}/privacy-policy.pdf",
+            is_generic=True, is_active=True,
+        ),
+        LegalDocument(
+            type="CONTRACT", version=1, title="Contrato de Agencia",
+            content=_CONTRACT_HTML,
+            file_url=f"{SUPPLIER_PORTAL_PDF_BASE}/agency-contract.pdf",
+            is_generic=True, is_active=True,
+        ),
+        LegalDocument(
+            type="AUTOCONTROL", version=1, title="Código de Autocontrol",
+            content=_AUTOCONTROL_HTML,
+            file_url=None,
+            is_generic=True, is_active=True,
+        ),
+        LegalDocument(
+            type="DECLARATION", version=1, title="Declaración Responsable del Uso del Contenido",
+            content=_DECLARATION_HTML,
+            file_url=None,
+            is_generic=True, is_active=True,
+        ),
+    ]
+    session.add_all(docs)
+    session.flush()  # Assign IDs before migration
+    logger.info(f"Seeded {len(docs)} legal documents")
+    return docs
+
+
+def _migrate_existing_acceptances(session):
+    """Migrate existing supplier privacy/contract acceptances to the new table."""
+    from app.models.legal_documents import LegalDocument, SupplierDocumentAcceptance
+    from app.models.suppliers import Supplier
+
+    privacy_doc = session.query(LegalDocument).filter_by(type="PRIVACY", is_active=True, is_generic=True).first()
+    contract_doc = session.query(LegalDocument).filter_by(type="CONTRACT", is_active=True, is_generic=True).first()
+
+    if not privacy_doc:
+        return
+
+    count = 0
+    suppliers = session.query(Supplier).filter(
+        (Supplier.privacy_accepted_at.isnot(None)) | (Supplier.contract_accepted_at.isnot(None))
+    ).all()
+
+    for s in suppliers:
+        if s.privacy_accepted_at and privacy_doc:
+            session.add(SupplierDocumentAcceptance(
+                supplier_id=s.id, document_id=privacy_doc.id,
+                accepted_at=s.privacy_accepted_at,
+            ))
+            count += 1
+        if s.contract_accepted_at and contract_doc:
+            session.add(SupplierDocumentAcceptance(
+                supplier_id=s.id, document_id=contract_doc.id,
+                accepted_at=s.contract_accepted_at,
+            ))
+            count += 1
+
+    logger.info(f"Migrated {count} existing document acceptances")
 
 
 # Create FastAPI app
@@ -262,6 +516,7 @@ app.include_router(companies.router)
 app.include_router(suppliers_admin.router)
 app.include_router(autoinvoice.router)
 app.include_router(supplier_portal.router)
+app.include_router(legal_documents_router.router)
 
 @app.get("/")
 @limiter.limit("10 per minute")

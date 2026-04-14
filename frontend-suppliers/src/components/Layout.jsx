@@ -1,13 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Upload, Bell, User, LogOut } from 'lucide-react';
+import { Home, Upload, Bell, User, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { getSummary } from '../services/api';
+import { getSummary, getPendingDocuments } from '../services/api';
 import DazzLogo from './DazzLogo';
 
 const NAV_ITEMS = [
   { path: '/', icon: Home, label: 'Home' },
   { path: '/upload', icon: Upload, label: 'Upload invoice' },
+  { path: '/documents', icon: FileText, label: 'Documents' },
   { path: '/notifications', icon: Bell, label: 'Notifications' },
   { path: '/profile', icon: User, label: 'My profile' },
 ];
@@ -17,6 +18,7 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const { supplier, logout } = useAuth();
   const [unread, setUnread] = useState(0);
+  const [pendingDocs, setPendingDocs] = useState(0);
   const initials = supplier?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
 
   useEffect(() => {
@@ -33,6 +35,11 @@ const Layout = ({ children }) => {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
+  }, [pathname]);
+
+  // FEAT-06: Fetch pending legal documents count
+  useEffect(() => {
+    getPendingDocuments().then(r => setPendingDocs(r.data?.length || 0)).catch(() => {});
   }, [pathname]);
 
   const handleLogout = async () => { await logout(); navigate('/login'); };
@@ -67,6 +74,9 @@ const Layout = ({ children }) => {
                 <item.icon size={15} strokeWidth={1.5} />
                 {item.label}
                 {item.path === '/notifications' && unread > 0 && (
+                  <span className="ml-auto w-2 h-2 rounded-full bg-amber-500" />
+                )}
+                {item.path === '/documents' && pendingDocs > 0 && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-amber-500" />
                 )}
               </Link>
@@ -114,6 +124,19 @@ const Layout = ({ children }) => {
           </div>
         </header>
 
+        {/* FEAT-06: Pending legal documents banner */}
+        {pendingDocs > 0 && pathname !== '/documents' && (
+          <Link to="/documents" className="block bg-amber-500/[.08] border-b border-amber-500/20 px-4 py-2.5 hover:bg-amber-500/[.12] transition-colors">
+            <div className="flex items-center gap-2 max-w-4xl mx-auto">
+              <FileText size={14} className="text-amber-400 flex-shrink-0" />
+              <span className="text-amber-400 text-xs">
+                You have {pendingDocs} pending legal document{pendingDocs !== 1 ? 's' : ''} to accept.
+              </span>
+              <span className="text-amber-500 text-xs font-semibold ml-auto">Review now →</span>
+            </div>
+          </Link>
+        )}
+
         {/* Content */}
         <main className="flex-1 overflow-y-auto pb-[80px] lg:pb-4">
           {children}
@@ -128,6 +151,9 @@ const Layout = ({ children }) => {
                 <item.icon size={20} className={active ? 'text-amber-500' : 'text-zinc-600'} strokeWidth={1.5} />
                 <span className={`text-[9px] ${active ? 'text-amber-400' : 'text-zinc-600'}`}>{item.label === 'Upload invoice' ? 'Upload' : item.label === 'My profile' ? 'Profile' : item.label}</span>
                 {item.path === '/notifications' && unread > 0 && (
+                  <span className="absolute top-[2px] right-[6px] w-2 h-2 rounded-full bg-amber-500" />
+                )}
+                {item.path === '/documents' && pendingDocs > 0 && (
                   <span className="absolute top-[2px] right-[6px] w-2 h-2 rounded-full bg-amber-500" />
                 )}
               </Link>

@@ -17,6 +17,7 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const EditData = lazy(() => import('./pages/EditData'));
 const ChangeIban = lazy(() => import('./pages/ChangeIban'));
 const RequestDeactivation = lazy(() => import('./pages/RequestDeactivation'));
+const Documents = lazy(() => import('./pages/Documents'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
@@ -37,6 +38,7 @@ function App() {
             <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><Layout><Upload /></Layout></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
+            <Route path="/documents" element={<ProtectedRoute><Layout><Documents /></Layout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
             <Route path="/profile/edit-data" element={<ProtectedRoute><Layout><EditData /></Layout></ProtectedRoute>} />
             <Route path="/profile/change-iban" element={<ProtectedRoute><Layout><ChangeIban /></Layout></ProtectedRoute>} />

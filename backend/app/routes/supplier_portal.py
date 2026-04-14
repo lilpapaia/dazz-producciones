@@ -565,6 +565,15 @@ async def upload_invoice(
     import json
     import shutil
 
+    # FEAT-06: Block upload if supplier has pending legal documents
+    from app.routes.legal_documents import get_pending_documents
+    pending_docs = get_pending_documents(supplier, db)
+    if pending_docs:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="pending_legal_documents",
+        )
+
     # Validate file (magic bytes + size)
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
