@@ -236,12 +236,14 @@ async def register_supplier(
         for doc in invitation_docs:
             doc.target_supplier_id = supplier.id
 
-        # Create acceptance records (only for applicable documents)
+        # Create acceptance records (only for applicable documents) — batch query
+        docs = {d.id: d for d in db.query(LegalDocument).filter(
+            LegalDocument.id.in_(body.accepted_document_ids),
+            LegalDocument.is_active == True,
+        ).all()}
         for doc_id in body.accepted_document_ids:
-            doc = db.query(LegalDocument).get(doc_id)
-            if doc and doc.is_active and (
-                doc.is_generic or doc.target_invitation_id == invitation.id
-            ):
+            doc = docs.get(doc_id)
+            if doc and (doc.is_generic or doc.target_invitation_id == invitation.id):
                 db.add(SupplierDocumentAcceptance(
                     supplier_id=supplier.id,
                     document_id=doc_id,
