@@ -104,7 +104,7 @@ const SuppliersLayout = () => {
 
       {/* Bottom nav — solo móvil (5 items, sin Invitar) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around h-[62px] px-4 safe-area-bottom">
-        {NAV_ITEMS.filter(i => i.path !== '/suppliers/invite').map(item => {
+        {NAV_ITEMS.filter(i => i.path !== '/suppliers/invite' && i.path !== '/suppliers/documents').map(item => {
           const active = isActive(item.path, item.exact);
           return (
             <Link

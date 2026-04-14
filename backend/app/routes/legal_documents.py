@@ -294,7 +294,11 @@ async def legal_document_stats(
     """Stats per active document: total applicable suppliers and total accepted."""
     from sqlalchemy import func as sqlfunc
 
-    active_docs = db.query(LegalDocument).filter(LegalDocument.is_active == True).all()
+    # Only generic documents (not personalized per-supplier)
+    active_docs = db.query(LegalDocument).filter(
+        LegalDocument.is_active == True,
+        LegalDocument.target_supplier_id == None,
+    ).all()
     if not active_docs:
         return []
 
@@ -372,21 +376,20 @@ async def legal_document_pending_suppliers(
         ).all()
     )
 
-    # Get last activity per supplier (latest invoice updated_at)
-    from sqlalchemy.orm import joinedload
+    # Batch-load OC numbers to avoid N+1
+    oc_ids = [s.oc_id for s in applicable if s.oc_id]
+    ocs = {oc.id: oc for oc in db.query(SupplierOC).filter(SupplierOC.id.in_(oc_ids)).all()} if oc_ids else {}
+
     pending = []
     for s in applicable:
         if s.id in accepted_supplier_ids:
             continue
-        oc_number = None
-        if s.oc_id:
-            oc = db.query(SupplierOC).get(s.oc_id)
-            oc_number = oc.oc_number if oc else None
+        oc = ocs.get(s.oc_id)
         pending.append(PendingSupplierResponse(
             id=s.id,
             name=s.name,
             nif_cif=s.nif_cif,
-            oc_number=oc_number,
+            oc_number=oc.oc_number if oc else None,
             created_at=s.created_at,
             last_activity=s.updated_at,
         ))

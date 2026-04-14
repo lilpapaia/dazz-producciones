@@ -286,17 +286,7 @@ async def invite_supplier_with_contract(
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
 
-    # Create invitation
-    token = _generate_token()
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=72)
-    invitation = SupplierInvitation(
-        email=email.lower(), name=name, token=token,
-        expires_at=expires_at, invited_by=admin.id,
-    )
-    db.add(invitation)
-    db.flush()  # Get invitation.id
-
-    # Upload PDF to R2
+    # Upload PDF to R2 first (before DB writes — if R2 fails, no orphan records)
     from app.services.legal_storage import save_legal_doc
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(contents)
@@ -307,6 +297,16 @@ async def invite_supplier_with_contract(
         )
     finally:
         os.unlink(tmp_path)
+
+    # Create invitation (after R2 success)
+    token = _generate_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=72)
+    invitation = SupplierInvitation(
+        email=email.lower(), name=name, token=token,
+        expires_at=expires_at, invited_by=admin.id,
+    )
+    db.add(invitation)
+    db.flush()  # Get invitation.id
 
     # Create personalized contract document linked to invitation
     doc = LegalDocument(

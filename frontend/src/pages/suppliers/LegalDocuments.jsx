@@ -29,8 +29,8 @@ const LegalDocumentsPage = () => {
     );
   }
 
-  // Group: show generic docs only (not custom per-supplier)
-  const genericDocs = stats?.filter(d => !d.type.includes('_CUSTOM')) || [];
+  // Stats endpoint already filters to generic-only docs
+  const genericDocs = stats || [];
 
   return (
     <div className="max-w-[47rem] mx-auto">
