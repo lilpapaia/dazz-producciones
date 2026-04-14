@@ -979,8 +979,10 @@ const ReviewTicket = () => {
                         onChange={(e) => {
                           const base = parseFloat(e.target.value) || 0;
                           const ivaP = ticket.iva_percentage || 0;
+                          const irpfP = ticket.irpf_percentage || 0;
                           const iva = Math.round(base * ivaP * 100) / 100;
-                          setTicket({ ...ticket, base_amount: base, iva_amount: iva, total_with_iva: Math.round((base + iva) * 100) / 100, final_total: Math.round((base + iva) * 100) / 100 });
+                          const irpf = Math.round(base * irpfP * 100) / 100;
+                          setTicket({ ...ticket, base_amount: base, iva_amount: iva, irpf_amount: irpf, total_with_iva: Math.round((base + iva) * 100) / 100, final_total: Math.round((base + iva - irpf) * 100) / 100 });
                         }}
                         disabled={isSupplierTicket}
                         className={`w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none${isSupplierTicket ? ' opacity-60 cursor-not-allowed' : ''}`}
@@ -996,8 +998,9 @@ const ReviewTicket = () => {
                         onChange={(e) => {
                           const pct = (parseFloat(e.target.value) || 0) / 100;
                           const base = ticket.base_amount || 0;
+                          const irpf = ticket.irpf_amount || 0;
                           const iva = Math.round(base * pct * 100) / 100;
-                          setTicket({ ...ticket, iva_percentage: pct, iva_amount: iva, total_with_iva: Math.round((base + iva) * 100) / 100, final_total: Math.round((base + iva) * 100) / 100 });
+                          setTicket({ ...ticket, iva_percentage: pct, iva_amount: iva, total_with_iva: Math.round((base + iva) * 100) / 100, final_total: Math.round((base + iva - irpf) * 100) / 100 });
                         }}
                         disabled={isSupplierTicket}
                         className={`w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 pr-7 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none${isSupplierTicket ? ' opacity-60 cursor-not-allowed' : ''}`}
@@ -1005,11 +1008,39 @@ const ReviewTicket = () => {
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">%</span>
                     </div>
                   </div>
+                  <div className="w-20">
+                    <label className="block text-zinc-400 mb-1 text-xs">% IRPF</label>
+                    <div className="relative">
+                      <select
+                        value={ticket.irpf_percentage != null ? Math.round(ticket.irpf_percentage * 100) : 0}
+                        onChange={(e) => {
+                          const pct = (parseFloat(e.target.value) || 0) / 100;
+                          const base = ticket.base_amount || 0;
+                          const iva = ticket.iva_amount || 0;
+                          const irpf = Math.round(base * pct * 100) / 100;
+                          setTicket({ ...ticket, irpf_percentage: pct, irpf_amount: irpf, final_total: Math.round((base + iva - irpf) * 100) / 100 });
+                        }}
+                        disabled={isSupplierTicket}
+                        className={`w-full bg-zinc-800 border border-zinc-700 rounded-sm px-3 py-2 text-zinc-100 font-semibold focus:outline-none focus:border-amber-500${isSupplierTicket ? ' opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="0">0%</option>
+                        <option value="7">7%</option>
+                        <option value="15">15%</option>
+                        <option value="19">19%</option>
+                      </select>
+                    </div>
+                  </div>
                   <div className="flex-1">
                     <label className="block text-zinc-400 mb-1 text-xs">IVA</label>
                     <p className="px-3 py-2 font-semibold text-zinc-300">{ticket.iva_amount?.toFixed(2)}€</p>
                   </div>
                 </div>
+
+                {(ticket.irpf_amount > 0) && (
+                  <div className="mb-2 text-xs text-zinc-500">
+                    IRPF: -{ticket.irpf_amount?.toFixed(2)}€
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-zinc-700">
                   <p className="text-zinc-400 mb-1 text-xs">Total</p>
