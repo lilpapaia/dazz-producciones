@@ -56,10 +56,10 @@ const Navbar = () => {
               </Link>
             )}
 
-            {/* Proveedores — solo ADMIN */}
-            {user.role === ROLES.ADMIN && (
+            {/* Proveedores — ADMIN (full) o BOSS MGMT (contratos) */}
+            {(user.role === ROLES.ADMIN || (user.role === ROLES.BOSS && user.companies?.some(c => c.name.toUpperCase().includes('MGMT')))) && (
               <Link
-                to="/suppliers"
+                to={user.role === ROLES.ADMIN ? '/suppliers' : '/suppliers/contracts'}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
                   isActive('/suppliers')
                     ? 'bg-amber-500 text-zinc-950'

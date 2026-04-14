@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, Bell, UserPlus, FilePlus, FileCheck } from 'lucide-react';
 import { getSuppliersDashboard } from '../../services/suppliersApi';
+import { useAuth } from '../../context/AuthContext';
 
-const NAV_ITEMS = [
+const ADMIN_NAV = [
   { path: '/suppliers', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { path: '/suppliers/list', label: 'Proveedores', icon: Users },
   { path: '/suppliers/invoices', label: 'Facturas', icon: FileText },
@@ -13,14 +14,24 @@ const NAV_ITEMS = [
   { path: '/suppliers/invite', label: 'Invitar proveedor', icon: UserPlus, section: 'add' },
 ];
 
+const BOSS_NAV = [
+  { path: '/suppliers/contracts', label: 'Contratos', icon: FileCheck, exact: true },
+];
+
 const SuppliersLayout = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  const isBoss = user?.role === 'BOSS';
+  const NAV_ITEMS = isBoss ? BOSS_NAV : ADMIN_NAV;
   const [stats, setStats] = useState({});
   const [fetchError, setFetchError] = useState(false);
 
-  const fetchStats = () => getSuppliersDashboard()
-    .then(r => { setStats(r.data); setFetchError(false); })
-    .catch(() => { setFetchError(true); });
+  const fetchStats = () => {
+    if (isBoss) return; // BOSS doesn't have access to dashboard stats
+    getSuppliersDashboard()
+      .then(r => { setStats(r.data); setFetchError(false); })
+      .catch(() => { setFetchError(true); });
+  };
 
   useEffect(() => {
     fetchStats();
@@ -36,6 +47,11 @@ const SuppliersLayout = () => {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
   }, [location.pathname]);
+
+  // BOSS redirect: if at /suppliers index, redirect to /suppliers/contracts
+  if (isBoss && location.pathname === '/suppliers') {
+    return <Navigate to="/suppliers/contracts" replace />;
+  }
 
   const isActive = (path, exact) => {
     if (exact) return location.pathname === path;
@@ -102,7 +118,8 @@ const SuppliersLayout = () => {
         <Outlet />
       </main>
 
-      {/* Bottom nav — solo móvil (5 items, sin Invitar) */}
+      {/* Bottom nav — solo móvil (ADMIN: 5 items; BOSS: hidden since only 1 item) */}
+      {!isBoss && (
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around h-[62px] px-4 safe-area-bottom">
         {NAV_ITEMS.filter(i => i.path !== '/suppliers/invite' && i.path !== '/suppliers/documents').map(item => {
           const active = isActive(item.path, item.exact);
@@ -126,6 +143,7 @@ const SuppliersLayout = () => {
           );
         })}
       </nav>
+      )}
     </div>
   );
 };

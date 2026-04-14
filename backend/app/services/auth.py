@@ -184,3 +184,15 @@ async def get_current_admin_user(
             detail="Not enough permissions"
         )
     return current_user
+
+
+async def get_current_admin_or_boss_user(
+    current_user: User = Depends(get_current_active_user)
+) -> User:
+    """Get current user if ADMIN or BOSS."""
+    if current_user.role not in (UserRole.ADMIN, UserRole.BOSS):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+    return current_user

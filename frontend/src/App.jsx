@@ -34,6 +34,7 @@ const AutoInvoice = lazy(() => import('./pages/suppliers/AutoInvoice'));
 const LegalDocumentsAdmin = lazy(() => import('./pages/suppliers/LegalDocuments'));
 const UpdateDocument = lazy(() => import('./pages/suppliers/UpdateDocument'));
 const DocumentPendingList = lazy(() => import('./pages/suppliers/DocumentPendingList'));
+const BossContracts = lazy(() => import('./pages/suppliers/BossContracts'));
 
 // PWA Components
 import { PWAUpdatePrompt, PWAInstallPrompt } from './components/PWAComponents';
@@ -170,11 +171,11 @@ function App() {
               }
             />
 
-            {/* Suppliers module - Admin only */}
+            {/* Suppliers module - Admin + BOSS MGMT */}
             <Route
               path="/suppliers"
               element={
-                <ProtectedRoute adminOnly>
+                <ProtectedRoute adminOrBossOnly>
                   <Navbar />
                   <SuppliersLayout />
                 </ProtectedRoute>
@@ -190,6 +191,7 @@ function App() {
               <Route path="documents" element={<LegalDocumentsAdmin />} />
               <Route path="documents/update/:docType" element={<UpdateDocument />} />
               <Route path="documents/:docId/pending" element={<DocumentPendingList />} />
+              <Route path="contracts" element={<BossContracts />} />
               <Route path=":id" element={<SupplierDetail />} />
             </Route>
             {/* 404 catch-all */}

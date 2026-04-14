@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from config.database import get_db
-from app.models.database import User
+from app.models.database import User, UserRole, OCPrefix
 from app.models.legal_documents import LegalDocument, SupplierDocumentAcceptance, LegalDocumentType
 from app.models.suppliers import Supplier, SupplierOC, SupplierInvitation, SupplierInvoice
 from app.models.supplier_schemas import (
@@ -24,8 +24,10 @@ from app.models.supplier_schemas import (
     MyDocumentsResponse, SupplierDocumentsResponse,
     DocumentStatsResponse, PendingSupplierResponse,
     InfluencerContractInfo, RegistrationDocumentResponse,
+    BossInfluencerDocStatus,
 )
-from app.services.auth import get_current_admin_user
+from app.services.auth import get_current_admin_user, get_current_admin_or_boss_user
+from app.services.permissions import get_user_company_ids
 from app.services.supplier_auth import get_current_active_supplier
 from app.services.validators import validate_pdf_bytes
 from app.services.rate_limit import limiter
@@ -121,6 +123,40 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def get_boss_influencer_ids(user: User, db: Session) -> set[int]:
+    """Return supplier IDs of influencers whose OC prefix belongs to the BOSS's companies.
+    Uses SQL LIKE for efficient matching instead of loading all OCs into Python."""
+    boss_cids = get_user_company_ids(user, db)
+    if not boss_cids:
+        return set()
+
+    # Get active OC prefixes for boss's companies
+    prefixes = db.query(OCPrefix.prefix).filter(
+        OCPrefix.company_id.in_(boss_cids),
+        OCPrefix.active == True,
+    ).all()
+    prefix_strings = [p[0] for p in prefixes]
+    if not prefix_strings:
+        return set()
+
+    # Find SupplierOC IDs whose oc_number starts with any of these prefixes (SQL LIKE)
+    from sqlalchemy import or_
+    oc_filters = [SupplierOC.oc_number.like(f"{p}%") for p in prefix_strings]
+    matching_oc_ids = [
+        row[0] for row in db.query(SupplierOC.id).filter(or_(*oc_filters)).all()
+    ]
+    if not matching_oc_ids:
+        return set()
+
+    # Find supplier IDs with these OCs
+    return set(
+        row[0] for row in db.query(Supplier.id).filter(
+            Supplier.oc_id.in_(matching_oc_ids),
+            Supplier.is_active == True,
+        ).all()
+    )
+
+
 # ============================================
 # ADMIN ENDPOINTS: /suppliers/legal-documents
 # ============================================
@@ -152,12 +188,21 @@ async def create_legal_document(
     target_supplier_id: Optional[int] = Query(None),
     company_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    admin: User = Depends(get_current_admin_or_boss_user),
 ):
-    """Upload a new legal document PDF + HTML content (ADMIN only)."""
+    """Upload a new legal document PDF + HTML content (ADMIN or BOSS for CONTRACT/AUTOCONTROL)."""
     doc_type = doc_type.upper()
     if doc_type not in [t.value for t in LegalDocumentType]:
         raise HTTPException(400, detail=f"Invalid type. Must be one of: {[t.value for t in LegalDocumentType]}")
+
+    # BOSS: only CONTRACT and AUTOCONTROL, only for their company's influencers
+    if admin.role == UserRole.BOSS:
+        if doc_type not in ("CONTRACT", "AUTOCONTROL"):
+            raise HTTPException(403, detail="Only CONTRACT and AUTOCONTROL documents allowed")
+        if target_supplier_id:
+            boss_inf_ids = get_boss_influencer_ids(admin, db)
+            if target_supplier_id not in boss_inf_ids:
+                raise HTTPException(403, detail="This influencer is not in your company")
 
     # Validate PDF
     contents = await file.read()
@@ -289,10 +334,12 @@ async def get_supplier_documents(
 @router.get("/suppliers/legal-documents/stats", response_model=list[DocumentStatsResponse])
 async def legal_document_stats(
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    user: User = Depends(get_current_admin_or_boss_user),
 ):
-    """Stats per active document: total applicable suppliers and total accepted."""
+    """Stats per active document. BOSS only sees CONTRACT + AUTOCONTROL for their company."""
     from sqlalchemy import func as sqlfunc
+
+    is_boss = user.role == UserRole.BOSS
 
     # Only generic documents (not personalized per-supplier)
     active_docs = db.query(LegalDocument).filter(
@@ -302,10 +349,19 @@ async def legal_document_stats(
     if not active_docs:
         return []
 
+    # BOSS: only CONTRACT and AUTOCONTROL
+    if is_boss:
+        active_docs = [d for d in active_docs if d.type in ("CONTRACT", "AUTOCONTROL")]
+
     # Count all active suppliers
     all_suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
     influencer_ids = {s.id for s in all_suppliers if s.oc_id is not None}
     all_supplier_ids = {s.id for s in all_suppliers}
+
+    # BOSS: narrow to their company's influencers
+    if is_boss:
+        boss_inf_ids = get_boss_influencer_ids(user, db)
+        influencer_ids = influencer_ids & boss_inf_ids
 
     # Pre-fetch all acceptance counts per document
     acceptance_counts = dict(
@@ -315,17 +371,12 @@ async def legal_document_stats(
         .all()
     )
 
-    # Build response — skip documents targeted at specific suppliers for custom contracts
-    # that are superseded by generic ones in the stats view
     result = []
     for doc in active_docs:
         if doc.type == "PRIVACY":
             total = len(all_supplier_ids)
         elif doc.type in ("CONTRACT", "AUTOCONTROL", "DECLARATION"):
-            if doc.target_supplier_id:
-                total = 1  # personalized doc
-            else:
-                total = len(influencer_ids)
+            total = len(influencer_ids)
         else:
             total = len(all_supplier_ids)
 
@@ -346,14 +397,17 @@ async def legal_document_stats(
 async def legal_document_pending_suppliers(
     doc_id: int,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    user: User = Depends(get_current_admin_or_boss_user),
 ):
-    """List suppliers who have NOT accepted a specific document."""
-    from sqlalchemy import func as sqlfunc
-
+    """List suppliers who have NOT accepted a specific document. BOSS filtered by company."""
     doc = db.query(LegalDocument).get(doc_id)
     if not doc or not doc.is_active:
         raise HTTPException(404, detail="Document not found")
+
+    # BOSS: can only view CONTRACT/AUTOCONTROL pending lists
+    is_boss = user.role == UserRole.BOSS
+    if is_boss and doc.type not in ("CONTRACT", "AUTOCONTROL"):
+        raise HTTPException(403, detail="Not enough permissions")
 
     # Determine applicable suppliers
     all_suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
@@ -363,8 +417,12 @@ async def legal_document_pending_suppliers(
     elif doc.target_supplier_id:
         applicable = [s for s in all_suppliers if s.id == doc.target_supplier_id]
     else:
-        # Influencer-only docs
         applicable = [s for s in all_suppliers if s.oc_id is not None]
+
+    # BOSS: narrow to their company's influencers
+    if is_boss:
+        boss_inf_ids = get_boss_influencer_ids(user, db)
+        applicable = [s for s in applicable if s.id in boss_inf_ids]
 
     if not applicable:
         return []
@@ -400,9 +458,9 @@ async def legal_document_pending_suppliers(
 @router.get("/suppliers/legal-documents/influencers", response_model=list[InfluencerContractInfo])
 async def legal_document_influencers(
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user),
+    user: User = Depends(get_current_admin_or_boss_user),
 ):
-    """List all influencers with their current contract version info."""
+    """List all influencers with their current contract version info. BOSS filtered by company."""
     influencers = db.query(Supplier).filter(
         Supplier.is_active == True,
         Supplier.oc_id != None,
@@ -410,6 +468,13 @@ async def legal_document_influencers(
 
     if not influencers:
         return []
+
+    # BOSS: filter to their company's influencers
+    if user.role == UserRole.BOSS:
+        boss_inf_ids = get_boss_influencer_ids(user, db)
+        influencers = [s for s in influencers if s.id in boss_inf_ids]
+        if not influencers:
+            return []
 
     # Get active CONTRACT documents
     active_contracts = db.query(LegalDocument).filter(
@@ -449,6 +514,82 @@ async def legal_document_influencers(
             contract_version=contract_version,
             contract_type=contract_type,
             contract_doc_id=contract_doc_id,
+        ))
+
+    return result
+
+
+@router.get("/suppliers/legal-documents/boss-contracts", response_model=list[BossInfluencerDocStatus])
+async def boss_contracts_view(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_admin_or_boss_user),
+):
+    """Full document status for BOSS's influencers. ADMIN sees all influencers."""
+    influencers = db.query(Supplier).filter(
+        Supplier.is_active == True,
+        Supplier.oc_id != None,
+    ).all()
+
+    if user.role == UserRole.BOSS:
+        boss_inf_ids = get_boss_influencer_ids(user, db)
+        influencers = [s for s in influencers if s.id in boss_inf_ids]
+
+    if not influencers:
+        return []
+
+    # Batch-load OCs
+    oc_ids = [s.oc_id for s in influencers if s.oc_id]
+    ocs = {oc.id: oc for oc in db.query(SupplierOC).filter(SupplierOC.id.in_(oc_ids)).all()} if oc_ids else {}
+
+    # Get all active generic documents by type
+    active_generic = db.query(LegalDocument).filter(
+        LegalDocument.is_active == True, LegalDocument.is_generic == True,
+    ).all()
+    doc_by_type = {}
+    for d in active_generic:
+        doc_by_type[d.type] = d
+
+    # Get custom contracts
+    supplier_ids = [s.id for s in influencers]
+    custom_contracts = {
+        d.target_supplier_id: d
+        for d in db.query(LegalDocument).filter(
+            LegalDocument.type == "CONTRACT",
+            LegalDocument.is_active == True,
+            LegalDocument.target_supplier_id.in_(supplier_ids),
+        ).all()
+    }
+
+    # Batch-load all acceptances for these suppliers
+    all_acceptances = db.query(SupplierDocumentAcceptance).filter(
+        SupplierDocumentAcceptance.supplier_id.in_(supplier_ids),
+    ).all()
+    # Map: (supplier_id, document_id) → True
+    accepted_set = {(a.supplier_id, a.document_id) for a in all_acceptances}
+
+    result = []
+    for s in influencers:
+        oc = ocs.get(s.oc_id)
+        custom = custom_contracts.get(s.id)
+        contract_doc = custom or doc_by_type.get("CONTRACT")
+        autocontrol_doc = doc_by_type.get("AUTOCONTROL")
+        privacy_doc = doc_by_type.get("PRIVACY")
+        declaration_doc = doc_by_type.get("DECLARATION")
+
+        result.append(BossInfluencerDocStatus(
+            id=s.id,
+            name=s.name,
+            nif_cif=s.nif_cif,
+            oc_number=oc.oc_number if oc else None,
+            contract_version=contract_doc.version if contract_doc else None,
+            contract_type="custom" if custom else "generic" if contract_doc else None,
+            contract_accepted=(s.id, contract_doc.id) in accepted_set if contract_doc else False,
+            autocontrol_version=autocontrol_doc.version if autocontrol_doc else None,
+            autocontrol_accepted=(s.id, autocontrol_doc.id) in accepted_set if autocontrol_doc else False,
+            privacy_version=privacy_doc.version if privacy_doc else None,
+            privacy_accepted=(s.id, privacy_doc.id) in accepted_set if privacy_doc else False,
+            declaration_version=declaration_doc.version if declaration_doc else None,
+            declaration_accepted=(s.id, declaration_doc.id) in accepted_set if declaration_doc else False,
         ))
 
     return result

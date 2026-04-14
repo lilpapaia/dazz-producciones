@@ -62,6 +62,7 @@ export const extractLegalDocText = (file) => {
   return api.post('/suppliers/legal-documents/extract-text', form, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 export const getSupplierDocuments = (supplierId) => api.get(`/suppliers/${supplierId}/documents`);
+export const getBossContracts = () => api.get('/suppliers/legal-documents/boss-contracts');
 export const inviteWithContract = (formData, params) =>
   api.post('/suppliers/invite-with-contract', formData, { headers: { 'Content-Type': 'multipart/form-data' }, params });
 

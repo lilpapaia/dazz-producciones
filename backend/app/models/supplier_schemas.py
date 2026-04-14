@@ -358,6 +358,23 @@ class InfluencerContractInfo(BaseModel):
     contract_doc_id: Optional[int] = None
 
 
+class BossInfluencerDocStatus(BaseModel):
+    """Full document status for a single influencer — used by BOSS contracts view."""
+    id: int
+    name: str
+    nif_cif: Optional[str] = None
+    oc_number: Optional[str] = None
+    contract_version: Optional[int] = None
+    contract_type: Optional[str] = None
+    contract_accepted: bool = False
+    autocontrol_version: Optional[int] = None
+    autocontrol_accepted: bool = False
+    privacy_version: Optional[int] = None
+    privacy_accepted: bool = False
+    declaration_version: Optional[int] = None
+    declaration_accepted: bool = False
+
+
 class RegistrationDocumentResponse(BaseModel):
     """Document for step 4 registration — includes content HTML."""
     id: int
