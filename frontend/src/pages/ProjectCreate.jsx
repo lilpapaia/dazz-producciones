@@ -25,7 +25,8 @@ const ProjectCreate = () => {
     client_oc: '',
     client_data: '',
     client_email: '',
-    project_link: ''
+    project_link: '',
+    presupuesto: ''
   });
 
   // ← NUEVO: Cargar empresas al montar
@@ -88,7 +89,8 @@ const ProjectCreate = () => {
       const dataToSend = {
         ...formData,
         owner_company_id: parseInt(formData.owner_company_id),
-        client_email: clientEmails.join(', ')
+        client_email: clientEmails.join(', '),
+        presupuesto: formData.presupuesto ? parseFloat(formData.presupuesto) : null
       };
       
       const response = await createProject(dataToSend);
@@ -272,17 +274,35 @@ const ProjectCreate = () => {
             />
           </div>
 
-          {/* OC de Cliente */}
-          <div>
-            <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">OC DE CLIENTE</label>
-            <input
-              type="text"
-              name="client_oc"
-              value={formData.client_oc}
-              onChange={handleChange}
-              placeholder="Ej: 7000958658"
-              className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
-            />
+          {/* OC de Cliente y Presupuesto */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">OC DE CLIENTE</label>
+              <input
+                type="text"
+                name="client_oc"
+                value={formData.client_oc}
+                onChange={handleChange}
+                placeholder="Ej: 7000958658"
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 text-zinc-100 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">PRESUPUESTO</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  name="presupuesto"
+                  value={formData.presupuesto}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 pr-8 text-zinc-100 focus:outline-none focus:border-amber-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">€</span>
+              </div>
+            </div>
           </div>
 
           {/* Datos Cliente */}

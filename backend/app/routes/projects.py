@@ -304,7 +304,7 @@ async def close_project(
     excel_bytes = None
     try:
         from app.services.excel_generator import create_project_excel_bytes
-        excel_bytes = create_project_excel_bytes(project, tickets)
+        excel_bytes = create_project_excel_bytes(project, tickets, db)
     except Exception as e:
         logger.error(f"Error generando Excel: {str(e)}")
         raise HTTPException(

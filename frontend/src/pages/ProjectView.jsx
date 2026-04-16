@@ -164,7 +164,7 @@ const ProjectView = () => {
   };
 
   // Edit project modal
-  const EDIT_FIELDS = ['description', 'responsible', 'send_date', 'invoice_type', 'other_invoice_data', 'client_oc', 'client_data', 'client_email', 'project_link'];
+  const EDIT_FIELDS = ['description', 'responsible', 'send_date', 'invoice_type', 'other_invoice_data', 'client_oc', 'presupuesto', 'client_data', 'client_email', 'project_link'];
 
   const openEditModal = () => {
     const form = {};
@@ -704,6 +704,11 @@ const ProjectView = () => {
               <p className="text-zinc-100">{project.client_oc || 'N/A'}</p>
             </div>
 
+            <div>
+              <p className="text-zinc-500 mb-1">Presupuesto</p>
+              <p className="text-zinc-100">{project.presupuesto != null ? `${project.presupuesto.toFixed(2)} €` : 'N/A'}</p>
+            </div>
+
             <div className="col-span-2">
               <p className="text-zinc-500 mb-1">Datos Cliente</p>
               <p className="text-zinc-100 whitespace-pre-wrap">{project.client_data || 'N/A'}</p>
@@ -814,10 +819,21 @@ const ProjectView = () => {
                 <input type="text" value={editForm.other_invoice_data} onChange={e => setEditForm({ ...editForm, other_invoice_data: e.target.value })}
                   className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
               </div>
-              <div>
-                <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">OC CLIENTE</label>
-                <input type="text" value={editForm.client_oc} onChange={e => setEditForm({ ...editForm, client_oc: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">OC CLIENTE</label>
+                  <input type="text" value={editForm.client_oc} onChange={e => setEditForm({ ...editForm, client_oc: e.target.value })}
+                    className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 rounded-sm focus:border-amber-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">PRESUPUESTO</label>
+                  <div className="relative">
+                    <input type="number" value={editForm.presupuesto || ''} onChange={e => setEditForm({ ...editForm, presupuesto: e.target.value ? parseFloat(e.target.value) : null })}
+                      placeholder="0.00" step="0.01" min="0"
+                      className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 text-sm px-3 py-2.5 pr-8 rounded-sm focus:border-amber-500 outline-none" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">€</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-1.5 tracking-wider">DATOS CLIENTE</label>

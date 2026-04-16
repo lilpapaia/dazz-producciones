@@ -121,6 +121,7 @@ class Project(Base):
     client_data = Column(Text)
     client_email = Column(String)
     project_link = Column(String)
+    presupuesto = Column(Float, nullable=True)
     status = Column(Enum(ProjectStatus), default=ProjectStatus.EN_CURSO, nullable=False, index=True)
     total_amount = Column(Float, default=0.0)
     tickets_count = Column(Integer, default=0)

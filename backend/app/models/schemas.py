@@ -131,6 +131,7 @@ class ProjectBase(BaseModel):
     client_data: Optional[str] = Field(default=None, max_length=500)
     client_email: Optional[str] = Field(default=None, max_length=200)
     project_link: Optional[str] = Field(default=None, max_length=500)
+    presupuesto: Optional[float] = Field(default=None, ge=0)
 
 class ProjectCreate(ProjectBase):
     pass
@@ -149,6 +150,7 @@ class ProjectUpdate(BaseModel):
     client_data: Optional[str] = None
     client_email: Optional[str] = None
     project_link: Optional[str] = None
+    presupuesto: Optional[float] = None
     status: Optional[ProjectStatus] = None
 
 class ProjectResponse(ProjectBase):

@@ -93,6 +93,7 @@ async def lifespan(app):
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_supplier_invoices_file_hash ON supplier_invoices (file_hash)"))
             conn.execute(text("ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS country_code VARCHAR(10)"))
             conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS is_suplido BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS presupuesto FLOAT"))
             # FEAT-06: Partial unique indexes for legal_documents
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_legal_doc_generic_active "
