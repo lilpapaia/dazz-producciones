@@ -189,6 +189,7 @@ const InvoiceDetail = () => {
               : 'FACTURAS'}
           </span>
           {' / '}{invoice.invoice_number}
+          {invoice.is_autoinvoice && <span className="ml-2 text-[8px] px-1.5 py-[1px] rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 font-sans font-bold align-middle">AUTO</span>}
         </h1>
 
         {/* Row 2: navigation */}

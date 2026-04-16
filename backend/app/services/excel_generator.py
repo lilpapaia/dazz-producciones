@@ -102,9 +102,10 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         for attr, val in style.items():
             setattr(cell, attr, val)
 
-    # ── Resolve billing company name ────────────────────────
+    # ── Resolve billing company name + presupuesto ──────────
     company_name = getattr(project.owner_company, 'name', '') or project.company or ''
     billing_company_name = _resolve_billing_company_name(project, db)
+    presupuesto = getattr(project, 'presupuesto', None)
 
     # ── FILA 1: Cabecera metadatos (19 cols, rosa) ──────────
     headers_meta = [
@@ -113,7 +114,7 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         "QUIEN INTERVIENE", "DESCRIPCIÓN/CAMPAÑA/ACCIÓN", "IMPORTE BRUTO TOTAL",
         "MONEDA", "IRPF", "IMPORTE IRPF", "OC DE CLIENTE",
         "OTROS DATOS FACTURA", "DATOS CLIENTE", "EMAIL CLIENTE",
-        "ESTATUS", "LINEA FISPER",
+        "ESTATUS", "LINEA FISPER", "PRESUPUESTO",
     ]
     for col, header in enumerate(headers_meta, start=1):
         cell = sheet.cell(row=1, column=col, value=header)
@@ -144,12 +145,14 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         project.client_email or '',                                      # Q: EMAIL CLIENTE
         project.status.value if hasattr(project.status, 'value') else str(project.status or ''),  # R: ESTATUS
         '',                                                              # S: LINEA FISPER (vacío)
+        presupuesto if presupuesto is not None else '',                   # T: PRESUPUESTO
     ]
     for col, value in enumerate(project_data, start=1):
         cell = sheet.cell(row=2, column=col, value=value)
         _apply(cell, style_data_row)
-    # Apply currency format to IMPORTE BRUTO TOTAL
+    # Apply currency format to IMPORTE BRUTO TOTAL and PRESUPUESTO
     sheet.cell(row=2, column=10).number_format = '#,##0.00 €'
+    sheet.cell(row=2, column=20).number_format = '#,##0.00 €'
 
     # ── FILA 3: Cabecera gastos (22 cols, negro) ────────────
     headers_tickets = [
@@ -174,9 +177,9 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
             getattr(ticket, 'notes', '') or '',                         # D: DESCRIPCIÓN
             ticket.base_amount or 0,                                    # E: IMPORTE
             ticket.type.value if hasattr(ticket.type, 'value') else str(ticket.type or ''),  # F: TIPO
-            (ticket.iva_percentage or 0) / 100 if ticket.iva_percentage else 0,  # G: TIPO IVA (%)
+            ticket.iva_percentage or 0,                                    # G: TIPO IVA (%)
             (ticket.base_amount or 0) + (ticket.iva_amount or 0),       # H: TOTAL (base+iva)
-            (getattr(ticket, 'irpf_percentage', 0) or 0) / 100 if getattr(ticket, 'irpf_percentage', 0) else 0,  # I: TIPO IRPF (%)
+            getattr(ticket, 'irpf_percentage', 0) or 0,                 # I: TIPO IRPF (%)
             getattr(ticket, 'irpf_amount', 0) or 0,                    # J: RETENCION
             ticket.final_total or 0,                                    # K: TOTAL
             ticket.invoice_status or '',                                # L: ESTATUS FACTURA
@@ -231,7 +234,6 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         _apply(cell, style_footer)
     sheet.cell(row=budget_row, column=5, value="PRESUPUESTO")
     sheet.cell(row=budget_row, column=5).font = Font(name='Calibri', size=11, bold=True)
-    presupuesto = getattr(project, 'presupuesto', None)
     sheet.cell(row=budget_row, column=6, value=presupuesto if presupuesto is not None else '')
     sheet.cell(row=budget_row, column=6).number_format = '#,##0.00 €'
 
@@ -274,6 +276,9 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
     for i in range(1, max_cols + 1):
         col_letter = sheet.cell(row=1, column=i).column_letter
         sheet.column_dimensions[col_letter].width = 13
+
+    # ── Force formula recalculation on open ──────────────────
+    wb.calculation.calcMode = "auto"
 
     # ── Save to memory ──────────────────────────────────────
     excel_buffer = BytesIO()

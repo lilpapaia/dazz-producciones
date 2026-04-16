@@ -622,7 +622,7 @@ const ReviewTicket = () => {
           )}
 
           {/* Alerta IA - Solo en desktop */}
-          <div className={`hidden md:block rounded-sm p-4 ${
+          <div className={`rounded-sm p-4 ${
             isExtractionFailed ? 'bg-red-500/10 border border-red-500/30'
             : ticket.ia_warnings ? 'bg-amber-500/10 border border-amber-500/30'
             : 'bg-blue-500/10 border border-blue-500/30'

@@ -639,7 +639,7 @@ const SupplierDetail = () => {
                       onClick={() => navigate(`/suppliers/invoices/${inv.id}?from=supplier&supplierId=${id}`)}
                       className="bg-zinc-800 rounded-md p-3 cursor-pointer border border-zinc-700 transition-colors">
                       <div className="flex items-start justify-between mb-2">
-                        <span className="font-mono text-[13px] font-semibold text-zinc-200">{inv.invoice_number}</span>
+                        <span className="font-mono text-[13px] font-semibold text-zinc-200">{inv.invoice_number}{inv.is_autoinvoice && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 font-sans font-bold">AUTO</span>}</span>
                         <span className="font-mono text-[13px] font-medium text-zinc-100">{inv.final_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</span>
                       </div>
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -697,6 +697,7 @@ const SupplierDetail = () => {
                     {/* Nombre factura */}
                     <div className="text-[13px] font-semibold text-zinc-200 font-mono truncate">
                       {inv.invoice_number}
+                      {inv.is_autoinvoice && <span className="ml-1.5 text-[8px] px-1.5 py-[1px] rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 font-sans font-bold">AUTO</span>}
                     </div>
                     {/* OC */}
                     <div>
