@@ -82,14 +82,6 @@ async def get_usernames(
         seen_ids = {u.id for u in workers}
         if current_user.id not in seen_ids:
             workers.append(current_user)
-            seen_ids.add(current_user.id)
-
-        # ADMIN siempre visible como responsable potencial
-        admin_users = db.query(User).filter(User.role == UserRole.ADMIN).all()
-        for admin in admin_users:
-            if admin.id not in seen_ids:
-                workers.append(admin)
-                seen_ids.add(admin.id)
 
         return workers
 
