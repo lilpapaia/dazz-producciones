@@ -107,6 +107,18 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
     billing_company_name = _resolve_billing_company_name(project, db)
     presupuesto = getattr(project, 'presupuesto', None)
 
+    # BUG-71b: precompute totals as numbers. Excel formulas written via openpyxl
+    # are NOT evaluated until a program (Excel desktop) opens the file — mobile
+    # previews, Google Sheets and some renderers show blanks. Writing raw numbers
+    # works everywhere.
+    total_gastos = sum((t.base_amount or 0) for t in tickets)
+    if presupuesto is not None:
+        diferencia = presupuesto - total_gastos
+        margen = (diferencia / presupuesto) if presupuesto else 0
+    else:
+        diferencia = None
+        margen = None
+
     # ── FILA 1: Cabecera metadatos (19 cols, rosa) ──────────
     headers_meta = [
         "TIPO", "AÑO", "FECHA ENVIO FACTURAR", "OC PROYECTO",
@@ -135,7 +147,7 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         project.invoice_type or '',                                      # G: TIPO FACTURA
         '',                                                              # H: QUIEN INTERVIENE (vacío)
         project.description or '',                                       # I: DESCRIPCIÓN/CAMPAÑA
-        f'=SUM(E{ticket_start_row}:E{ticket_end_row})' if tickets else 0,  # J: IMPORTE BRUTO TOTAL
+        total_gastos,                                                    # J: IMPORTE BRUTO TOTAL (BUG-71b: precomputed)
         '',                                                              # K: MONEDA (vacío)
         '',                                                              # L: IRPF (vacío)
         '',                                                              # M: IMPORTE IRPF (vacío)
@@ -221,10 +233,7 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         _apply(cell, style_footer)
     sheet.cell(row=footer_row, column=5, value="TOTAL")
     sheet.cell(row=footer_row, column=5).font = Font(name='Calibri', size=11, bold=True)
-    if tickets:
-        sheet.cell(row=footer_row, column=6, value=f'=SUM(E{ticket_start_row}:E{ticket_end_row})')
-    else:
-        sheet.cell(row=footer_row, column=6, value=0)
+    sheet.cell(row=footer_row, column=6, value=total_gastos)  # BUG-71b: precomputed
     sheet.cell(row=footer_row, column=6).number_format = '#,##0.00 €'
 
     # Row: PRESUPUESTO
@@ -244,10 +253,7 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         _apply(cell, style_footer_diff)
     sheet.cell(row=diff_row, column=5, value="DIFERENCIA")
     sheet.cell(row=diff_row, column=5).font = Font(name='Calibri', size=11, bold=True)
-    if presupuesto is not None:
-        sheet.cell(row=diff_row, column=6, value=f'=F{budget_row}-F{footer_row}')
-    else:
-        sheet.cell(row=diff_row, column=6, value='')
+    sheet.cell(row=diff_row, column=6, value=diferencia if diferencia is not None else '')  # BUG-71b: precomputed
     sheet.cell(row=diff_row, column=6).number_format = '#,##0.00 €'
 
     # Row: MARGEN %
@@ -257,10 +263,7 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         _apply(cell, style_footer)
     sheet.cell(row=margin_row, column=5, value="PORCENTAJE MARGEN")
     sheet.cell(row=margin_row, column=5).font = Font(name='Calibri', size=11, bold=True)
-    if presupuesto is not None:
-        sheet.cell(row=margin_row, column=6, value=f'=IF(F{budget_row}=0,0,F{diff_row}/F{budget_row})')
-    else:
-        sheet.cell(row=margin_row, column=6, value='')
+    sheet.cell(row=margin_row, column=6, value=margen if margen is not None else '')  # BUG-71b: precomputed
     sheet.cell(row=margin_row, column=6).number_format = '0%'
 
     # ── LINK A PROYECTO (fila extra) ────────────────────────
@@ -276,9 +279,6 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
     for i in range(1, max_cols + 1):
         col_letter = sheet.cell(row=1, column=i).column_letter
         sheet.column_dimensions[col_letter].width = 13
-
-    # ── Force formula recalculation on open ──────────────────
-    wb.calculation.calcMode = "auto"
 
     # ── Save to memory ──────────────────────────────────────
     excel_buffer = BytesIO()
