@@ -115,8 +115,9 @@ async def lifespan(app):
                     "CREATE UNIQUE INDEX IF NOT EXISTS ix_projects_creative_code_unique "
                     "ON projects (creative_code) WHERE creative_code IS NOT NULL"
                 ))
-            # QUAL-7: Clean up plaintext IBANs from historical autoinvoices
-            conn.execute(text("UPDATE supplier_invoices SET iban = NULL WHERE iban IS NOT NULL AND is_autoinvoice = TRUE"))
+            # MEJORA-08: Drop legacy iban column (never read, only ever set to NULL).
+            # SQLite <3.35 doesn't support DROP COLUMN — failure is caught by the outer try/except.
+            conn.execute(text("ALTER TABLE supplier_invoices DROP COLUMN IF EXISTS iban"))
             # ADMIN users don't need company assignments — they have access to all companies by design
             conn.execute(text("DELETE FROM user_companies WHERE user_id IN (SELECT id FROM users WHERE role = 'ADMIN')"))
             conn.commit()

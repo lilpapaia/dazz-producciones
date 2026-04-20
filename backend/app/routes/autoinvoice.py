@@ -255,7 +255,6 @@ async def generate_autoinvoice(
         date=body.date,
         provider_name=supplier.name,
         nif_cif=supplier.nif_cif,
-        iban=None,  # SEC-2: never store plaintext IBAN — PDF already generated with it
         oc_number=body.oc_number,
         project_id=project_id,
         company_id=company.id,

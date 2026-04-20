@@ -129,7 +129,6 @@ class SupplierInvoice(Base):
     date_parsed = Column(Date, nullable=True)
     provider_name = Column(String, nullable=False)
     nif_cif = Column(String, nullable=True)
-    iban = Column(String, nullable=True)
     oc_number = Column(String, nullable=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True, index=True)
