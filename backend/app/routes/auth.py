@@ -208,7 +208,10 @@ async def login(
     ).first()
 
     if target_user and target_user.locked_until:
-        if target_user.locked_until > datetime.now(timezone.utc):
+        # BD stores naive UTC (SQLAlchemy strips tzinfo on write to DateTime without tz);
+        # re-attach UTC to compare safely against aware datetime.now(timezone.utc).
+        locked_until_aware = target_user.locked_until.replace(tzinfo=timezone.utc) if target_user.locked_until.tzinfo is None else target_user.locked_until
+        if locked_until_aware > datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Account temporarily locked due to too many failed attempts. Try again in 15 minutes."

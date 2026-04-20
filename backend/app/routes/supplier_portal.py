@@ -291,7 +291,9 @@ async def login_supplier(
 
     # SEC-1: Check account lockout before attempting auth
     if supplier and supplier.locked_until:
-        if supplier.locked_until > datetime.now(timezone.utc):
+        # BD stores naive UTC; re-attach UTC to compare safely against aware now.
+        locked_until_aware = supplier.locked_until.replace(tzinfo=timezone.utc) if supplier.locked_until.tzinfo is None else supplier.locked_until
+        if locked_until_aware > datetime.now(timezone.utc):
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
                                 "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.")
         else:
