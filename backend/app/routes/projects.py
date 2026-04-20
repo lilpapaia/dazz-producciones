@@ -2,7 +2,7 @@ import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_, case, false
 from typing import List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
@@ -13,7 +13,7 @@ from app.models import schemas
 from app.models.database import User, Project, ProjectStatus, Company, UserRole
 from app.services.auth import get_current_active_user, get_current_admin_user
 from app.services.companies_service import validate_company_access
-from app.services.permissions import get_user_company_ids, can_access_project, can_modify_project
+from app.services.permissions import get_user_company_ids, get_mgmt_company_ids, can_access_project, can_modify_project
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_project_deleted
@@ -160,15 +160,20 @@ async def get_projects(
         query = query.filter(Project.owner_company_id.in_(user_company_ids))
 
     else:
-        # WORKER ve proyectos donde es owner O responsible (case-insensitive)
+        # WORKER: proyectos propios (owner/responsible) + bypass MGMT
+        # (BUG-65: miembros de empresas MGMT ven todos los proyectos de esas empresas).
         user_company_ids = get_user_company_ids(current_user, db)
+        mgmt_company_ids = get_mgmt_company_ids(current_user)
         username_lower = (current_user.username or "").lower()
         query = query.filter(
+            Project.owner_company_id.in_(user_company_ids),
             or_(
+                # MGMT bypass: cualquier proyecto cuya empresa sea MGMT del user
+                Project.owner_company_id.in_(mgmt_company_ids) if mgmt_company_ids else false(),
+                # Regla normal: owner o responsible
                 Project.owner_id == current_user.id,
                 func.lower(Project.responsible) == username_lower,
             ),
-            Project.owner_company_id.in_(user_company_ids)
         )
 
     # Filtrar por estado si se proporciona

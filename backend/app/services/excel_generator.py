@@ -120,22 +120,25 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         margen = None
 
     # ── FILA 1: Cabecera metadatos (19 cols, rosa) ──────────
+    # IMPORTE BRUTO TOTAL = presupuesto del cliente. Se eliminó la columna redundante
+    # PRESUPUESTO (antes T/20) — el desglose gastos/diferencia/margen sigue en el footer.
     headers_meta = [
         "TIPO", "AÑO", "FECHA ENVIO FACTURAR", "OC PROYECTO",
         "EMPRESA FACTURACION", "QUIEN PASA FACTURAR (TAG)", "TIPO FACTURA",
         "QUIEN INTERVIENE", "DESCRIPCIÓN/CAMPAÑA/ACCIÓN", "IMPORTE BRUTO TOTAL",
         "MONEDA", "IRPF", "IMPORTE IRPF", "OC DE CLIENTE",
         "OTROS DATOS FACTURA", "DATOS CLIENTE", "EMAIL CLIENTE",
-        "ESTATUS", "LINEA FISPER", "PRESUPUESTO",
+        "ESTATUS", "LINEA FISPER",
     ]
     for col, header in enumerate(headers_meta, start=1):
         cell = sheet.cell(row=1, column=col, value=header)
         _apply(cell, style_header_meta)
 
     # ── FILA 2: Datos del proyecto ──────────────────────────
-    # Pre-calculate ticket data row range for SUM formula
     ticket_start_row = 4
     ticket_end_row = ticket_start_row + len(tickets) - 1 if tickets else ticket_start_row
+
+    importe_bruto_total = presupuesto if presupuesto is not None else 0
 
     project_data = [
         company_name,                                                    # A: TIPO
@@ -147,7 +150,7 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         project.invoice_type or '',                                      # G: TIPO FACTURA
         '',                                                              # H: QUIEN INTERVIENE (vacío)
         project.description or '',                                       # I: DESCRIPCIÓN/CAMPAÑA
-        total_gastos,                                                    # J: IMPORTE BRUTO TOTAL (BUG-71b: precomputed)
+        importe_bruto_total,                                             # J: IMPORTE BRUTO TOTAL = presupuesto cliente
         '',                                                              # K: MONEDA (vacío)
         '',                                                              # L: IRPF (vacío)
         '',                                                              # M: IMPORTE IRPF (vacío)
@@ -157,14 +160,12 @@ def create_project_excel_bytes(project, tickets, db: Session = None) -> bytes:
         project.client_email or '',                                      # Q: EMAIL CLIENTE
         project.status.value if hasattr(project.status, 'value') else str(project.status or ''),  # R: ESTATUS
         '',                                                              # S: LINEA FISPER (vacío)
-        presupuesto if presupuesto is not None else '',                   # T: PRESUPUESTO
     ]
     for col, value in enumerate(project_data, start=1):
         cell = sheet.cell(row=2, column=col, value=value)
         _apply(cell, style_data_row)
-    # Apply currency format to IMPORTE BRUTO TOTAL and PRESUPUESTO
+    # Currency format for IMPORTE BRUTO TOTAL
     sheet.cell(row=2, column=10).number_format = '#,##0.00 €'
-    sheet.cell(row=2, column=20).number_format = '#,##0.00 €'
 
     # ── FILA 3: Cabecera gastos (22 cols, negro) ────────────
     headers_tickets = [

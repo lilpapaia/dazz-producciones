@@ -23,29 +23,46 @@ def get_user_company_ids(user: User, db: Session) -> List[int]:
     return [c.id for c in user.companies] if user else []
 
 
+def get_mgmt_company_ids(user: User) -> set:
+    """
+    IDs de las empresas del usuario cuyo nombre contiene "MGMT" (case-insensitive).
+
+    BUG-65: los miembros de empresas MGMT ven y modifican TODOS los proyectos de
+    esas empresas, independientemente de owner_id o responsible. Esto refleja la
+    gestión de influencers en equipo — cualquiera del equipo MGMT debe poder
+    operar sobre cualquier talento.
+    """
+    if not user or not user.companies:
+        return set()
+    return {c.id for c in user.companies if "MGMT" in (c.name or "").upper()}
+
+
 def can_access_project(user: User, project: Project, db: Session) -> bool:
     """
     Verificar si un usuario puede acceder (ver) un proyecto.
 
     - ADMIN: acceso total
     - BOSS: proyectos de su empresa
-    - WORKER: solo SUS proyectos de sus empresas
+    - WORKER: proyectos propios (owner/responsible) + bypass MGMT (todos los de empresas MGMT del user)
     """
     # DEUDA-M3: Usar enum UserRole en vez de strings literales
     if user.role == UserRole.ADMIN:
         return True
 
     company_ids = get_user_company_ids(user, db)
+    if project.owner_company_id not in company_ids:
+        return False
 
     if user.role == UserRole.BOSS:
-        return project.owner_company_id in company_ids
+        return True
 
-    # WORKER: proyectos donde es owner O responsible
+    # WORKER
+    if project.owner_company_id in get_mgmt_company_ids(user):
+        return True  # BUG-65: MGMT team-wide visibility
+
     is_owner = project.owner_id == user.id
     is_responsible = (user.username or "").lower() == (project.responsible or "").lower()
-    if not is_owner and not is_responsible:
-        return False
-    return project.owner_company_id in company_ids
+    return is_owner or is_responsible
 
 
 def can_modify_project(user: User, project: Project, db: Session) -> bool:
@@ -54,17 +71,22 @@ def can_modify_project(user: User, project: Project, db: Session) -> bool:
 
     - ADMIN: puede modificar cualquier proyecto
     - BOSS: puede modificar proyectos de su empresa
-    - WORKER: puede modificar solo SUS proyectos
+    - WORKER: proyectos propios + bypass MGMT (modifica todos los de sus empresas MGMT)
     """
     if user.role == UserRole.ADMIN:
         return True
 
-    if user.role == UserRole.BOSS:
-        company_ids = get_user_company_ids(user, db)
-        return project.owner_company_id in company_ids
-
-    # WORKER: proyectos donde es owner O responsible, AND misma empresa
     company_ids = get_user_company_ids(user, db)
+    if project.owner_company_id not in company_ids:
+        return False
+
+    if user.role == UserRole.BOSS:
+        return True
+
+    # WORKER
+    if project.owner_company_id in get_mgmt_company_ids(user):
+        return True  # BUG-65: MGMT team-wide modify
+
     is_owner = project.owner_id == user.id
     is_responsible = (user.username or "").lower() == (project.responsible or "").lower()
-    return (is_owner or is_responsible) and project.owner_company_id in company_ids
+    return is_owner or is_responsible
