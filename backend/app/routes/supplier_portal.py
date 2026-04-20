@@ -280,7 +280,7 @@ async def register_supplier(
 # ============================================
 
 @router.post("/login", response_model=LoginResponse)
-@limiter.limit("5/minute")
+@limiter.limit("15/minute")
 async def login_supplier(
     request: Request,
     response: Response,
