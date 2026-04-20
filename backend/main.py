@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import os
@@ -503,6 +504,12 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["X-Email-Sent", "X-Email-Error", "Content-Disposition"],
 )
+
+# MEJORA-05: Force HTTPS in production. Relies on gunicorn's
+# --forwarded-allow-ips='*' (railway.json) to trust X-Forwarded-Proto
+# from Railway's TLS-terminating proxy. Skipped in development (local HTTP).
+if ENVIRONMENT == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 # VULN-003: Eliminado mount de /uploads (archivos van a Cloudinary)
 # El directorio uploads/ sigue existiendo para archivos temporales
