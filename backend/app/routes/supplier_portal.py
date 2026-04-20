@@ -345,16 +345,17 @@ async def refresh_token(
     db: Session = Depends(get_db),
     response: Response = None,
 ):
-    rt = validate_supplier_refresh_token(db, body.refresh_token)
-    if not rt:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token")
-
-    supplier = db.query(Supplier).filter(Supplier.id == rt.supplier_id).first()
-    if not supplier or not supplier.is_active:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supplier not found or inactive")
+    """Rota el refresh token (single-use). Reutilizar un refresh revocado
+    invalida todas las sesiones del proveedor."""
+    from app.services.supplier_auth import rotate_supplier_refresh_token
+    supplier, new_refresh = rotate_supplier_refresh_token(db, body.refresh_token)
 
     access_token = create_supplier_access_token(supplier.id, supplier.email)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh,
+        "token_type": "bearer",
+    }
 
 
 @router.post("/logout")

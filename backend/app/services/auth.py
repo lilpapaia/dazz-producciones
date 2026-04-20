@@ -105,6 +105,47 @@ def revoke_all_user_refresh_tokens(db: Session, user_id: int):
     ).update({"revoked_at": datetime.now(timezone.utc)})
     db.commit()
 
+
+def rotate_refresh_token(db: Session, old_token: str) -> tuple["User", str]:
+    """
+    Single-use refresh rotation. Validates the old token, revokes it, issues a
+    new one atomically. Reuse of an already-revoked token is treated as theft:
+    all the user's refresh tokens are revoked and 401 is raised.
+
+    Returns (user, new_refresh_token). Raises HTTPException(401) on any failure.
+    """
+    rt = db.query(RefreshToken).filter(RefreshToken.token == old_token).first()
+    if not rt:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
+
+    now = datetime.now(timezone.utc)
+
+    # Reuse attempt: token was already used. Revoke all user's tokens.
+    if rt.revoked_at is not None:
+        revoke_all_user_refresh_tokens(db, rt.user_id)
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Refresh token already used — all sessions revoked for safety"
+        )
+
+    # BD stores naive UTC (SQLAlchemy strips tzinfo on write to DateTime w/o tz).
+    expires_aware = rt.expires_at.replace(tzinfo=timezone.utc) if rt.expires_at.tzinfo is None else rt.expires_at
+    if expires_aware < now:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Refresh token expired")
+
+    user = db.query(User).options(joinedload(User.companies)).filter(User.id == rt.user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
+
+    # Revoke old + insert new + commit atomically
+    rt.revoked_at = now
+    new_token = _generate_token()
+    new_expires_at = now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    db.add(RefreshToken(user_id=user.id, token=new_token, expires_at=new_expires_at))
+    db.commit()
+
+    return user, new_token
+
 def authenticate_user(db: Session, identifier: str, password: str):
     """
     Authenticate a user by email OR username

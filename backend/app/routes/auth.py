@@ -279,30 +279,22 @@ async def refresh_access_token(
     db: Session = Depends(get_db),
     response: Response = None,
 ):
-    """Renovar access token usando un refresh token válido"""
-    refresh_token = validate_refresh_token(db, request_body.refresh_token)
+    """Renovar access token. Rota el refresh token (single-use): el token
+    enviado se revoca y se emite uno nuevo. Reutilizar un refresh ya usado
+    revoca TODAS las sesiones del usuario (indicio de robo)."""
+    from app.services.auth import rotate_refresh_token
+    user, new_refresh = rotate_refresh_token(db, request_body.refresh_token)
 
-    if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token inválido o expirado"
-        )
-
-    # Obtener usuario
-    user = db.query(User).filter(User.id == refresh_token.user_id).first()
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no encontrado o inactivo"
-        )
-
-    # Crear nuevo access token
     access_token = create_access_token(
         data={"sub": user.email},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh,
+        "token_type": "bearer",
+    }
 
 
 @router.post("/logout")

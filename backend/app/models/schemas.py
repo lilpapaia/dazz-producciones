@@ -88,6 +88,7 @@ class RefreshTokenRequest(BaseModel):
 
 class RefreshTokenResponse(BaseModel):
     access_token: str
+    refresh_token: str  # Single-use rotation: new refresh token issued on every refresh
     token_type: str = "bearer"
 
 class LogoutRequest(BaseModel):

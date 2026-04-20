@@ -54,6 +54,10 @@ api.interceptors.response.use(
       try {
         const { data } = await axios.post(`${API_URL}/portal/refresh`, { refresh_token: refreshToken });
         localStorage.setItem('supplier_token', data.access_token);
+        // Single-use rotation: persist the rotated refresh token.
+        if (data.refresh_token) {
+          localStorage.setItem('supplier_refresh_token', data.refresh_token);
+        }
         processQueue(null, data.access_token);
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return api(original);

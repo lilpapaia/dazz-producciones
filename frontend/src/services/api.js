@@ -78,6 +78,12 @@ api.interceptors.response.use(
         const newAccessToken = response.data.access_token;
         localStorage.setItem('token', newAccessToken);
 
+        // Single-use rotation: backend issues a new refresh token on every refresh.
+        // Persist it; reusing the old one revokes ALL sessions server-side.
+        if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token);
+        }
+
         // Reintentar peticiones encoladas
         processQueue(null, newAccessToken);
 

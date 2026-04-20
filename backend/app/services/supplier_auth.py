@@ -91,6 +91,45 @@ def invalidate_all_supplier_tokens(db: Session, supplier_id: int):
     db.commit()
 
 
+def rotate_supplier_refresh_token(db: Session, old_token: str) -> tuple[Supplier, str]:
+    """
+    Single-use refresh rotation for suppliers. Mirrors auth.rotate_refresh_token.
+    Reuse of a revoked token revokes ALL the supplier's sessions.
+    """
+    rt = db.query(SupplierRefreshToken).filter(SupplierRefreshToken.token == old_token).first()
+    if not rt:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
+
+    now = datetime.now(timezone.utc)
+
+    if rt.revoked_at is not None:
+        invalidate_all_supplier_tokens(db, rt.supplier_id)
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Refresh token already used — all sessions revoked for safety"
+        )
+
+    expires_aware = rt.expires_at.replace(tzinfo=timezone.utc) if rt.expires_at.tzinfo is None else rt.expires_at
+    if expires_aware < now:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Refresh token expired")
+
+    supplier = db.query(Supplier).filter(Supplier.id == rt.supplier_id).first()
+    if not supplier or not supplier.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Supplier not found or inactive")
+
+    rt.revoked_at = now
+    new_token = _generate_token()
+    new_expires_at = now + timedelta(days=SUPPLIER_REFRESH_TOKEN_EXPIRE_DAYS)
+    db.add(SupplierRefreshToken(
+        supplier_id=supplier.id,
+        token=new_token,
+        expires_at=new_expires_at,
+    ))
+    db.commit()
+
+    return supplier, new_token
+
+
 async def get_current_supplier(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
