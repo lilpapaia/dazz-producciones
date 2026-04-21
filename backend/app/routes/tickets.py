@@ -12,7 +12,7 @@ from datetime import datetime
 from config.database import get_db
 from config.constants import MATH_TOLERANCE, MIN_AI_CONFIDENCE, ADMIN_RECIPIENT_ID
 from app.models import schemas
-from app.models.database import User, Project, Ticket
+from app.models.database import User, Project, Ticket, UserRole
 from app.services.auth import get_current_active_user
 from app.services.permissions import can_access_project
 from app.services.claude_ai import extract_ticket_data
@@ -298,6 +298,10 @@ async def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db:
     old_suplido = ticket.is_suplido or False
     was_error = (ticket.provider == "Error en extracción" and old_total == 0.0)
     update_data = ticket_update.model_dump(exclude_unset=True)
+    # SEC: BOSS/WORKER no pueden mutar invoice_status/payment_status en tickets del portal
+    if ticket.from_supplier_portal and current_user.role != UserRole.ADMIN:
+        update_data.pop("invoice_status", None)
+        update_data.pop("payment_status", None)
     for key, value in update_data.items():
         setattr(ticket, key, value)
     new_suplido = ticket.is_suplido or False
