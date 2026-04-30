@@ -107,6 +107,11 @@ async def lifespan(app):
             ))
             # FEAT-06 Phase 2: target_invitation_id for personalized contracts via invite
             conn.execute(text("ALTER TABLE legal_documents ADD COLUMN IF NOT EXISTS target_invitation_id INTEGER REFERENCES supplier_invitations(id)"))
+            # FEAT-06 UPDATE: 4 → 5 doc types — widen type column + rename CONTRACT, deactivate DECLARATION
+            if is_postgres:
+                conn.execute(text("ALTER TABLE legal_documents ALTER COLUMN type TYPE VARCHAR(30)"))
+            conn.execute(text("UPDATE legal_documents SET type = 'INFLUENCER_CONTRACT' WHERE type = 'CONTRACT'"))
+            conn.execute(text("UPDATE legal_documents SET is_active = FALSE WHERE type = 'DECLARATION' AND is_active = TRUE"))
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_autoinvoice_unique_number "
                 "ON supplier_invoices (invoice_number) WHERE is_autoinvoice = TRUE"
@@ -155,18 +160,20 @@ async def lifespan(app):
         except Exception as e:
             logger.warning(f"OC prefixes seed warning: {e}")
 
-        # FEAT-06: Seed initial legal documents + migrate existing acceptances
+        # FEAT-06: Seed legal documents (idempotent per type)
         try:
             from app.models.legal_documents import LegalDocument, SupplierDocumentAcceptance, LegalDocumentType
             from app.models.suppliers import Supplier
             from sqlalchemy.orm import Session as OrmSession
             with OrmSession(bind=engine) as session:
-                existing_docs = session.query(LegalDocument).filter(LegalDocument.is_active == True).count()
-                if existing_docs == 0:
-                    _seed_legal_documents(session)
+                total_docs = session.query(LegalDocument).count()
+                seeded = _seed_legal_documents(session)
+                # On a fresh DB, migrate legacy supplier privacy/contract acceptance fields
+                if total_docs == 0:
                     _migrate_existing_acceptances(session)
-                    session.commit()
-                    logger.info("Legal documents seeded + acceptances migrated")
+                session.commit()
+                if seeded:
+                    logger.info(f"Legal documents seeded: {seeded}")
         except Exception as e:
             logger.warning(f"Legal documents seed warning: {e}")
 
@@ -332,46 +339,46 @@ _AUTOCONTROL_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest upper
 <p class="text-zinc-400 text-xs leading-relaxed mb-3">Este documento será actualizado próximamente con el contenido definitivo antes del lanzamiento de la plataforma.</p>
 <p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZ CREATIVE © 2026 — Todos los derechos reservados</p>"""
 
-_DECLARATION_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Version 1.0 — Abril 2026</p>
-<h3 class="text-zinc-100 font-semibold text-sm mb-4">Declaración responsable del uso del contenido</h3>
-<p class="text-zinc-400 text-xs leading-relaxed mb-3">Este documento será actualizado próximamente con el contenido definitivo antes del lanzamiento de la plataforma.</p>
+_TERMS_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Version 1.0 — Abril 2026</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-4">Condiciones de uso y declaración de uso responsable</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Documento pendiente de redacción. Este texto será sustituido por las condiciones de uso definitivas y la declaración de uso responsable antes del lanzamiento de la plataforma.</p>
+<p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZ CREATIVE © 2026 — Todos los derechos reservados</p>"""
+
+_SUPPLIER_CONTRACT_HTML = """<p class="text-zinc-500 text-[10px] tracking-widest uppercase mb-4">Version 1.0 — Abril 2026</p>
+<h3 class="text-zinc-100 font-semibold text-sm mb-4">Contrato de proveedor</h3>
+<p class="text-zinc-400 text-xs leading-relaxed mb-3">Documento pendiente de redacción. Este texto será sustituido por el contrato genérico de proveedor antes del lanzamiento de la plataforma.</p>
 <p class="text-zinc-600 text-[10px] text-center pt-3 border-t border-zinc-800">DAZZ CREATIVE © 2026 — Todos los derechos reservados</p>"""
 
 
 def _seed_legal_documents(session):
-    """Seed the 4 initial legal documents."""
+    """Seed the 5 generic legal documents idempotently. Adds only types missing an active generic doc."""
     from app.models.legal_documents import LegalDocument
 
-    docs = [
-        LegalDocument(
-            type="PRIVACY", version=1, title="Política de Privacidad",
-            content=_PRIVACY_HTML,
-            file_url=f"{SUPPLIER_PORTAL_PDF_BASE}/privacy-policy.pdf",
-            is_generic=True, is_active=True,
-        ),
-        LegalDocument(
-            type="CONTRACT", version=1, title="Contrato de Agencia",
-            content=_CONTRACT_HTML,
-            file_url=f"{SUPPLIER_PORTAL_PDF_BASE}/agency-contract.pdf",
-            is_generic=True, is_active=True,
-        ),
-        LegalDocument(
-            type="AUTOCONTROL", version=1, title="Código de Autocontrol",
-            content=_AUTOCONTROL_HTML,
-            file_url=None,
-            is_generic=True, is_active=True,
-        ),
-        LegalDocument(
-            type="DECLARATION", version=1, title="Declaración Responsable del Uso del Contenido",
-            content=_DECLARATION_HTML,
-            file_url=None,
-            is_generic=True, is_active=True,
-        ),
+    seeds = [
+        ("PRIVACY",             "Política de Privacidad",             _PRIVACY_HTML,            f"{SUPPLIER_PORTAL_PDF_BASE}/privacy-policy.pdf"),
+        ("TERMS",               "Condiciones de Uso",                 _TERMS_HTML,              None),
+        ("SUPPLIER_CONTRACT",   "Contrato de Proveedor",              _SUPPLIER_CONTRACT_HTML,  None),
+        ("INFLUENCER_CONTRACT", "Contrato de Influencer",             _CONTRACT_HTML,           f"{SUPPLIER_PORTAL_PDF_BASE}/agency-contract.pdf"),
+        ("AUTOCONTROL",         "Código de Autocontrol",              _AUTOCONTROL_HTML,        None),
     ]
-    session.add_all(docs)
-    session.flush()  # Assign IDs before migration
-    logger.info(f"Seeded {len(docs)} legal documents")
-    return docs
+
+    added = []
+    for doc_type, title, content, file_url in seeds:
+        exists = session.query(LegalDocument).filter_by(
+            type=doc_type, is_generic=True, is_active=True,
+        ).first()
+        if exists:
+            continue
+        session.add(LegalDocument(
+            type=doc_type, version=1, title=title,
+            content=content, file_url=file_url,
+            is_generic=True, is_active=True,
+        ))
+        added.append(doc_type)
+
+    if added:
+        session.flush()
+    return added
 
 
 def _migrate_existing_acceptances(session):
@@ -380,7 +387,7 @@ def _migrate_existing_acceptances(session):
     from app.models.suppliers import Supplier
 
     privacy_doc = session.query(LegalDocument).filter_by(type="PRIVACY", is_active=True, is_generic=True).first()
-    contract_doc = session.query(LegalDocument).filter_by(type="CONTRACT", is_active=True, is_generic=True).first()
+    contract_doc = session.query(LegalDocument).filter_by(type="INFLUENCER_CONTRACT", is_active=True, is_generic=True).first()
 
     if not privacy_doc:
         return

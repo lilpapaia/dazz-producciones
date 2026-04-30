@@ -371,8 +371,8 @@ class BossInfluencerDocStatus(BaseModel):
     autocontrol_accepted: bool = False
     privacy_version: Optional[int] = None
     privacy_accepted: bool = False
-    declaration_version: Optional[int] = None
-    declaration_accepted: bool = False
+    terms_version: Optional[int] = None
+    terms_accepted: bool = False
 
 
 class RegistrationDocumentResponse(BaseModel):

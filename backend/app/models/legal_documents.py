@@ -19,16 +19,17 @@ from app.models.database import Base
 
 class LegalDocumentType(str, enum.Enum):
     PRIVACY = "PRIVACY"
-    CONTRACT = "CONTRACT"
+    TERMS = "TERMS"
+    SUPPLIER_CONTRACT = "SUPPLIER_CONTRACT"
+    INFLUENCER_CONTRACT = "INFLUENCER_CONTRACT"
     AUTOCONTROL = "AUTOCONTROL"
-    DECLARATION = "DECLARATION"
 
 
 class LegalDocument(Base):
     __tablename__ = "legal_documents"
 
     id = Column(Integer, primary_key=True, index=True)
-    type = Column(String(20), nullable=False)  # PRIVACY, CONTRACT, AUTOCONTROL, DECLARATION
+    type = Column(String(30), nullable=False)  # PRIVACY, TERMS, SUPPLIER_CONTRACT, INFLUENCER_CONTRACT, AUTOCONTROL
     version = Column(Integer, default=1, nullable=False)
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=True)  # HTML for scroll-to-accept modal

@@ -56,6 +56,7 @@ export const deactivateLegalDocument = (id) => api.delete(`/suppliers/legal-docu
 export const downloadLegalDocument = (id) => api.get(`/suppliers/legal-documents/${id}/download`);
 export const getPendingSuppliers = (docId) => api.get(`/suppliers/legal-documents/${docId}/pending-suppliers`);
 export const getLegalDocInfluencers = () => api.get('/suppliers/legal-documents/influencers');
+export const getLegalDocGeneralSuppliers = () => api.get('/suppliers/legal-documents/general-suppliers');
 export const extractLegalDocText = (file) => {
   const form = new FormData();
   form.append('file', file);

@@ -259,11 +259,17 @@ async def invite_supplier_with_contract(
     email: str = Query(...),
     message: Optional[str] = Query(None, max_length=500),
     contract_content: str = Query(..., description="HTML content for the personalized contract"),
+    is_influencer: bool = Query(False, description="True for INFLUENCER_CONTRACT, False for SUPPLIER_CONTRACT"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Invite a supplier with a personalized contract PDF."""
+    """Invite a supplier with a personalized contract PDF.
+
+    The contract type is determined by `is_influencer`:
+    - True  → INFLUENCER_CONTRACT (talent/influencer with permanent OC)
+    - False → SUPPLIER_CONTRACT  (general supplier without OC)
+    """
     import os, tempfile, asyncio
     from app.services.validators import validate_pdf_bytes
     from config.constants import MAX_SUPPLIER_PDF_SIZE
@@ -282,6 +288,12 @@ async def invite_supplier_with_contract(
     if pending:
         raise HTTPException(400, "An active invitation already exists for this email")
 
+    contract_type = "INFLUENCER_CONTRACT" if is_influencer else "SUPPLIER_CONTRACT"
+    contract_title = (
+        f"Contrato de Influencer — {name}" if is_influencer
+        else f"Contrato de Proveedor — {name}"
+    )
+
     # Validate PDF
     contents = await file.read()
     validate_pdf_bytes(contents, max_size=MAX_SUPPLIER_PDF_SIZE)
@@ -293,7 +305,7 @@ async def invite_supplier_with_contract(
         tmp_path = tmp.name
     try:
         object_key = await asyncio.to_thread(
-            save_legal_doc, tmp_path, "CONTRACT", 1, None
+            save_legal_doc, tmp_path, contract_type, 1, None
         )
     finally:
         os.unlink(tmp_path)
@@ -310,9 +322,9 @@ async def invite_supplier_with_contract(
 
     # Create personalized contract document linked to invitation
     doc = LegalDocument(
-        type="CONTRACT",
+        type=contract_type,
         version=1,
-        title=f"Contrato de Agencia — {name}",
+        title=contract_title,
         content=contract_content,
         file_url=object_key,
         file_size=len(contents),

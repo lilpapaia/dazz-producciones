@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, FileText, Eye, Code, ChevronLeft, AlertCircle, CheckCircle, Loader2, Users } from 'lucide-react';
-import { extractLegalDocText, createLegalDocument, getLegalDocInfluencers, getLegalDocumentStats } from '../../services/suppliersApi';
+import { extractLegalDocText, createLegalDocument, getLegalDocInfluencers, getLegalDocGeneralSuppliers, getLegalDocumentStats } from '../../services/suppliersApi';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
 const TITLES = {
   PRIVACY: 'Política de Privacidad',
-  CONTRACT: 'Contrato de Agencia',
+  TERMS: 'Condiciones de Uso',
+  SUPPLIER_CONTRACT: 'Contrato de Proveedor',
+  INFLUENCER_CONTRACT: 'Contrato de Influencer',
   AUTOCONTROL: 'Código de Autocontrol',
-  DECLARATION: 'Declaración Responsable del Uso del Contenido',
 };
+
+const PERSONALIZABLE_TYPES = new Set(['SUPPLIER_CONTRACT', 'INFLUENCER_CONTRACT']);
 
 const UpdateDocument = () => {
   const { docType } = useParams();
@@ -28,12 +31,14 @@ const UpdateDocument = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [currentVersion, setCurrentVersion] = useState(null);
 
-  // Contract-specific
-  const isContract = type === 'CONTRACT';
+  // Contract-specific (INFLUENCER_CONTRACT or SUPPLIER_CONTRACT can be personalized per-supplier)
+  const isPersonalizable = PERSONALIZABLE_TYPES.has(type);
+  const isInfluencerContract = type === 'INFLUENCER_CONTRACT';
+  const targetLabel = isInfluencerContract ? 'Influencers' : 'Proveedores';
   const [contractMode, setContractMode] = useState('generic'); // generic | custom
-  const [influencers, setInfluencers] = useState([]);
+  const [targets, setTargets] = useState([]);
   const [selected, setSelected] = useState(new Set());
-  const [loadingInfluencers, setLoadingInfluencers] = useState(false);
+  const [loadingTargets, setLoadingTargets] = useState(false);
 
   useEffect(() => {
     getLegalDocumentStats()
@@ -43,14 +48,15 @@ const UpdateDocument = () => {
       })
       .catch(() => {});
 
-    if (isContract) {
-      setLoadingInfluencers(true);
-      getLegalDocInfluencers()
-        .then(r => setInfluencers(r.data))
+    if (isPersonalizable) {
+      setLoadingTargets(true);
+      const loader = isInfluencerContract ? getLegalDocInfluencers : getLegalDocGeneralSuppliers;
+      loader()
+        .then(r => setTargets(r.data))
         .catch(() => {})
-        .finally(() => setLoadingInfluencers(false));
+        .finally(() => setLoadingTargets(false));
     }
-  }, [type, isContract]);
+  }, [type, isPersonalizable, isInfluencerContract]);
 
   const handleFile = async (f) => {
     if (!f || f.type !== 'application/pdf') { setError('Solo PDF'); return; }
@@ -73,15 +79,16 @@ const UpdateDocument = () => {
     setError('');
 
     try {
-      if (isContract && contractMode === 'custom') {
-        // Create personalized contracts for each selected influencer
+      if (isPersonalizable && contractMode === 'custom') {
+        // Create personalized contracts for each selected supplier/influencer
         for (const supplierId of selected) {
           const form = new FormData();
           form.append('file', file);
-          const inf = influencers.find(i => i.id === supplierId);
+          const tgt = targets.find(t => t.id === supplierId);
+          const baseTitle = TITLES[type] || type;
           await createLegalDocument(form, {
-            doc_type: 'CONTRACT',
-            title: `Contrato de Agencia — ${inf?.name || supplierId}`,
+            doc_type: type,
+            title: `${baseTitle} — ${tgt?.name || supplierId}`,
             content: htmlContent,
             is_generic: false,
             target_supplier_id: supplierId,
@@ -104,7 +111,7 @@ const UpdateDocument = () => {
     setSaving(false);
   };
 
-  const toggleInfluencer = (id) => {
+  const toggleTarget = (id) => {
     setSelected(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -113,16 +120,16 @@ const UpdateDocument = () => {
   };
 
   const toggleAll = () => {
-    if (selected.size === influencers.length) {
+    if (selected.size === targets.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(influencers.map(i => i.id)));
+      setSelected(new Set(targets.map(t => t.id)));
     }
   };
 
   const newVersion = (currentVersion || 0) + 1;
   const canConfirm = file && htmlContent && !extracting && !saving &&
-    (!isContract || contractMode === 'generic' || selected.size > 0);
+    (!isPersonalizable || contractMode === 'generic' || selected.size > 0);
 
   // Success state
   if (success) {
@@ -158,7 +165,7 @@ const UpdateDocument = () => {
       </div>
 
       {/* Contract mode selector */}
-      {isContract && (
+      {isPersonalizable && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-3">
           <div className="text-[12px] text-zinc-400 tracking-widest uppercase font-semibold mb-2">Alcance del contrato</div>
           <div className="flex gap-2">
@@ -170,7 +177,7 @@ const UpdateDocument = () => {
                   : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800'
               }`}
             >
-              Genérico (todos los influencers)
+              Genérico (todos {isInfluencerContract ? 'los influencers' : 'los proveedores'})
             </button>
             <button
               onClick={() => setContractMode('custom')}
@@ -186,44 +193,47 @@ const UpdateDocument = () => {
         </div>
       )}
 
-      {/* Influencer selection (contract custom mode) */}
-      {isContract && contractMode === 'custom' && (
+      {/* Target selection (contract custom mode) */}
+      {isPersonalizable && contractMode === 'custom' && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-3">
           <div className="flex items-center justify-between mb-2">
             <div className="text-[12px] text-zinc-400 tracking-widest uppercase font-semibold">
-              Influencers ({selected.size}/{influencers.length})
+              {targetLabel} ({selected.size}/{targets.length})
             </div>
             <button onClick={toggleAll} className="text-[11px] text-amber-400 hover:text-amber-300">
-              {selected.size === influencers.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              {selected.size === targets.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
             </button>
           </div>
-          {loadingInfluencers ? (
+          {loadingTargets ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 size={16} className="text-amber-500 animate-spin" />
             </div>
           ) : (
             <div className="space-y-1 max-h-[200px] overflow-y-auto">
-              {influencers.map(inf => (
-                <label key={inf.id} className="flex items-center gap-2.5 py-1.5 px-2 rounded hover:bg-zinc-800 cursor-pointer">
+              {targets.map(tgt => (
+                <label key={tgt.id} className="flex items-center gap-2.5 py-1.5 px-2 rounded hover:bg-zinc-800 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={selected.has(inf.id)}
-                    onChange={() => toggleInfluencer(inf.id)}
+                    checked={selected.has(tgt.id)}
+                    onChange={() => toggleTarget(tgt.id)}
                     className="w-3.5 h-3.5 accent-amber-500 rounded"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] text-zinc-200 truncate">{inf.name}</div>
+                    <div className="text-[13px] text-zinc-200 truncate">{tgt.name}</div>
                     <div className="text-[10px] text-zinc-500 flex gap-2">
-                      {inf.oc_number && <span className="text-purple-400 font-['IBM_Plex_Mono']">{inf.oc_number}</span>}
-                      {inf.contract_type && (
-                        <span>v{inf.contract_version} ({inf.contract_type === 'custom' ? 'especial' : 'genérico'})</span>
+                      {tgt.oc_number && <span className="text-purple-400 font-['IBM_Plex_Mono']">{tgt.oc_number}</span>}
+                      {tgt.nif_cif && !tgt.oc_number && <span className="font-['IBM_Plex_Mono']">{tgt.nif_cif}</span>}
+                      {tgt.contract_type && (
+                        <span>v{tgt.contract_version} ({tgt.contract_type === 'custom' ? 'especial' : 'genérico'})</span>
                       )}
                     </div>
                   </div>
                 </label>
               ))}
-              {influencers.length === 0 && (
-                <div className="text-[12px] text-zinc-500 text-center py-4">No hay influencers registrados</div>
+              {targets.length === 0 && (
+                <div className="text-[12px] text-zinc-500 text-center py-4">
+                  No hay {isInfluencerContract ? 'influencers' : 'proveedores generales'} registrados
+                </div>
               )}
             </div>
           )}
@@ -338,8 +348,8 @@ const UpdateDocument = () => {
         onConfirm={handleSave}
         title={`Actualizar ${TITLES[type]}`}
         message={
-          isContract && contractMode === 'custom'
-            ? `Se creará un contrato personalizado v${newVersion} para ${selected.size} influencer(s). Los seleccionados deberán aceptar la nueva versión.`
+          isPersonalizable && contractMode === 'custom'
+            ? `Se creará un contrato personalizado v${newVersion} para ${selected.size} ${isInfluencerContract ? 'influencer' : 'proveedor'}(es). Los seleccionados deberán aceptar la nueva versión.`
             : `¿Actualizar ${TITLES[type]} a v${newVersion}? Todos los proveedores aplicables deberán aceptar de nuevo.`
         }
         type="warning"

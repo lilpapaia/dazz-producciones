@@ -4,11 +4,16 @@ import { FileText, Users, ChevronRight, AlertCircle, Loader2 } from 'lucide-reac
 import { getLegalDocumentStats } from '../../services/suppliersApi';
 
 const TYPE_CONFIG = {
-  PRIVACY: { badge: 'TODOS', badgeCls: 'bg-blue-400/20 text-blue-400', label: 'Todos los proveedores' },
-  CONTRACT: { badge: 'INFLUENCERS', badgeCls: 'bg-purple-400/20 text-purple-400', label: 'Solo influencers' },
-  AUTOCONTROL: { badge: 'INFLUENCERS', badgeCls: 'bg-purple-400/20 text-purple-400', label: 'Solo influencers' },
-  DECLARATION: { badge: 'INFLUENCERS', badgeCls: 'bg-purple-400/20 text-purple-400', label: 'Solo influencers' },
+  PRIVACY:             { badge: 'TODOS',       badgeCls: 'bg-blue-400/20 text-blue-400',       label: 'Todos los proveedores' },
+  TERMS:               { badge: 'TODOS',       badgeCls: 'bg-blue-400/20 text-blue-400',       label: 'Todos los proveedores' },
+  SUPPLIER_CONTRACT:   { badge: 'PROVEEDORES', badgeCls: 'bg-emerald-400/20 text-emerald-400', label: 'Solo proveedores generales' },
+  INFLUENCER_CONTRACT: { badge: 'INFLUENCERS', badgeCls: 'bg-purple-400/20 text-purple-400',   label: 'Solo influencers' },
+  AUTOCONTROL:         { badge: 'INFLUENCERS', badgeCls: 'bg-purple-400/20 text-purple-400',   label: 'Solo influencers' },
 };
+
+const TYPE_ORDER = ['PRIVACY', 'TERMS', 'SUPPLIER_CONTRACT', 'INFLUENCER_CONTRACT', 'AUTOCONTROL'];
+
+const PERSONALIZABLE_TYPES = new Set(['SUPPLIER_CONTRACT', 'INFLUENCER_CONTRACT']);
 
 const LegalDocumentsPage = () => {
   const navigate = useNavigate();
@@ -29,8 +34,12 @@ const LegalDocumentsPage = () => {
     );
   }
 
-  // Stats endpoint already filters to generic-only docs
-  const genericDocs = stats || [];
+  // Stats endpoint already filters to generic-only docs. Sort by canonical order.
+  const genericDocs = (stats || []).slice().sort((a, b) => {
+    const ai = TYPE_ORDER.indexOf(a.type);
+    const bi = TYPE_ORDER.indexOf(b.type);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
 
   return (
     <div className="max-w-[47rem] mx-auto">
@@ -100,7 +109,7 @@ const LegalDocumentsPage = () => {
                   onClick={() => navigate(`/suppliers/documents/update/${doc.type}`)}
                   className="text-[12px] text-amber-400 hover:text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded transition-colors ml-auto"
                 >
-                  {doc.type === 'CONTRACT' ? 'Actualizar contratos' : 'Actualizar'} <ChevronRight size={12} className="inline" />
+                  {PERSONALIZABLE_TYPES.has(doc.type) ? 'Actualizar contratos' : 'Actualizar'} <ChevronRight size={12} className="inline" />
                 </button>
               </div>
             </div>

@@ -43,31 +43,50 @@ router = APIRouter(tags=["Legal Documents"])
 # ============================================
 
 def get_applicable_documents(supplier: Supplier, db: Session) -> list[LegalDocument]:
-    """Return all active legal documents that apply to a given supplier."""
+    """Return all active legal documents that apply to a given supplier.
+
+    General supplier (oc_id IS NULL): PRIVACY + TERMS + SUPPLIER_CONTRACT (generic or custom).
+    Influencer (oc_id IS NOT NULL):   PRIVACY + TERMS + INFLUENCER_CONTRACT (generic or custom) + AUTOCONTROL.
+    """
     is_influencer = supplier.oc_id is not None
     all_active = db.query(LegalDocument).filter(LegalDocument.is_active == True).all()
 
-    result = []
-    # Check if there's a personalized CONTRACT for this supplier
-    has_custom_contract = any(
-        d.type == "CONTRACT" and d.target_supplier_id == supplier.id
+    has_custom_inf = any(
+        d.type == "INFLUENCER_CONTRACT" and d.target_supplier_id == supplier.id
+        for d in all_active
+    )
+    has_custom_sup = any(
+        d.type == "SUPPLIER_CONTRACT" and d.target_supplier_id == supplier.id
         for d in all_active
     )
 
+    result = []
     for doc in all_active:
-        if doc.type == "PRIVACY" and doc.is_generic:
+        if doc.type == "PRIVACY":
+            if doc.is_generic:
+                result.append(doc)
+        elif doc.type == "TERMS":
+            if doc.is_generic:
+                result.append(doc)
+        elif doc.type == "SUPPLIER_CONTRACT":
+            if is_influencer:
+                continue
+            if doc.is_generic and has_custom_sup:
+                continue
+            if doc.target_supplier_id and doc.target_supplier_id != supplier.id:
+                continue
             result.append(doc)
-        elif doc.type in ("CONTRACT", "AUTOCONTROL", "DECLARATION"):
+        elif doc.type == "INFLUENCER_CONTRACT":
             if not is_influencer:
                 continue
-            if doc.type == "CONTRACT":
-                if doc.is_generic and has_custom_contract:
-                    # Skip generic contract if a custom one exists
-                    continue
-                if doc.target_supplier_id and doc.target_supplier_id != supplier.id:
-                    # Custom contract for a different supplier
-                    continue
+            if doc.is_generic and has_custom_inf:
+                continue
+            if doc.target_supplier_id and doc.target_supplier_id != supplier.id:
+                continue
             result.append(doc)
+        elif doc.type == "AUTOCONTROL":
+            if is_influencer and doc.is_generic:
+                result.append(doc)
 
     return result
 
@@ -163,7 +182,7 @@ def get_boss_influencer_ids(user: User, db: Session) -> set[int]:
 
 @router.get("/suppliers/legal-documents", response_model=list[LegalDocumentResponse])
 async def list_legal_documents(
-    type: Optional[str] = Query(None, description="Filter by type: PRIVACY, CONTRACT, AUTOCONTROL, DECLARATION"),
+    type: Optional[str] = Query(None, description="Filter by type: PRIVACY, TERMS, SUPPLIER_CONTRACT, INFLUENCER_CONTRACT, AUTOCONTROL"),
     active_only: bool = Query(True, description="Only active documents"),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
@@ -181,7 +200,7 @@ async def list_legal_documents(
 async def create_legal_document(
     request: Request,
     file: UploadFile = File(...),
-    doc_type: str = Query(..., description="PRIVACY, CONTRACT, AUTOCONTROL, DECLARATION"),
+    doc_type: str = Query(..., description="PRIVACY, TERMS, SUPPLIER_CONTRACT, INFLUENCER_CONTRACT, AUTOCONTROL"),
     title: str = Query(..., max_length=200),
     content: str = Query(..., description="HTML content for the scroll-to-accept modal"),
     is_generic: bool = Query(True),
@@ -190,15 +209,15 @@ async def create_legal_document(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_or_boss_user),
 ):
-    """Upload a new legal document PDF + HTML content (ADMIN or BOSS for CONTRACT/AUTOCONTROL)."""
+    """Upload a new legal document PDF + HTML content (ADMIN or BOSS for INFLUENCER_CONTRACT/AUTOCONTROL)."""
     doc_type = doc_type.upper()
     if doc_type not in [t.value for t in LegalDocumentType]:
         raise HTTPException(400, detail=f"Invalid type. Must be one of: {[t.value for t in LegalDocumentType]}")
 
-    # BOSS: only CONTRACT and AUTOCONTROL, only for their company's influencers
+    # BOSS: only INFLUENCER_CONTRACT and AUTOCONTROL, only for their company's influencers
     if admin.role == UserRole.BOSS:
-        if doc_type not in ("CONTRACT", "AUTOCONTROL"):
-            raise HTTPException(403, detail="Only CONTRACT and AUTOCONTROL documents allowed")
+        if doc_type not in ("INFLUENCER_CONTRACT", "AUTOCONTROL"):
+            raise HTTPException(403, detail="Only INFLUENCER_CONTRACT and AUTOCONTROL documents allowed")
         if target_supplier_id:
             boss_inf_ids = get_boss_influencer_ids(admin, db)
             if target_supplier_id not in boss_inf_ids:
@@ -336,7 +355,7 @@ async def legal_document_stats(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_admin_or_boss_user),
 ):
-    """Stats per active document. BOSS only sees CONTRACT + AUTOCONTROL for their company."""
+    """Stats per active generic document. BOSS only sees INFLUENCER_CONTRACT + AUTOCONTROL for their company."""
     from sqlalchemy import func as sqlfunc
 
     is_boss = user.role == UserRole.BOSS
@@ -349,14 +368,15 @@ async def legal_document_stats(
     if not active_docs:
         return []
 
-    # BOSS: only CONTRACT and AUTOCONTROL
+    # BOSS: only INFLUENCER_CONTRACT and AUTOCONTROL
     if is_boss:
-        active_docs = [d for d in active_docs if d.type in ("CONTRACT", "AUTOCONTROL")]
+        active_docs = [d for d in active_docs if d.type in ("INFLUENCER_CONTRACT", "AUTOCONTROL")]
 
-    # Count all active suppliers
+    # Count all active suppliers, split by influencer/general
     all_suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
     influencer_ids = {s.id for s in all_suppliers if s.oc_id is not None}
-    all_supplier_ids = {s.id for s in all_suppliers}
+    general_ids = {s.id for s in all_suppliers if s.oc_id is None}
+    all_supplier_ids = influencer_ids | general_ids
 
     # BOSS: narrow to their company's influencers
     if is_boss:
@@ -373,9 +393,11 @@ async def legal_document_stats(
 
     result = []
     for doc in active_docs:
-        if doc.type == "PRIVACY":
+        if doc.type in ("PRIVACY", "TERMS"):
             total = len(all_supplier_ids)
-        elif doc.type in ("CONTRACT", "AUTOCONTROL", "DECLARATION"):
+        elif doc.type == "SUPPLIER_CONTRACT":
+            total = len(general_ids)
+        elif doc.type in ("INFLUENCER_CONTRACT", "AUTOCONTROL"):
             total = len(influencer_ids)
         else:
             total = len(all_supplier_ids)
@@ -404,20 +426,24 @@ async def legal_document_pending_suppliers(
     if not doc or not doc.is_active:
         raise HTTPException(404, detail="Document not found")
 
-    # BOSS: can only view CONTRACT/AUTOCONTROL pending lists
+    # BOSS: can only view INFLUENCER_CONTRACT/AUTOCONTROL pending lists
     is_boss = user.role == UserRole.BOSS
-    if is_boss and doc.type not in ("CONTRACT", "AUTOCONTROL"):
+    if is_boss and doc.type not in ("INFLUENCER_CONTRACT", "AUTOCONTROL"):
         raise HTTPException(403, detail="Not enough permissions")
 
     # Determine applicable suppliers
     all_suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
 
-    if doc.type == "PRIVACY":
-        applicable = all_suppliers
-    elif doc.target_supplier_id:
+    if doc.target_supplier_id:
         applicable = [s for s in all_suppliers if s.id == doc.target_supplier_id]
-    else:
+    elif doc.type in ("PRIVACY", "TERMS"):
+        applicable = all_suppliers
+    elif doc.type == "SUPPLIER_CONTRACT":
+        applicable = [s for s in all_suppliers if s.oc_id is None]
+    elif doc.type in ("INFLUENCER_CONTRACT", "AUTOCONTROL"):
         applicable = [s for s in all_suppliers if s.oc_id is not None]
+    else:
+        applicable = all_suppliers
 
     # BOSS: narrow to their company's influencers
     if is_boss:
@@ -476,9 +502,9 @@ async def legal_document_influencers(
         if not influencers:
             return []
 
-    # Get active CONTRACT documents
+    # Get active INFLUENCER_CONTRACT documents
     active_contracts = db.query(LegalDocument).filter(
-        LegalDocument.type == "CONTRACT",
+        LegalDocument.type == "INFLUENCER_CONTRACT",
         LegalDocument.is_active == True,
     ).all()
 
@@ -519,6 +545,57 @@ async def legal_document_influencers(
     return result
 
 
+@router.get("/suppliers/legal-documents/general-suppliers", response_model=list[InfluencerContractInfo])
+async def legal_document_general_suppliers(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """List all general suppliers (no OC) with their current SUPPLIER_CONTRACT version info. ADMIN only."""
+    suppliers = db.query(Supplier).filter(
+        Supplier.is_active == True,
+        Supplier.oc_id == None,
+    ).all()
+
+    if not suppliers:
+        return []
+
+    active_contracts = db.query(LegalDocument).filter(
+        LegalDocument.type == "SUPPLIER_CONTRACT",
+        LegalDocument.is_active == True,
+    ).all()
+
+    generic_contract = next((d for d in active_contracts if d.is_generic), None)
+    custom_contracts = {d.target_supplier_id: d for d in active_contracts if d.target_supplier_id}
+
+    result = []
+    for s in suppliers:
+        custom = custom_contracts.get(s.id)
+        if custom:
+            contract_version = custom.version
+            contract_type = "custom"
+            contract_doc_id = custom.id
+        elif generic_contract:
+            contract_version = generic_contract.version
+            contract_type = "generic"
+            contract_doc_id = generic_contract.id
+        else:
+            contract_version = None
+            contract_type = None
+            contract_doc_id = None
+
+        result.append(InfluencerContractInfo(
+            id=s.id,
+            name=s.name,
+            nif_cif=s.nif_cif,
+            oc_number=None,
+            contract_version=contract_version,
+            contract_type=contract_type,
+            contract_doc_id=contract_doc_id,
+        ))
+
+    return result
+
+
 @router.get("/suppliers/legal-documents/boss-contracts", response_model=list[BossInfluencerDocStatus])
 async def boss_contracts_view(
     db: Session = Depends(get_db),
@@ -549,12 +626,12 @@ async def boss_contracts_view(
     for d in active_generic:
         doc_by_type[d.type] = d
 
-    # Get custom contracts
+    # Get custom contracts (per-influencer INFLUENCER_CONTRACT overrides)
     supplier_ids = [s.id for s in influencers]
     custom_contracts = {
         d.target_supplier_id: d
         for d in db.query(LegalDocument).filter(
-            LegalDocument.type == "CONTRACT",
+            LegalDocument.type == "INFLUENCER_CONTRACT",
             LegalDocument.is_active == True,
             LegalDocument.target_supplier_id.in_(supplier_ids),
         ).all()
@@ -571,10 +648,10 @@ async def boss_contracts_view(
     for s in influencers:
         oc = ocs.get(s.oc_id)
         custom = custom_contracts.get(s.id)
-        contract_doc = custom or doc_by_type.get("CONTRACT")
+        contract_doc = custom or doc_by_type.get("INFLUENCER_CONTRACT")
         autocontrol_doc = doc_by_type.get("AUTOCONTROL")
         privacy_doc = doc_by_type.get("PRIVACY")
-        declaration_doc = doc_by_type.get("DECLARATION")
+        terms_doc = doc_by_type.get("TERMS")
 
         result.append(BossInfluencerDocStatus(
             id=s.id,
@@ -588,8 +665,8 @@ async def boss_contracts_view(
             autocontrol_accepted=(s.id, autocontrol_doc.id) in accepted_set if autocontrol_doc else False,
             privacy_version=privacy_doc.version if privacy_doc else None,
             privacy_accepted=(s.id, privacy_doc.id) in accepted_set if privacy_doc else False,
-            declaration_version=declaration_doc.version if declaration_doc else None,
-            declaration_accepted=(s.id, declaration_doc.id) in accepted_set if declaration_doc else False,
+            terms_version=terms_doc.version if terms_doc else None,
+            terms_accepted=(s.id, terms_doc.id) in accepted_set if terms_doc else False,
         ))
 
     return result
@@ -790,12 +867,15 @@ async def portal_registration_documents(
     if not invitation:
         raise HTTPException(400, detail="Invalid or expired token")
 
-    # Get all active generic documents
+    # Get all active documents
     all_active = db.query(LegalDocument).filter(LegalDocument.is_active == True).all()
 
     # Check for personalized contract linked to this invitation
+    # The contract type depends on whether this invitation is for an influencer or general supplier
+    contract_type_for_invite = "INFLUENCER_CONTRACT" if is_influencer else "SUPPLIER_CONTRACT"
     custom_contract = next(
-        (d for d in all_active if d.type == "CONTRACT" and d.target_invitation_id == invitation.id),
+        (d for d in all_active
+         if d.type == contract_type_for_invite and d.target_invitation_id == invitation.id),
         None,
     )
     has_custom = custom_contract is not None
@@ -804,17 +884,31 @@ async def portal_registration_documents(
     for doc in all_active:
         if doc.type == "PRIVACY" and doc.is_generic:
             result.append(doc)
-        elif doc.type in ("CONTRACT", "AUTOCONTROL", "DECLARATION"):
+        elif doc.type == "TERMS" and doc.is_generic:
+            result.append(doc)
+        elif doc.type == "SUPPLIER_CONTRACT":
+            if is_influencer:
+                continue
+            if doc.is_generic and has_custom:
+                continue  # Skip generic if custom exists for this invitation
+            if doc.target_supplier_id:
+                continue  # Skip supplier-targeted docs (not for registration)
+            if doc.target_invitation_id and doc.target_invitation_id != invitation.id:
+                continue  # Skip other invitations' custom contracts
+            result.append(doc)
+        elif doc.type == "INFLUENCER_CONTRACT":
             if not is_influencer:
                 continue
-            if doc.type == "CONTRACT":
-                if doc.is_generic and has_custom:
-                    continue  # Skip generic if custom exists for this invitation
-                if doc.target_supplier_id:
-                    continue  # Skip supplier-targeted docs (not for registration)
-                if doc.target_invitation_id and doc.target_invitation_id != invitation.id:
-                    continue  # Skip other invitations' custom contracts
+            if doc.is_generic and has_custom:
+                continue
+            if doc.target_supplier_id:
+                continue
+            if doc.target_invitation_id and doc.target_invitation_id != invitation.id:
+                continue
             result.append(doc)
+        elif doc.type == "AUTOCONTROL" and doc.is_generic:
+            if is_influencer:
+                result.append(doc)
 
     return [RegistrationDocumentResponse(
         id=d.id, type=d.type, title=d.title, version=d.version,

@@ -41,7 +41,7 @@ const BossContracts = () => {
       {/* Info banner */}
       <div className="bg-blue-400/[.06] text-blue-400 border border-blue-400/[.12] rounded p-3 text-[12px] mb-4 flex items-start gap-2">
         <Info size={14} className="flex-shrink-0 mt-0.5" />
-        <span>Privacidad y declaración responsable son documentos globales — solo el administrador puede actualizarlos.</span>
+        <span>Privacidad y condiciones son documentos globales — solo el administrador puede actualizarlos.</span>
       </div>
 
       {error && (
@@ -90,15 +90,15 @@ const BossContracts = () => {
                 <DocBadge version={inf.privacy_version} accepted={inf.privacy_accepted} readOnly />
               </div>
               <div className="bg-zinc-800/50 rounded p-2.5 opacity-60">
-                <div className="text-[10px] text-zinc-600 tracking-widest uppercase mb-1">Declaración</div>
-                <DocBadge version={inf.declaration_version} accepted={inf.declaration_accepted} readOnly />
+                <div className="text-[10px] text-zinc-600 tracking-widest uppercase mb-1">Condiciones</div>
+                <DocBadge version={inf.terms_version} accepted={inf.terms_accepted} readOnly />
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex gap-2">
               <button
-                onClick={() => navigate('/suppliers/documents/update/CONTRACT')}
+                onClick={() => navigate('/suppliers/documents/update/INFLUENCER_CONTRACT')}
                 className="text-[12px] text-amber-400 hover:text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded transition-colors flex items-center gap-1"
               >
                 Actualizar contrato <ChevronRight size={12} />

@@ -87,7 +87,8 @@ const SupplierInvite = () => {
     setSending(true);
     try {
       if (withContract && contractFile && contractHtml) {
-        // Use invite-with-contract endpoint
+        // Use invite-with-contract endpoint. Backend uses is_influencer to choose
+        // INFLUENCER_CONTRACT vs SUPPLIER_CONTRACT for the personalized doc.
         const form = new FormData();
         form.append('file', contractFile);
         await inviteWithContract(form, {
@@ -95,6 +96,7 @@ const SupplierInvite = () => {
           email: email.trim(),
           message: message.trim() || undefined,
           contract_content: contractHtml,
+          is_influencer: withOC,
         });
       } else {
         await inviteSupplier({ name: name.trim(), email: email.trim(), message: message.trim() || undefined });
@@ -241,8 +243,8 @@ const SupplierInvite = () => {
         </div>
       )}
 
-      {/* ─── PERSONALIZED CONTRACT (optional, after OC created) ─── */}
-      {withOC && ocCreated && (
+      {/* ─── PERSONALIZED CONTRACT (optional, available for both flows) ─── */}
+      {canShowInviteForm && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4 mb-3">
           <label className="flex items-center gap-3 cursor-pointer mb-3">
             <input
@@ -252,7 +254,9 @@ const SupplierInvite = () => {
               className="w-4 h-4 accent-amber-500 rounded"
             />
             <div>
-              <div className="text-[13px] text-zinc-200 font-medium">Adjuntar contrato personalizado</div>
+              <div className="text-[13px] text-zinc-200 font-medium">
+                Adjuntar contrato personalizado de {withOC ? 'influencer' : 'proveedor'}
+              </div>
               <div className="text-[12px] text-zinc-500">Si no adjuntas, se usará el contrato genérico vigente</div>
             </div>
           </label>
