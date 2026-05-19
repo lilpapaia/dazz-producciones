@@ -463,6 +463,23 @@ Statistics/
 
 ---
 
+## 2026-04-21: [Diseño] - Autofactura crea PENDING, ticket solo al aprobar
+
+**Decisión:** El flujo de autofactura (factura emitida por DAZZ al proveedor) crea una `SupplierInvoice` en estado PENDING. El registro en la tabla `tickets` NO se genera hasta que un ADMIN aprueba la autofactura.
+**Por qué:** Mantener un flujo uniforme con las facturas normales del portal (PENDING → APPROVED → ticket creado). Evita duplicar lógica y deja una ventana para corregir errores.
+**Riesgo aceptado:** Si el usuario se equivoca al crear una autofactura, puede borrarla mientras esté en PENDING sin efectos en la contabilidad del proyecto.
+**Aplicación:** No cambiar este comportamiento pensando que es un bug. Si alguna auditoría lo marca como "el ticket no aparece tras crear la autofactura", es intencionado.
+
+---
+
+## 2026-04-21: [Diseño] - resolve_company_from_oc devuelve billing_company_id
+
+**Decisión:** `resolve_company_from_oc()` resuelve la empresa a partir de la OC devolviendo `billing_company_id`, NO `company_id`.
+**Por qué:** DAZZ tiene 2 empresas constituidas legalmente (DIGITAL ADVERTISING y DAZZLE MGMT). La empresa que factura (billing) puede diferir de la empresa "dueña" del proyecto/OC. Para facturación y Excel de contabilidad, lo correcto es usar la billing_company.
+**Aplicación:** Al tocar flujos de facturación/OCs, NO "corregir" esto a `company_id`. Si necesitas la empresa de negocio, usa `company_id`; si necesitas la empresa que emite la factura legal, usa `billing_company_id`.
+
+---
+
 ## Template para futuras lecciones
 
 ```

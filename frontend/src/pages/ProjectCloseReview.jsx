@@ -130,14 +130,14 @@ const ProjectCloseReview = () => {
             <span className="text-sm">Volver al Proyecto</span>
           </button>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
             <div>
               <h1 className="text-3xl font-bebas tracking-wider">CERRAR PROYECTO</h1>
-              <p className="text-zinc-400">{project.creative_code} • {project.description}</p>
+              <p className="text-zinc-400 text-sm">{project.creative_code} • {project.description}</p>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-sm text-zinc-500">TOTAL PROYECTO</p>
                 <p className="text-3xl font-bold text-amber-500">{totalAmount.toFixed(2)}€</p>
               </div>

@@ -494,11 +494,28 @@ Estos issues requieren contenido legal que debe redactar un abogado especialista
 
 ---
 
+## ✅ Sesión 2026-04-16 — 4 commits, Excel redesign + 5 bugfixes
+
+### ✅ Feature: Excel redesign + presupuesto
+- [x] **FEAT-EXCEL:** Reescritura completa excel_generator.py — formato DESGLOSE_CON_MARGEN contabilidad
+- [x] **FEAT-PRESUPUESTO:** Campo presupuesto en Project (BD + schemas + migración + frontend crear/editar)
+- [x] **FEAT-LABEL:** Label "PO SI APLICA" → "DESCRIPCIÓN" en ReviewTicket.jsx
+
+### ✅ Bugs resueltos (2026-04-16)
+- [x] **BUG-70:** Badge AUTO en InvoiceDetail y SupplierDetail (3 sitios)
+- [x] **BUG-71a:** IVA/IRPF 100x más pequeños en Excel — quitado /100 innecesario
+- [x] **BUG-71b:** Fórmulas Excel no se evaluaban al abrir — calcMode=auto
+- [x] **BUG-71c:** Presupuesto en cabecera superior Excel (columna T)
+- [x] **BUG-BANNER:** Banner IA no visible en móvil — quitado hidden md:block
+
+---
+
 ## 🔧 Bugs pendientes
 
 - [ ] **Rate limiting storage memory://:** No se comparte entre workers gunicorn — necesita Redis
 - [ ] **BUG-47:** Verificar límite tamaño archivos en producción
 - [ ] **BUG-52:** Total proyecto huérfano tras error BUG-50 — verificar y limpiar datos producción
+- [ ] **BUG-COSMETIC:** UserAutocomplete.jsx:137 — corona ADMIN nunca se muestra ('admin' vs 'ADMIN')
 
 ---
 

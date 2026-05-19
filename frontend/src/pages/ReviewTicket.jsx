@@ -970,8 +970,9 @@ const ReviewTicket = () => {
                 {/* ═══ NATIONAL: EUR only ═══ */}
                 <p className="text-xs text-zinc-500 font-mono mb-3 tracking-wider">DESGLOSE IMPORTES</p>
 
-                <div className="flex items-end gap-4 mb-4">
-                  <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-4">
+                  {/* Base - full width on mobile, flex-1 on desktop */}
+                  <div className="w-full sm:flex-1">
                     <label className="block text-zinc-400 mb-1 text-xs">Base</label>
                     <div className="relative">
                       <input type="number" step="0.01"
@@ -990,6 +991,8 @@ const ReviewTicket = () => {
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">€</span>
                     </div>
                   </div>
+                  {/* %IVA + %IRPF + IVA amount - grouped on second line on mobile */}
+                  <div className="flex items-end gap-4">
                   <div className="w-20">
                     <label className="block text-zinc-400 mb-1 text-xs">% IVA</label>
                     <div className="relative">
@@ -1034,6 +1037,7 @@ const ReviewTicket = () => {
                     <label className="block text-zinc-400 mb-1 text-xs">IVA</label>
                     <p className="px-3 py-2 font-semibold text-zinc-300">{ticket.iva_amount?.toFixed(2)}€</p>
                   </div>
+                  </div>{/* close grouped %IVA + %IRPF + IVA */}
                 </div>
 
                 {(ticket.irpf_amount > 0) && (
