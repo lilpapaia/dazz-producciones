@@ -7,6 +7,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import useEscapeKey from '../hooks/useEscapeKey';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
+import AmountInput from '../components/common/AmountInput';
 import { getCurrencySymbol } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../constants/roles';
@@ -861,9 +862,9 @@ const ReviewTicket = () => {
                         <div className="flex items-center justify-between py-2.5 border-b border-zinc-800/50 pr-5">
                           <label className="text-[13px] text-zinc-400">Base</label>
                           <div className="relative w-28">
-                            <input type="number" step="0.01"
-                              value={ticket.foreign_amount ?? ''}
-                              onChange={(e) => updateFromForeign(parseFloat(e.target.value) || 0, ticket.iva_percentage || 0)}
+                            <AmountInput
+                              value={ticket.foreign_amount}
+                              onCommit={(n) => updateFromForeign(n ?? 0, ticket.iva_percentage || 0)}
                               disabled={isSupplierTicket}
                               className={`${inputCls} text-right pr-7 text-sm`} />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">{sym}</span>
@@ -880,9 +881,9 @@ const ReviewTicket = () => {
                           <label className="text-[13px] text-zinc-400">IVA</label>
                           <div className="flex items-center gap-2">
                             <div className="relative w-16">
-                              <input type="number" step="1" min="0" max="100"
-                                value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
-                                onChange={(e) => updateFromForeign(ticket.foreign_amount || 0, (parseFloat(e.target.value) || 0) / 100)}
+                              <AmountInput decimals={0} min={0} max={100}
+                                value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : null}
+                                onCommit={(n) => updateFromForeign(ticket.foreign_amount || 0, (n ?? 0) / 100)}
                                 disabled={isSupplierTicket}
                                 className={`${inputCls} text-center pr-6 text-sm`} />
                               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">%</span>
@@ -916,9 +917,9 @@ const ReviewTicket = () => {
                           <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
                             <label className="text-[13px] text-zinc-400">Base</label>
                             <div className="relative w-28">
-                              <input type="number" step="0.01"
-                                value={ticket.foreign_amount ?? ''}
-                                onChange={(e) => updateFromForeign(parseFloat(e.target.value) || 0, ticket.iva_percentage || 0)}
+                              <AmountInput
+                                value={ticket.foreign_amount}
+                                onCommit={(n) => updateFromForeign(n ?? 0, ticket.iva_percentage || 0)}
                                 disabled={isSupplierTicket}
                                 className={`${inputCls} text-right pr-7 text-sm`} />
                               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">{sym}</span>
@@ -928,9 +929,9 @@ const ReviewTicket = () => {
                             <label className="text-[13px] text-zinc-400">IVA</label>
                             <div className="flex items-center gap-2">
                               <div className="relative w-16">
-                                <input type="number" step="1" min="0" max="100"
-                                  value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
-                                  onChange={(e) => updateFromForeign(ticket.foreign_amount || 0, (parseFloat(e.target.value) || 0) / 100)}
+                                <AmountInput decimals={0} min={0} max={100}
+                                  value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : null}
+                                  onCommit={(n) => updateFromForeign(ticket.foreign_amount || 0, (n ?? 0) / 100)}
                                   disabled={isSupplierTicket}
                                   className={`${inputCls} text-center pr-6 text-sm`} />
                                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">%</span>
@@ -975,10 +976,9 @@ const ReviewTicket = () => {
                   <div className="w-full sm:flex-1">
                     <label className="block text-zinc-400 mb-1 text-xs">Base</label>
                     <div className="relative">
-                      <input type="number" step="0.01"
-                        value={ticket.base_amount ?? ''}
-                        onChange={(e) => {
-                          const base = parseFloat(e.target.value) || 0;
+                      <AmountInput
+                        value={ticket.base_amount}
+                        onCommit={(base) => {
                           const ivaP = ticket.iva_percentage || 0;
                           const irpfP = ticket.irpf_percentage || 0;
                           const iva = Math.round(base * ivaP * 100) / 100;
@@ -996,10 +996,10 @@ const ReviewTicket = () => {
                   <div className="w-20">
                     <label className="block text-zinc-400 mb-1 text-xs">% IVA</label>
                     <div className="relative">
-                      <input type="number" step="1" min="0" max="100"
-                        value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : ''}
-                        onChange={(e) => {
-                          const pct = (parseFloat(e.target.value) || 0) / 100;
+                      <AmountInput decimals={0} min={0} max={100}
+                        value={ticket.iva_percentage != null ? Math.round(ticket.iva_percentage * 100) : null}
+                        onCommit={(pctInt) => {
+                          const pct = pctInt / 100;
                           const base = ticket.base_amount || 0;
                           const irpf = ticket.irpf_amount || 0;
                           const iva = Math.round(base * pct * 100) / 100;

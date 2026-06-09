@@ -480,6 +480,29 @@ Statistics/
 
 ---
 
+## 2026-06-09: [Frontend] - input type="number" rompe la edición de importes por locale (coma/punto)
+
+**Error:** Usuarios de Mac y de Windows (locale ES) no podían editar importes en ReviewTicket. Al teclear el separador decimal el importe "saltaba" a 0, se reseteaba el campo, o solo dejaba meter céntimos con coma. Afectaba a base_amount, iva_amount, foreign_amount, etc.
+**Causa raíz:** Combinación de tres factores con `<input type="number">`:
+1. `type="number"` devuelve `e.target.value === ""` en estados intermedios inválidos (ej. al teclear la coma en "1500,") y el separador decimal aceptado depende del SO/navegador/locale (Chrome Win ES espera coma, Safari Mac es inconsistente).
+2. `parseFloat(e.target.value) || 0` convertía ese `""`/`NaN` transitorio en **0**.
+3. El recálculo de IVA/IRPF/total se disparaba en **cada keystroke** sobre un input **controlado** (`value={ticket.base_amount}`), así que el 0 se propagaba y React sobrescribía lo que el usuario estaba escribiendo. En divisa era peor (8 campos recalculados por tecla).
+   - Matiz: `parseFloat` NO era el culpable directo aquí porque `type="number"` ya entrega formato con punto o vacío; pasa a serlo si migras a `type="text"` sin normalizar coma→punto.
+**Solución (plan B+D):** Componente `frontend/src/components/common/AmountInput.jsx` reutilizable:
+- `type="text"` + `inputMode="decimal"` → controlamos el separador nosotros, no el SO.
+- Mantiene el **texto crudo** mientras se edita (no lo pisa con re-renders; flag `editing` en ref).
+- Acepta coma O punto, **normaliza coma→punto** antes de `parseFloat`.
+- Solo entrega el número parseado en `onCommit` al **perder foco / pulsar Enter** (no en cada tecla).
+- Props: `decimals` (0 para %), `min`/`max` (clamp en commit), `allowEmpty` (vacío → `null`).
+- Aplicado en ReviewTicket.jsx (6 inputs: base/IVA% nacional + base/IVA% divisa desktop y móvil), AutoInvoice.jsx (baseAmount, gastosBase) y ProjectCreate.jsx (presupuesto).
+**Regla:** NUNCA usar `<input type="number">` para importes editables con separador decimal. Usar siempre `<AmountInput>` (type="text" + inputMode="decimal" + normaliza coma→punto + recalcula en blur). El recálculo de campos derivados va en `onCommit` (blur), nunca en cada keystroke sobre un input controlado.
+**Prevención:**
+- Si añades un nuevo campo de importe, reutiliza `AmountInput`, no `type="number"`.
+- Probar edición tecleando tanto `1500,50` como `1500.50` en Chrome Win ES, Chrome Mac y Safari Mac.
+- Para porcentajes: `decimals={0}` + `min={0}` + `max={100}`. Para importes opcionales: `allowEmpty`.
+
+---
+
 ## Template para futuras lecciones
 
 ```

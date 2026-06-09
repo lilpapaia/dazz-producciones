@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Building2 } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
 import UserAutocomplete from '../components/UserAutocomplete';
 import OCSelector from '../components/OCSelector';
+import AmountInput from '../components/common/AmountInput';
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
@@ -290,14 +291,12 @@ const ProjectCreate = () => {
             <div>
               <label className="block text-xs font-mono text-zinc-400 mb-2 tracking-wider">PRESUPUESTO</label>
               <div className="relative">
-                <input
-                  type="number"
-                  name="presupuesto"
+                <AmountInput
+                  allowEmpty
+                  min={0}
                   value={formData.presupuesto}
-                  onChange={handleChange}
+                  onCommit={n => setFormData(prev => ({ ...prev, presupuesto: n == null ? '' : String(n) }))}
                   placeholder="0.00"
-                  step="0.01"
-                  min="0"
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-sm px-4 py-2.5 pr-8 text-zinc-100 focus:outline-none focus:border-amber-500"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">€</span>

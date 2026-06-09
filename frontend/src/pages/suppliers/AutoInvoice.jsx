@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Send, Download, Check, X } from 'lucide-react';
 import { getCompanies } from '../../services/api';
 import OCSelector from '../../components/OCSelector';
+import AmountInput from '../../components/common/AmountInput';
 import { getNextInvoiceNumber, searchSuppliersForAutoinvoice, generateAutoinvoice, previewAutoinvoice } from '../../services/suppliersApi';
 import { showError } from '../../utils/toast';
 import useClickOutside from '../../hooks/useClickOutside';
@@ -270,7 +271,7 @@ const AutoInvoice = () => {
               <input value={concept} onChange={e => setConcept(e.target.value)} placeholder="Servicios de creación de contenido · Campaña Nike Q4 2026" className={v(concept.trim()) ? invalidCls : inputCls} />
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <div><label className={v(base > 0) ? invalidLabelCls : labelCls}>Importe base *</label><input type="number" step="0.01" value={baseAmount} onChange={e => setBaseAmount(e.target.value)} placeholder="1520.00" className={`${v(base > 0) ? invalidCls : inputCls} font-mono`} /></div>
+              <div><label className={v(base > 0) ? invalidLabelCls : labelCls}>Importe base *</label><AmountInput allowEmpty value={baseAmount} onCommit={n => setBaseAmount(n == null ? '' : String(n))} placeholder="1520.00" className={`${v(base > 0) ? invalidCls : inputCls} font-mono`} /></div>
               <div>
                 <label className={labelCls}>IVA % *</label>
                 <select value={ivaPercent} onChange={e => setIvaPercent(e.target.value)} className={`${inputCls} appearance-none`}>
@@ -309,7 +310,7 @@ const AutoInvoice = () => {
               <div className="grid grid-cols-3 gap-2 mt-3">
                 <div>
                   <label className={labelCls}>Importe *</label>
-                  <input type="number" step="0.01" value={gastosBase} onChange={e => setGastosBase(e.target.value)} placeholder="250.00" className={`${inputCls} font-mono`} />
+                  <AmountInput allowEmpty value={gastosBase} onCommit={n => setGastosBase(n == null ? '' : String(n))} placeholder="250.00" className={`${inputCls} font-mono`} />
                 </div>
                 <div>
                   <label className={labelCls}>IVA %</label>
