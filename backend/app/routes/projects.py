@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response
@@ -10,10 +11,14 @@ from pydantic import BaseModel, EmailStr
 from config.database import get_db
 from config.constants import ADMIN_RECIPIENT_ID
 from app.models import schemas
-from app.models.database import User, Project, ProjectStatus, Company, UserRole
-from app.services.auth import get_current_active_user, get_current_admin_user
+from app.models.database import User, Project, ProjectStatus, Company, UserRole, ProjectShareToken
+from app.services.auth import get_current_active_user, get_current_admin_user, get_password_hash
+from app.services.guest_share_auth import generate_share_token, generate_pin
 from app.services.companies_service import validate_company_access
 from app.services.permissions import get_user_company_ids, get_mgmt_company_ids, can_access_project, can_modify_project
+
+# FEAT-09: URL del frontend para construir el share_url (mismo origen que email.py)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://dazz-producciones.vercel.app")
 
 # LOGGING CRÍTICO
 from app.services.critical_logger import log_project_deleted
@@ -30,6 +35,39 @@ RESPONSIBLE_EMAILS = {
 
 class CloseProjectRequest(BaseModel):
     recipients: Optional[List[EmailStr]] = None
+
+
+# ============================================
+# HELPERS EXCEL (FEAT-09 — reutilizados por close_project y GET /excel)
+# ============================================
+
+def generate_project_excel_bytes(project, tickets, db) -> bytes:
+    """Genera los bytes del Excel del proyecto. HTTPException 500 si falla.
+
+    NO cambia el estado del proyecto ni envía emails — eso es responsabilidad del caller.
+    """
+    try:
+        from app.services.excel_generator import create_project_excel_bytes
+        return create_project_excel_bytes(project, tickets, db)
+    except Exception as e:
+        logger.error(f"Error generando Excel: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al generar Excel"
+        )
+
+
+def build_excel_response(project, excel_bytes, extra_headers: dict = None) -> Response:
+    """Construye la Response de descarga del Excel (mismo media_type y filename que close_project)."""
+    safe_code = re.sub(r'[^\w\-.]', '_', project.creative_code)
+    headers = {"Content-Disposition": f'attachment; filename="{safe_code}_GASTOS.xlsx"'}
+    if extra_headers:
+        headers.update(extra_headers)
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
+    )
 
 
 # ============================================
@@ -306,16 +344,7 @@ async def close_project(
             detail="Cannot close project without tickets"
         )
 
-    excel_bytes = None
-    try:
-        from app.services.excel_generator import create_project_excel_bytes
-        excel_bytes = create_project_excel_bytes(project, tickets, db)
-    except Exception as e:
-        logger.error(f"Error generando Excel: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno al generar Excel"
-        )
+    excel_bytes = generate_project_excel_bytes(project, tickets, db)
 
     recipients = []
     if request.recipients and len(request.recipients) > 0:
@@ -358,21 +387,10 @@ async def close_project(
     project.closed_at = datetime.now(timezone.utc)
     db.commit()
 
-    if excel_bytes:
-        return Response(
-            content=excel_bytes,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f'attachment; filename="{safe_code}_GASTOS.xlsx"',
-                "X-Email-Sent": "true" if email_sent else "false",
-                "X-Email-Error": email_error or "",
-            }
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate Excel"
-        )
+    return build_excel_response(project, excel_bytes, {
+        "X-Email-Sent": "true" if email_sent else "false",
+        "X-Email-Error": email_error or "",
+    })
 
 
 @router.post("/{project_id}/reopen")
@@ -535,3 +553,168 @@ async def recalculate_project_totals(
 
     db.commit()
     return {"fixed": len(fixed), "details": fixed}
+
+
+# ============================================
+# SHARE TOKENS (FEAT-09) — acceso externo link + PIN
+# ============================================
+
+def _is_mgmt_project(project) -> bool:
+    """True si la empresa del proyecto es MGMT (no se permite compartir con externos)."""
+    company_name = (project.owner_company.name if project.owner_company else None) or project.company or ""
+    return "MGMT" in company_name.upper()
+
+
+def _to_naive_utc(dt: datetime) -> datetime:
+    """Normaliza un datetime (naive o aware) a UTC naive para guardarlo en la BD."""
+    aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+    return aware.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+@router.get("/{project_id}/excel")
+async def download_project_excel(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Descargar el Excel del proyecto SIN cerrarlo (el estado sigue EN_CURSO).
+
+    Permite descargar incluso con 0 tickets (plantilla con los datos del proyecto).
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if not can_access_project(current_user, project, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para ver este proyecto")
+
+    from app.models.database import Ticket
+    tickets = db.query(Ticket).filter(Ticket.project_id == project_id).all()
+    excel_bytes = generate_project_excel_bytes(project, tickets, db)
+    return build_excel_response(project, excel_bytes)
+
+
+@router.post("/{project_id}/share-tokens", response_model=schemas.ShareTokenCreateResponse, status_code=status.HTTP_201_CREATED)
+async def create_share_token(
+    project_id: int,
+    body: schemas.ShareTokenCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Generar un link + PIN para acceso externo a un proyecto (solo producción, no MGMT).
+
+    El PIN se devuelve en texto plano ÚNICAMENTE aquí (en BD se guarda hasheado).
+    """
+    project = db.query(Project).options(joinedload(Project.owner_company)).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if not can_modify_project(current_user, project, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para compartir este proyecto")
+
+    if _is_mgmt_project(project):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No se pueden compartir proyectos MGMT")
+
+    # La fecha de expiración debe ser futura.
+    now = datetime.now(timezone.utc)
+    expires_aware = body.expires_at.replace(tzinfo=timezone.utc) if body.expires_at.tzinfo is None else body.expires_at
+    if expires_aware <= now:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La fecha de expiración debe ser futura")
+
+    # Límite: máximo 10 links activos por proyecto.
+    active_count = db.query(func.count(ProjectShareToken.id)).filter(
+        ProjectShareToken.project_id == project_id,
+        ProjectShareToken.is_active == True,
+    ).scalar()
+    if active_count >= 10:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Máximo 10 links activos por proyecto")
+
+    token = generate_share_token()
+    pin = generate_pin()
+    share = ProjectShareToken(
+        project_id=project_id,
+        token=token,
+        pin_hash=get_password_hash(pin),
+        guest_name=body.guest_name,
+        expires_at=_to_naive_utc(body.expires_at),
+        created_by=current_user.id,
+    )
+    db.add(share)
+    db.commit()
+    db.refresh(share)
+
+    return schemas.ShareTokenCreateResponse(
+        id=share.id,
+        token=token,
+        pin=pin,
+        guest_name=share.guest_name,
+        expires_at=share.expires_at,
+        share_url=f"{FRONTEND_URL}/share/{token}",
+    )
+
+
+@router.get("/{project_id}/share-tokens", response_model=List[schemas.ShareTokenResponse])
+async def list_share_tokens(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Listar los links del proyecto (nunca devuelve token ni pin_hash)."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if not can_access_project(current_user, project, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para ver este proyecto")
+
+    tokens = db.query(ProjectShareToken).filter(
+        ProjectShareToken.project_id == project_id
+    ).order_by(ProjectShareToken.created_at.desc()).all()
+
+    # Batch load de nombres de los creadores (evita N+1).
+    creator_ids = list({t.created_by for t in tokens})
+    creators = {u.id: u.name for u in db.query(User).filter(User.id.in_(creator_ids)).all()} if creator_ids else {}
+
+    now = datetime.now(timezone.utc)
+    result = []
+    for t in tokens:
+        exp_aware = t.expires_at.replace(tzinfo=timezone.utc) if t.expires_at.tzinfo is None else t.expires_at
+        result.append(schemas.ShareTokenResponse(
+            id=t.id,
+            guest_name=t.guest_name,
+            expires_at=t.expires_at,
+            is_active=t.is_active,
+            created_at=t.created_at,
+            last_accessed_at=t.last_accessed_at,
+            last_accessed_ip=t.last_accessed_ip,
+            created_by_name=creators.get(t.created_by, "—"),
+            is_expired=exp_aware < now,
+        ))
+    return result
+
+
+@router.delete("/{project_id}/share-tokens/{token_id}")
+async def revoke_share_token(
+    project_id: int,
+    token_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Revocar un link (is_active=False). NO se borra físicamente (auditoría)."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if not can_modify_project(current_user, project, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para revocar links de este proyecto")
+
+    share = db.query(ProjectShareToken).filter(
+        ProjectShareToken.id == token_id,
+        ProjectShareToken.project_id == project_id,
+    ).first()
+    if not share:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link no encontrado")
+
+    share.is_active = False
+    db.commit()
+    return {"message": "Link revocado"}

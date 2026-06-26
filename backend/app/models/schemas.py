@@ -169,6 +169,33 @@ class ProjectResponse(ProjectBase):
         from_attributes = True
 
 # ============================================
+# PROJECT SHARE TOKEN SCHEMAS (FEAT-09)
+# ============================================
+
+class ShareTokenCreate(BaseModel):
+    guest_name: str = Field(min_length=1, max_length=200)
+    expires_at: datetime
+
+class ShareTokenCreateResponse(BaseModel):
+    id: int
+    token: str
+    pin: str          # texto plano — ÚNICA vez que se devuelve
+    guest_name: str
+    expires_at: datetime
+    share_url: str
+
+class ShareTokenResponse(BaseModel):   # listado — SIN pin ni pin_hash
+    id: int
+    guest_name: str
+    expires_at: datetime
+    is_active: bool
+    created_at: datetime
+    last_accessed_at: Optional[datetime] = None
+    last_accessed_ip: Optional[str] = None
+    created_by_name: str               # computed (join a users.name)
+    is_expired: bool                   # computed (expires_at < now)
+
+# ============================================
 # TICKET SCHEMAS
 # ============================================
 
