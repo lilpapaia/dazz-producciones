@@ -349,6 +349,15 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db), current_u
     if not can_access_project(current_user, project, db):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    # SEC: los tickets de proveedor no se hard-deletan por esta vía (dejaría la
+    # SupplierInvoice huérfana). El frontend ya lo oculta; este guard protege la API
+    # directa. El borrado real va por delete_ticket_for_invoice (módulo proveedores).
+    if ticket.from_supplier_portal:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Los tickets de proveedor deben gestionarse desde el módulo de proveedores"
+        )
+
     if ticket.payment_status == "PAGADO ADMIN":
         raise HTTPException(status_code=403, detail="No se puede eliminar un ticket con estado de pago PAGADO ADMIN")
 
