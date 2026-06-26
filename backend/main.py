@@ -19,6 +19,7 @@ from app.models.database import Base
 from app.routes import users, auth, projects, tickets, statistics, companies
 from app.routes import suppliers as suppliers_admin, supplier_portal, autoinvoice
 from app.routes import legal_documents as legal_documents_router
+from app.routes import guest_share
 from app.services.rate_limit import limiter
 
 # QUAL-3: Lifespan context manager (replaces deprecated @app.on_event("startup"))
@@ -538,6 +539,7 @@ app.include_router(suppliers_admin.router)
 app.include_router(autoinvoice.router)
 app.include_router(supplier_portal.router)
 app.include_router(legal_documents_router.router)
+app.include_router(guest_share.router)
 
 @app.get("/")
 @limiter.limit("10 per minute")

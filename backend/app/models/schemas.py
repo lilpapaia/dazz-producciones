@@ -195,6 +195,33 @@ class ShareTokenResponse(BaseModel):   # listado — SIN pin ni pin_hash
     created_by_name: str               # computed (join a users.name)
     is_expired: bool                   # computed (expires_at < now)
 
+# ---- Guest session (acceso externo) ----
+
+class GuestValidatePinRequest(BaseModel):
+    token: str = Field(min_length=1)
+    pin: str = Field(min_length=1, max_length=12)
+
+class GuestValidatePinResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    guest_name: str
+    project_id: int
+
+class GuestProjectResponse(BaseModel):        # SIN presupuesto ni datos de cliente
+    id: int
+    creative_code: str
+    description: str
+    status: ProjectStatus
+    company_name: Optional[str] = None        # owner_company.name
+    responsible: str
+    total_amount: float
+    tickets_count: int
+    client_oc: Optional[str] = None
+    project_link: Optional[str] = None
+    send_date: Optional[str] = None
+    invoice_type: Optional[str] = None
+    other_invoice_data: Optional[str] = None
+
 # ============================================
 # TICKET SCHEMAS
 # ============================================
@@ -276,6 +303,7 @@ class TicketResponse(TicketBase):
     supplier_invoice_id: Optional[int] = None
     is_autoinvoice: bool = False
     is_suplido: bool = False
+    uploaded_by_guest_name: Optional[str] = None  # FEAT-09: badge "EXTERNO" (null = subido por empleado)
     project_status: Optional[str] = None
 
     class Config:

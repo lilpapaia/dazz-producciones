@@ -450,6 +450,53 @@ def send_project_closed_email_multi(
 
 
 # ============================================
+# FEAT-09 - Aviso de primer acceso de un externo
+# ============================================
+def send_guest_first_access_email(creator_email: str, creator_name: str, guest_name: str,
+                                  project_name: str, project_code: str) -> bool:
+    """Avisa al creador del link cuando un externo accede al proyecto por primera vez.
+
+    NON-BLOCKING: nunca lanza — devuelve True/False. No debe bloquear el login del externo.
+    """
+    try:
+        # Escapar todos los campos (anti HTML-injection en el email)
+        creator_name = html.escape(creator_name or "")
+        guest_name = html.escape(guest_name or "")
+        project_name = html.escape(project_name or "")
+        project_code = html.escape(project_code or "")
+
+        subject = f"Acceso externo al proyecto {project_code}"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#18181b;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#18181b;padding:40px 20px;">
+                <tr><td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color:#27272a;border-radius:8px;overflow:hidden;">
+                        <tr><td style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:30px;text-align:center;">
+                            <h1 style="margin:0;color:#18181b;font-size:22px;">DAZZ Creative</h1>
+                        </td></tr>
+                        <tr><td style="padding:32px;color:#e4e4e7;font-size:15px;line-height:1.6;">
+                            <p>Hola <strong>{creator_name}</strong>,</p>
+                            <p><strong>{guest_name}</strong> ha accedido al proyecto
+                            <strong>{project_name}</strong> (<span style="color:#f59e0b;">{project_code}</span>)
+                            por primera vez mediante el enlace de acceso externo.</p>
+                            <p style="color:#a1a1aa;font-size:13px;">Si no reconoces este acceso, revoca el enlace desde el proyecto.</p>
+                        </td></tr>
+                    </table>
+                </td></tr>
+            </table>
+        </body>
+        </html>
+        """
+        return send_email(creator_email, subject, html_content)
+    except Exception as e:
+        logger.warning(f"No se pudo enviar email de primer acceso externo: {str(e)}")
+        return False
+
+
+# ============================================
 # TEST - Para verificar que funciona
 # ============================================
 def test_brevo_connection():
