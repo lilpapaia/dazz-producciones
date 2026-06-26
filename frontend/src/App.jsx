@@ -1,8 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
+import { ExternalSessionProvider } from './context/ExternalSessionContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ExternalRoute from './components/ExternalRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 
@@ -20,6 +22,12 @@ const UploadTickets = lazy(() => import('./pages/UploadTickets'));
 const ReviewTicket = lazy(() => import('./pages/ReviewTicket'));
 const Statistics = lazy(() => import('./pages/Statistics'));
 const Users = lazy(() => import('./pages/Users'));
+
+// FEAT-09: Páginas externas (acceso por link + PIN, sin Navbar)
+const ExternalPinPage = lazy(() => import('./pages/external/ExternalPinPage'));
+const ExternalProjectView = lazy(() => import('./pages/external/ExternalProjectView'));
+const ExternalUploadTickets = lazy(() => import('./pages/external/ExternalUploadTickets'));
+const ExternalReviewTicket = lazy(() => import('./pages/external/ExternalReviewTicket'));
 
 // Suppliers module (admin only)
 const SuppliersLayout = lazy(() => import('./pages/suppliers/SuppliersLayout'));
@@ -74,6 +82,22 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/set-password" element={<SetPassword />} />
+
+            {/* FEAT-09: Acceso externo por link + PIN — público, sin Navbar.
+                Un solo provider para todas las rutas /share (sesión compartida vía Outlet). */}
+            <Route
+              path="/share/:token"
+              element={
+                <ExternalSessionProvider>
+                  <Outlet />
+                </ExternalSessionProvider>
+              }
+            >
+              <Route index element={<ExternalPinPage />} />
+              <Route path="project" element={<ExternalRoute><ExternalProjectView /></ExternalRoute>} />
+              <Route path="upload" element={<ExternalRoute><ExternalUploadTickets /></ExternalRoute>} />
+              <Route path="ticket/:ticketId" element={<ExternalRoute><ExternalReviewTicket /></ExternalRoute>} />
+            </Route>
             
             {/* Protected Routes con Navbar */}
             <Route 
