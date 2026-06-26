@@ -137,7 +137,7 @@ class Project(Base):
     tickets = relationship("Ticket", back_populates="project", cascade="all, delete-orphan")
 
 # ============================================
-# MODELO TICKET (SIN CAMBIOS)
+# MODELO TICKET (FEAT-09: + autoría externa)
 # ============================================
 
 class Ticket(Base):
@@ -188,6 +188,10 @@ class Ticket(Base):
     is_autoinvoice = Column(Boolean, default=False, nullable=False)
     is_suplido = Column(Boolean, default=False, nullable=False)
 
+    # FEAT-09: Autoría externa (link + PIN). Ambos null → subido por empleado.
+    uploaded_by_guest_name = Column(String, nullable=True)  # nombre del externo que subió el ticket
+    guest_share_token_id = Column(Integer, ForeignKey("project_share_tokens.id", ondelete="SET NULL"), nullable=True)
+
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
 
     # Relaciones
@@ -226,3 +230,31 @@ class RefreshToken(Base):
     revoked_at = Column(DateTime, nullable=True)
 
     user = relationship("User")
+
+# ============================================
+# MODELO PROJECT SHARE TOKEN (FEAT-09)
+# ============================================
+# Link único + PIN para acceso externo (freelancers sin cuenta) a un proyecto.
+# Patrón clonado del portal de proveedores: tabla propia, lockout, sin User.
+
+class ProjectShareToken(Base):
+    __tablename__ = "project_share_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    pin_hash = Column(String, nullable=False)
+    guest_name = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_accessed_at = Column(DateTime, nullable=True)
+    last_accessed_ip = Column(String, nullable=True)
+    failed_pin_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime, nullable=True)
+    first_access_notified = Column(Boolean, default=False, nullable=False)
+
+    # Relaciones
+    project = relationship("Project", backref="share_tokens")
+    creator = relationship("User")
