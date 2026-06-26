@@ -14,16 +14,18 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 
 from config.database import get_db
 from app.models import schemas
-from app.models.database import ProjectShareToken, Project, Ticket
+from app.models.database import ProjectShareToken, Project, Ticket, ProjectStatus
 from app.services.auth import verify_password, _DUMMY_HASH
 from app.services.guest_share_auth import get_current_guest, create_guest_access_token, _as_utc
 from app.services.rate_limit import limiter, get_real_client_ip
 from app.services.email import send_guest_first_access_email
+from app.services.ticket_service import process_ticket_upload, apply_ticket_update, delete_ticket_record
+from app.routes.projects import generate_project_excel_bytes, build_excel_response
 
 logger = logging.getLogger(__name__)
 
@@ -158,3 +160,106 @@ async def get_guest_tickets(
 ):
     """Lista los tickets del proyecto del externo (project_id del JWT — anti-IDOR)."""
     return db.query(Ticket).filter(Ticket.project_id == guest["project_id"]).all()
+
+
+# ============================================
+# MUTACIONES (FEAT-09 Fase 5)
+# ============================================
+
+def _guest_ticket_or_403(ticket_id: int, guest: dict, db: Session) -> Ticket:
+    """Carga el ticket y verifica que pertenece al proyecto del JWT (anti-IDOR)."""
+    ticket = db.query(Ticket).options(joinedload(Ticket.project)).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+    if ticket.project_id != guest["project_id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+    return ticket
+
+
+@router.post("/tickets/upload", response_model=schemas.TicketUploadResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("40/minute")
+async def guest_upload_ticket(
+    request: Request,
+    response: Response,
+    file: UploadFile = File(...),
+    guest: dict = Depends(get_current_guest),
+    db: Session = Depends(get_db),
+):
+    """Subir un ticket como externo. project_id del JWT (anti-IDOR). Mismo flujo IA que empleados."""
+    project = db.query(Project).filter(Project.id == guest["project_id"]).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if project.status == ProjectStatus.CERRADO:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El proyecto está cerrado")
+
+    return await process_ticket_upload(
+        file, project, db,
+        uploaded_by_guest_name=guest["guest_name"],
+        guest_share_token_id=guest["token_id"],
+    )
+
+
+@router.put("/tickets/{ticket_id}", response_model=schemas.TicketResponse)
+async def guest_update_ticket(
+    ticket_id: int,
+    ticket_update: schemas.TicketUpdate,
+    guest: dict = Depends(get_current_guest),
+    db: Session = Depends(get_db),
+):
+    """Editar un ticket del proyecto del externo. El guest nunca es admin →
+    no puede mutar invoice_status/payment_status en tickets del portal de proveedores."""
+    ticket = _guest_ticket_or_403(ticket_id, guest, db)
+    update_data = ticket_update.model_dump(exclude_unset=True)
+    return apply_ticket_update(ticket, update_data, db, is_admin=False)
+
+
+@router.delete("/tickets/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def guest_delete_ticket(
+    ticket_id: int,
+    guest: dict = Depends(get_current_guest),
+    db: Session = Depends(get_db),
+):
+    """Borrar un ticket del proyecto del externo. Bloquea tickets de proveedor y PAGADO ADMIN."""
+    ticket = _guest_ticket_or_403(ticket_id, guest, db)
+
+    if ticket.from_supplier_portal:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Los tickets de proveedor deben gestionarse desde el módulo de proveedores",
+        )
+    if ticket.payment_status == "PAGADO ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede eliminar un ticket con estado de pago PAGADO ADMIN",
+        )
+
+    delete_ticket_record(ticket, db)
+    return None
+
+
+@router.patch("/tickets/{ticket_id}/suplido", response_model=schemas.TicketResponse)
+async def guest_toggle_suplido(
+    ticket_id: int,
+    body: schemas.GuestSuplidoRequest,
+    guest: dict = Depends(get_current_guest),
+    db: Session = Depends(get_db),
+):
+    """Marcar/desmarcar un ticket como gasto suplido. Reutiliza apply_ticket_update
+    para ajustar los totales del proyecto con la misma lógica que empleados."""
+    ticket = _guest_ticket_or_403(ticket_id, guest, db)
+    return apply_ticket_update(ticket, {"is_suplido": body.is_suplido}, db, is_admin=False)
+
+
+@router.get("/project/excel")
+async def guest_download_excel(
+    guest: dict = Depends(get_current_guest),
+    db: Session = Depends(get_db),
+):
+    """Descargar el Excel del proyecto SIN cerrarlo. Permite 0 tickets (plantilla vacía)."""
+    project = db.query(Project).filter(Project.id == guest["project_id"]).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    tickets = db.query(Ticket).filter(Ticket.project_id == guest["project_id"]).all()
+    excel_bytes = generate_project_excel_bytes(project, tickets, db)
+    return build_excel_response(project, excel_bytes)

@@ -207,6 +207,9 @@ class GuestValidatePinResponse(BaseModel):
     guest_name: str
     project_id: int
 
+class GuestSuplidoRequest(BaseModel):
+    is_suplido: bool
+
 class GuestProjectResponse(BaseModel):        # SIN presupuesto ni datos de cliente
     id: int
     creative_code: str

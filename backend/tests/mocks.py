@@ -145,10 +145,11 @@ def mock_autoinvoice_pdf(*args, **kwargs):
 
 
 # Common patch targets for tickets upload flow
+# FEAT-09: la lógica de upload vive en ticket_service (compartida empleado/guest)
 UPLOAD_PATCHES = {
-    "cloudinary": "app.routes.tickets.upload_ticket_file",
-    "claude_ai": "app.routes.tickets.extract_ticket_data",
-    "exchange_rate": "app.routes.tickets.get_historical_exchange_rate",
+    "cloudinary": "app.services.ticket_service.upload_ticket_file",
+    "claude_ai": "app.services.ticket_service.extract_ticket_data",
+    "exchange_rate": "app.services.ticket_service.get_historical_exchange_rate",
 }
 
 # Patch targets for supplier portal upload flow
