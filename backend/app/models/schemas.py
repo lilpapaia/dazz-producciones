@@ -194,6 +194,11 @@ class ShareTokenResponse(BaseModel):   # listado — SIN pin ni pin_hash
     last_accessed_ip: Optional[str] = None
     created_by_name: str               # computed (join a users.name)
     is_expired: bool                   # computed (expires_at < now)
+    share_url: str                     # computed (FRONTEND_URL/share/<token>) — para copiar el enlace
+
+class RegeneratePinResponse(BaseModel):
+    pin: str          # texto plano — ÚNICA vez que se devuelve
+    message: str
 
 # ---- Guest session (acceso externo) ----
 

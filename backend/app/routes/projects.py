@@ -668,7 +668,8 @@ async def list_share_tokens(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para ver este proyecto")
 
     tokens = db.query(ProjectShareToken).filter(
-        ProjectShareToken.project_id == project_id
+        ProjectShareToken.project_id == project_id,
+        ProjectShareToken.hidden != True,
     ).order_by(ProjectShareToken.created_at.desc()).all()
 
     # Batch load de nombres de los creadores (evita N+1).
@@ -689,6 +690,7 @@ async def list_share_tokens(
             last_accessed_ip=t.last_accessed_ip,
             created_by_name=creators.get(t.created_by, "—"),
             is_expired=exp_aware < now,
+            share_url=f"{FRONTEND_URL}/share/{t.token}",
         ))
     return result
 
@@ -718,3 +720,76 @@ async def revoke_share_token(
     share.is_active = False
     db.commit()
     return {"message": "Link revocado"}
+
+
+@router.patch("/{project_id}/share-tokens/{token_id}/hide")
+async def hide_share_token(
+    project_id: int,
+    token_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Ocultar un link del panel (hidden=True). Solo para links ya revocados — no borra de BD."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if not can_modify_project(current_user, project, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para modificar links de este proyecto")
+
+    share = db.query(ProjectShareToken).filter(
+        ProjectShareToken.id == token_id,
+        ProjectShareToken.project_id == project_id,
+    ).first()
+    if not share:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link no encontrado")
+
+    if share.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Solo se pueden ocultar links revocados")
+
+    share.hidden = True
+    db.commit()
+    return {"message": "Link ocultado"}
+
+
+@router.post("/{project_id}/share-tokens/{token_id}/regenerate-pin", response_model=schemas.RegeneratePinResponse)
+async def regenerate_share_pin(
+    project_id: int,
+    token_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Regenerar el PIN de un link activo. Devuelve el nuevo PIN en texto plano (única vez)."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if not can_modify_project(current_user, project, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para modificar links de este proyecto")
+
+    share = db.query(ProjectShareToken).filter(
+        ProjectShareToken.id == token_id,
+        ProjectShareToken.project_id == project_id,
+    ).first()
+    if not share:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link no encontrado")
+
+    if not share.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se puede regenerar el PIN de un link revocado")
+
+    now = datetime.now(timezone.utc)
+    exp_aware = share.expires_at.replace(tzinfo=timezone.utc) if share.expires_at.tzinfo is None else share.expires_at
+    if exp_aware <= now:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se puede regenerar el PIN de un link expirado")
+
+    pin = generate_pin()
+    share.pin_hash = get_password_hash(pin)
+    # Resetear bloqueo/intentos: el PIN anterior queda invalidado.
+    share.failed_pin_attempts = 0
+    share.locked_until = None
+    db.commit()
+
+    return schemas.RegeneratePinResponse(
+        pin=pin,
+        message="PIN regenerado. El anterior ya no es válido.",
+    )

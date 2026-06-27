@@ -254,6 +254,8 @@ class ProjectShareToken(Base):
     failed_pin_attempts = Column(Integer, default=0, nullable=False)
     locked_until = Column(DateTime, nullable=True)
     first_access_notified = Column(Boolean, default=False, nullable=False)
+    # FEAT-09: ocultar del panel sin borrar de BD (solo aplica a links revocados).
+    hidden = Column(Boolean, default=False, nullable=False)
 
     # Relaciones
     project = relationship("Project", backref="share_tokens")

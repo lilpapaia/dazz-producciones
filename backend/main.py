@@ -99,6 +99,7 @@ async def lifespan(app):
             # FEAT-09: autoría externa en tickets (link + PIN). FK añadida vía modelo, no en SQL.
             conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS uploaded_by_guest_name VARCHAR"))
             conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS guest_share_token_id INTEGER"))
+            conn.execute(text("ALTER TABLE project_share_tokens ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT FALSE NOT NULL"))
             # FEAT-06: Partial unique indexes for legal_documents
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_legal_doc_generic_active "

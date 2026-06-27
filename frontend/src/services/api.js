@@ -231,5 +231,11 @@ export const getShareTokens = (projectId) =>
 export const revokeShareToken = (projectId, tokenId) =>
   api.delete(`/projects/${projectId}/share-tokens/${tokenId}`);
 
+export const hideShareToken = (projectId, tokenId) =>
+  api.patch(`/projects/${projectId}/share-tokens/${tokenId}/hide`);
+
+export const regenerateSharePin = (projectId, tokenId) =>
+  api.post(`/projects/${projectId}/share-tokens/${tokenId}/regenerate-pin`);
+
 export const downloadProjectExcel = (projectId) =>
   api.get(`/projects/${projectId}/excel`, { responseType: 'blob' });
