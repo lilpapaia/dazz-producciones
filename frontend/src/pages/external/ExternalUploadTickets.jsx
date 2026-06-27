@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { uploadGuestTicket, getGuestProject } from '../../services/shareApi';
+import { uploadGuestTicket } from '../../services/shareApi';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw, ExternalLink } from 'lucide-react';
 import { showWarning } from '../../utils/toast';
 import { getCurrencySymbol } from '../../utils/currency';
@@ -21,11 +21,6 @@ const ExternalUploadTickets = () => {
   const [currentFileName, setCurrentFileName] = useState('');
   const [failedFiles, setFailedFiles] = useState([]);
   const [oversizedFile, setOversizedFile] = useState(null);
-  const [project, setProject] = useState(null);
-
-  useEffect(() => {
-    getGuestProject().then(r => setProject(r.data)).catch(() => {});
-  }, []);
 
   // Bloquear navegación mientras sube
   useEffect(() => {
@@ -265,11 +260,6 @@ const ExternalUploadTickets = () => {
               </label>
             </div>
             <p className="text-xs text-zinc-600 mt-4">💡 "Tomar Foto" abre la cámara en móvil</p>
-            {project?.last_uploaded_file && (
-              <p className="text-xs text-zinc-500 mt-2 truncate">
-                Último archivo subido: <span className="text-zinc-400">{project.last_uploaded_file}</span>
-              </p>
-            )}
           </div>
 
           {files.length > 0 && (

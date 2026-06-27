@@ -237,19 +237,6 @@ async def guest_delete_ticket(
     return None
 
 
-@router.patch("/tickets/{ticket_id}/suplido", response_model=schemas.TicketResponse)
-async def guest_toggle_suplido(
-    ticket_id: int,
-    body: schemas.GuestSuplidoRequest,
-    guest: dict = Depends(get_current_guest),
-    db: Session = Depends(get_db),
-):
-    """Marcar/desmarcar un ticket como gasto suplido. Reutiliza apply_ticket_update
-    para ajustar los totales del proyecto con la misma lógica que empleados."""
-    ticket = _guest_ticket_or_403(ticket_id, guest, db)
-    return apply_ticket_update(ticket, {"is_suplido": body.is_suplido}, db, is_admin=False)
-
-
 @router.get("/project/excel")
 async def guest_download_excel(
     guest: dict = Depends(get_current_guest),

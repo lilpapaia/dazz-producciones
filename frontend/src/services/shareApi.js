@@ -68,8 +68,7 @@ export const updateGuestTicket = (ticketId, data) =>
 export const deleteGuestTicket = (ticketId) =>
   shareApi.delete(`/guest/tickets/${ticketId}`);
 
-export const toggleGuestSuplido = (ticketId, isSuplido) =>
-  shareApi.patch(`/guest/tickets/${ticketId}/suplido`, { is_suplido: isSuplido });
+// El "suplido" del externo se guarda en el PUT (updateGuestTicket incluye is_suplido).
 
 export const downloadGuestExcel = () =>
   shareApi.get('/guest/project/excel', { responseType: 'blob' });
