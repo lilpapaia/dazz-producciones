@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProject, getProjectTickets, closeProjectWithEmails, getUsernames } from '../services/api';
+import { getProject, getProjectTickets, closeProjectWithEmails, getUsernames, downloadProjectExcel } from '../services/api';
 import { showSuccess, showError, showWarning } from '../utils/toast';
 import { ArrowLeft, Download, Send, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import EmailChipsInput from '../components/EmailChipsInput';
@@ -19,6 +19,7 @@ const ProjectCloseReview = () => {
   const [sending, setSending] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState([]);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -101,6 +102,29 @@ const ProjectCloseReview = () => {
       showError('Error al cerrar proyecto: ' + (error.response?.data?.detail || error.message));
     } finally {
       setSending(false);
+    }
+  };
+
+  // FEAT-09: descargar el Excel SIN cerrar el proyecto ni enviar email
+  const handleDownloadExcel = async () => {
+    setDownloadingExcel(true);
+    try {
+      const response = await downloadProjectExcel(id);
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${project.creative_code}_GASTOS.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      showError('Error al descargar Excel: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setDownloadingExcel(false);
     }
   };
 
@@ -310,7 +334,17 @@ const ProjectCloseReview = () => {
           >
             Cancelar
           </button>
-          
+
+          {/* FEAT-09: descargar Excel sin cerrar */}
+          <button
+            onClick={handleDownloadExcel}
+            disabled={downloadingExcel}
+            className="flex-1 px-6 py-3 bg-zinc-700 hover:bg-zinc-600 text-zinc-100 rounded-sm transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Download size={18} />
+            {downloadingExcel ? 'DESCARGANDO...' : 'DESCARGAR EXCEL'}
+          </button>
+
           <button
             onClick={handleConfirmClose}
             disabled={sending || tickets.length === 0 || emailRecipients.length === 0}

@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProject, getProjectTickets, deleteTicket, deleteProject, reopenProject, updateProject, requestSupplierTicketDeletion } from '../services/api';
-import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock, Edit3, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Upload, Lock, Trash2, Search, X, Mic, Clock, Unlock, Edit3, ExternalLink, Share2 } from 'lucide-react';
 import UserAutocomplete from '../components/UserAutocomplete';
 import { useAuth } from '../context/AuthContext';
 import { showSuccess, showError } from '../utils/toast';
 import { ROLES } from '../constants/roles';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ShareProjectModal from '../components/ShareProjectModal';
+import ShareLinksPanel from '../components/ShareLinksPanel';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 import { getCurrencySymbol } from '../utils/currency';
@@ -37,6 +39,10 @@ const ProjectView = () => {
   const [supplierDeleteModal, setSupplierDeleteModal] = useState(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [requestingDelete, setRequestingDelete] = useState(false);
+
+  // FEAT-09: Compartir proyecto con externos
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareRefreshSignal, setShareRefreshSignal] = useState(0);
 
   // Búsqueda tickets
   const [ticketSearch, setTicketSearch] = useState('');
@@ -231,6 +237,12 @@ const ProjectView = () => {
   const isBossOfProject = isBoss && userCompanyIds.includes(project.owner_company_id);
   const isWorkerOwner = user?.role === ROLES.WORKER && userCompanyIds.includes(project.owner_company_id) && (project.owner_id === user?.id || project.responsible?.toLowerCase() === user?.username?.toLowerCase());
 
+  // FEAT-09: compartir solo en proyectos de producción (no MGMT) y solo quien puede modificar.
+  const projectCompanyName = project.owner_company?.name || project.company || '';
+  const isNotMgmt = !projectCompanyName.toUpperCase().includes('MGMT');
+  const canModifyProject = isAdmin || isBossOfProject || isWorkerOwner;
+  const canShare = canModifyProject && isNotMgmt;
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header OPACO Y STICKY */}
@@ -310,6 +322,17 @@ const ProjectView = () => {
               <Upload size={16} />
               SUBIR
             </button>
+
+            {/* FEAT-09: BOTÓN COMPARTIR (solo producción no-MGMT, EN_CURSO, y quien puede modificar) */}
+            {canShare && project.status === 'en_curso' && (
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 font-semibold rounded-sm transition-colors text-sm whitespace-nowrap"
+              >
+                <Share2 size={16} />
+                COMPARTIR
+              </button>
+            )}
 
             {/* BOTÓN CERRAR (solo si EN CURSO) */}
             {project.status === 'en_curso' && (
@@ -671,6 +694,13 @@ const ProjectView = () => {
           )}
         </div>
 
+        {/* FEAT-09: Panel de enlaces externos (solo producción no-MGMT, oculto si no hay) */}
+        <ShareLinksPanel
+          projectId={id}
+          companyName={projectCompanyName}
+          refreshSignal={shareRefreshSignal}
+        />
+
         {/* Project Info Card */}
         <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-sm p-6">
           <div className="flex items-center justify-between mb-4">
@@ -769,6 +799,14 @@ const ProjectView = () => {
         message={`El proyecto "${project?.creative_code}" se reabrirá y podrás volver a subir tickets.`}
         confirmText="Reabrir"
         type="warning"
+      />
+
+      {/* FEAT-09: Modal compartir proyecto */}
+      <ShareProjectModal
+        projectId={id}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onGenerated={() => setShareRefreshSignal(s => s + 1)}
       />
 
       {/* Modal editar proyecto */}

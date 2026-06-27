@@ -217,3 +217,19 @@ export const getCompleteStatistics = (year, quarter = null, geoFilter = null, co
 // ============================================
 
 export const getCompanies = () => api.get('/companies');
+
+// ============================================
+// SHARE TOKENS (FEAT-09 — acceso externo)
+// ============================================
+
+export const createShareToken = (projectId, data) =>
+  api.post(`/projects/${projectId}/share-tokens`, data);
+
+export const getShareTokens = (projectId) =>
+  api.get(`/projects/${projectId}/share-tokens`);
+
+export const revokeShareToken = (projectId, tokenId) =>
+  api.delete(`/projects/${projectId}/share-tokens/${tokenId}`);
+
+export const downloadProjectExcel = (projectId) =>
+  api.get(`/projects/${projectId}/excel`, { responseType: 'blob' });
