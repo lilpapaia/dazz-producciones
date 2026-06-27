@@ -1,6 +1,546 @@
-import ExternalPlaceholder from './ExternalPlaceholder';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { uploadGuestTicket, getGuestProject } from '../../services/shareApi';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Camera, FolderOpen, X, RefreshCw, ExternalLink } from 'lucide-react';
+import { showWarning } from '../../utils/toast';
+import { getCurrencySymbol } from '../../utils/currency';
 
-// FEAT-09 Fase 7: subida de tickets para el externo.
-const ExternalUploadTickets = () => <ExternalPlaceholder label="Subir tickets (vista externa)" />;
+const MAX_FILES_PER_BATCH = 15;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const UPLOAD_TIMEOUT_MS = 120000; // 120s fixed
+
+// FEAT-09: copia de UploadTickets para el flujo externo (shareApi, rutas /share/:token).
+const ExternalUploadTickets = () => {
+  const { token } = useParams();
+  const navigate = useNavigate();
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const [results, setResults] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [currentFileName, setCurrentFileName] = useState('');
+  const [failedFiles, setFailedFiles] = useState([]);
+  const [oversizedFile, setOversizedFile] = useState(null);
+  const [project, setProject] = useState(null);
+
+  useEffect(() => {
+    getGuestProject().then(r => setProject(r.data)).catch(() => {});
+  }, []);
+
+  // Bloquear navegación mientras sube
+  useEffect(() => {
+    if (!uploading) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [uploading]);
+
+  const compressImageIfNeeded = async (file) => {
+    if (!file.type.startsWith('image/') || file.size < 3 * 1024 * 1024) return file;
+    try {
+      const { default: imageCompression } = await import('browser-image-compression');
+      const compressedFile = await imageCompression(file, {
+        maxSizeMB: 3,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        fileType: file.type,
+      });
+      return compressedFile;
+    } catch (error) {
+      console.error('Error al comprimir:', error);
+      return file;
+    }
+  };
+
+  const processFiles = async (selectedFiles, append = false) => {
+    const oversized = selectedFiles.find(f => f.size > MAX_FILE_SIZE);
+    if (oversized) {
+      setOversizedFile({ name: oversized.name, size: (oversized.size / (1024 * 1024)).toFixed(1), isPdf: oversized.type === 'application/pdf' });
+      selectedFiles = selectedFiles.filter(f => f.size <= MAX_FILE_SIZE);
+      if (selectedFiles.length === 0) return;
+    }
+
+    const currentCount = append ? files.length : 0;
+    const slotsAvailable = MAX_FILES_PER_BATCH - currentCount;
+    let filesToProcess = selectedFiles;
+
+    if (filesToProcess.length > slotsAvailable) {
+      filesToProcess = filesToProcess.slice(0, Math.max(0, slotsAvailable));
+      showWarning(`Máximo ${MAX_FILES_PER_BATCH} archivos por lote. Se han seleccionado los primeros ${MAX_FILES_PER_BATCH}.`);
+    }
+
+    if (filesToProcess.length === 0) return;
+
+    const hasLargeImages = filesToProcess.some(f =>
+      f.type.startsWith('image/') && f.size > 3 * 1024 * 1024
+    );
+
+    let processedFiles;
+    if (hasLargeImages) {
+      setCompressing(true);
+      processedFiles = await Promise.all(
+        filesToProcess.map(file => compressImageIfNeeded(file))
+      );
+      setCompressing(false);
+    } else {
+      processedFiles = filesToProcess;
+    }
+
+    if (append) {
+      setFiles(prev => {
+        const existingNames = new Set(prev.map(f => f.name));
+        const newOnes = processedFiles.filter(f => !existingNames.has(f.name));
+        return [...prev, ...newOnes];
+      });
+    } else {
+      setFiles(processedFiles);
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    await processFiles(Array.from(e.target.files), true);
+    e.target.value = '';
+  };
+
+  const ALLOWED_DROP_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    const dropped = Array.from(e.dataTransfer.files);
+    const valid = dropped.filter(f => ALLOWED_DROP_TYPES.includes(f.type));
+    const rejected = dropped.length - valid.length;
+    if (rejected > 0) showWarning(`${rejected} archivo(s) rechazado(s) — solo JPG, PNG, WebP, HEIC y PDF`);
+    if (valid.length > 0) await processFiles(valid, true);
+  };
+
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const retryFailed = () => {
+    setFiles(failedFiles);
+    setResults([]);
+    setFailedFiles([]);
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      showWarning('Selecciona al menos un archivo');
+      return;
+    }
+
+    setUploading(true);
+    setFailedFiles([]);
+    setUploadProgress({ current: 0, total: files.length });
+    const newResults = [];
+    const newFailedFiles = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress({ current: i + 1, total: files.length });
+      setCurrentFileName(file.name);
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await uploadGuestTicket(formData, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        const ticketData = response.data.ticket || response.data;
+        const warning = response.data.duplicate_invoice_warning || null;
+        newResults.push({ file: file.name, success: true, data: ticketData, duplicate_invoice_warning: warning });
+        setFiles(prev => prev.filter(f => f.name !== file.name));
+      } catch (error) {
+        const isTimeout = error.code === 'ERR_CANCELED' || error.name === 'AbortError';
+        const detail = error.response?.data?.detail;
+        if (error.response?.status === 409 && detail?.code === 'duplicate_hash') {
+          newResults.push({
+            file: file.name,
+            success: false,
+            isDuplicate: true,
+            duplicateTicketId: detail.ticket_id,
+            error: detail.message
+          });
+        } else {
+          newResults.push({
+            file: file.name,
+            success: false,
+            error: isTimeout
+              ? 'Timeout — el servidor no respondió en 120 segundos'
+              : typeof detail === 'string' ? detail : detail?.message || 'Error al procesar'
+          });
+          newFailedFiles.push(file);
+        }
+      }
+
+      setResults([...newResults]);
+    }
+
+    setFailedFiles(newFailedFiles);
+    setUploading(false);
+    setCurrentFileName('');
+    setUploadProgress({ current: 0, total: 0 });
+  };
+
+  const successCount = results.filter(r => r.success).length;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+          <button
+            onClick={() => { if (!uploading) navigate(`/share/${token}/project`); }}
+            disabled={uploading}
+            className={`flex items-center gap-2 transition-colors mb-3 ${uploading ? 'text-zinc-600 cursor-not-allowed opacity-50' : 'text-zinc-400 hover:text-zinc-100'}`}
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm">Volver</span>
+          </button>
+          <h1 className="text-3xl font-bebas tracking-wider">SUBIR TICKETS</h1>
+        </div>
+      </div>
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-8">
+
+          {compressing && (
+            <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-sm">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+                <p className="text-sm text-blue-400">
+                  🔄 Comprimiendo imágenes... Esto puede tardar unos segundos
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div
+            onDragOver={(e) => { if (!uploading) e.preventDefault(); }}
+            onDrop={(e) => { if (uploading) { e.preventDefault(); return; } handleDrop(e); }}
+            className={`border-2 border-dashed rounded-sm p-12 text-center transition-colors ${uploading ? 'border-zinc-800 opacity-50 pointer-events-none' : 'border-zinc-700 hover:border-amber-500'}`}
+          >
+            <Upload size={48} className="mx-auto text-zinc-600 mb-4" />
+            <p className="text-lg font-medium text-zinc-300 mb-2">
+              Arrastra archivos aquí o elige una opción
+            </p>
+            <p className="text-sm text-zinc-500 mb-6 font-mono">
+              Acepta: JPG, PNG, PDF • <span className="text-amber-400">Máximo 10MB</span> por archivo • <span className="text-amber-400">Máximo {MAX_FILES_PER_BATCH} archivos</span> por lote
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="camera-input"
+              />
+              <label
+                htmlFor="camera-input"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/30"
+              >
+                <Camera size={20} />
+                TOMAR FOTO
+              </label>
+
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 px-6 py-3 rounded-sm font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30"
+              >
+                <FolderOpen size={20} />
+                ELEGIR ARCHIVOS
+              </label>
+            </div>
+            <p className="text-xs text-zinc-600 mt-4">💡 "Tomar Foto" abre la cámara en móvil</p>
+            {project?.last_uploaded_file && (
+              <p className="text-xs text-zinc-500 mt-2 truncate">
+                Último archivo subido: <span className="text-zinc-400">{project.last_uploaded_file}</span>
+              </p>
+            )}
+          </div>
+
+          {files.length > 0 && (
+            <div className="mt-6">
+              <h3 className="font-semibold font-mono mb-3 tracking-wider">
+                ARCHIVOS SELECCIONADOS ({files.length})
+              </h3>
+              <div className="space-y-2">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-sm"
+                  >
+                    <FileText size={20} className="text-amber-500 flex-shrink-0" />
+                    <span className="flex-1 text-sm truncate">{file.name}</span>
+                    <span className="text-xs text-zinc-500 font-mono whitespace-nowrap">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      disabled={uploading}
+                      className="p-1 rounded-sm text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                      title="Quitar archivo"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleUpload}
+                disabled={uploading || compressing}
+                className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-zinc-950 py-3 rounded-sm font-bold transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Upload size={18} />
+                {uploading
+                  ? `PROCESANDO... (${uploadProgress.current}/${uploadProgress.total})`
+                  : 'PROCESAR CON IA'
+                }
+              </button>
+
+              {uploading && (
+                <div className="mt-4 p-4 bg-zinc-950 border border-amber-500/30 rounded-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-amber-500 border-t-transparent"></div>
+                      </div>
+                      <span className="text-sm font-semibold text-zinc-100">
+                        Procesando con IA...
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-amber-500">
+                        {uploadProgress.current}/{uploadProgress.total}
+                      </span>
+                      <span className="text-xs text-zinc-500 ml-2">
+                        {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {currentFileName && (
+                    <p className="text-sm text-zinc-400 truncate">
+                      Procesando: {currentFileName}
+                    </p>
+                  )}
+
+                  <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 transition-all duration-500 ease-out rounded-full"
+                      style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                    </div>
+
+                    <div className="absolute inset-0 flex items-center justify-between px-1">
+                      {[25, 50, 75].map(percent => (
+                        <div
+                          key={percent}
+                          className={`w-1 h-1 rounded-full ${
+                            (uploadProgress.current / uploadProgress.total) * 100 >= percent
+                              ? 'bg-white'
+                              : 'bg-zinc-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-amber-500">🤖</span>
+                    <span className="text-zinc-400">
+                      Analizando facturas y extrayendo datos automáticamente
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {results.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold font-mono tracking-wider">RESULTADOS</h3>
+                <span className="text-sm text-zinc-400 font-mono">
+                  {successCount} de {results.length} exitosos
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {results.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-sm border-2 ${
+                      result.success
+                        ? 'border-green-500/30 bg-green-500/10'
+                        : result.isDuplicate
+                          ? 'border-amber-500/30 bg-amber-500/10'
+                          : 'border-red-500/30 bg-red-500/10'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {result.success
+                        ? <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
+                        : <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${result.isDuplicate ? 'text-amber-400' : 'text-red-400'}`} />
+                      }
+                      <div className="flex-1">
+                        <p className="font-medium text-sm mb-1">{result.file}</p>
+                        {result.success ? (
+                          <div className="text-xs space-y-1 font-mono text-zinc-400">
+                            <p className="text-green-400 font-semibold font-sans mb-1">Procesado · Pendiente de revisión</p>
+                            <p>
+                              <span className="font-medium">Proveedor:</span>{' '}
+                              {result.data?.provider || 'N/A'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Total:</span>{' '}
+                              {result.data?.final_total
+                                ? result.data.is_foreign && result.data.currency !== 'EUR' && result.data.foreign_total
+                                  ? `${result.data.foreign_total.toFixed(2)}${getCurrencySymbol(result.data.currency)} (≈${result.data.final_total.toFixed(2)}€)`
+                                  : `${result.data.final_total.toFixed(2)}€`
+                                : 'N/A'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Tipo:</span>{' '}
+                              {result.data?.type === 'factura' ? 'Factura' : 'Ticket'}
+                            </p>
+                            {result.duplicate_invoice_warning && (
+                              <div className="mt-2 pt-2 border-t border-amber-500/30">
+                                <p className="text-amber-400 font-bold text-xs">
+                                  Posible duplicado — ya existe ticket #{result.duplicate_invoice_warning.ticket_id} con factura {result.duplicate_invoice_warning.invoice_number}
+                                </p>
+                              </div>
+                            )}
+                            {result.data?.is_foreign && (
+                              <div className="mt-2 pt-2 border-t border-blue-500/30">
+                                <p className="text-blue-400 font-bold mb-1">
+                                  Factura internacional detectada
+                                </p>
+                                <p>
+                                  <span className="font-medium">Divisa:</span>{' '}
+                                  <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs">
+                                    {result.data.currency || 'N/A'}
+                                  </span>
+                                </p>
+                                {result.data.country_code && (
+                                  <p>
+                                    <span className="font-medium">País:</span>{' '}
+                                    {result.data.country_code}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {result.data?.ia_warnings && (
+                              <div className="mt-2 pt-2 border-t border-amber-500/30">
+                                <p className="text-amber-400 font-sans font-semibold">⚠ Requiere revisión — la IA detectó advertencias</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : result.isDuplicate ? (
+                          <p className="text-xs text-amber-400">
+                            Archivo duplicado — ya existe como ticket #{result.duplicateTicketId}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-red-400">
+                            {typeof result.error === 'string'
+                              ? result.error
+                              : JSON.stringify(result.error)
+                            }
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {failedFiles.length > 0 && (
+                <button
+                  onClick={retryFailed}
+                  className="w-full mt-4 flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 hover:border-amber-500 text-amber-400 py-3 rounded-sm font-bold transition-all"
+                >
+                  <RefreshCw size={18} />
+                  REINTENTAR {failedFiles.length} FALLIDO{failedFiles.length !== 1 ? 'S' : ''}
+                </button>
+              )}
+
+              {successCount > 0 && (
+                <button
+                  onClick={() => navigate(`/share/${token}/project`)}
+                  className="w-full mt-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 py-3 rounded-sm font-semibold transition-colors"
+                >
+                  VER PROYECTO
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {oversizedFile && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setOversizedFile(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-zinc-100 mb-2">Archivo demasiado grande</h3>
+            <p className="text-sm text-zinc-300 mb-1">
+              <span className="font-semibold">{oversizedFile.name}</span> ({oversizedFile.size}MB) supera el límite de 10MB.
+            </p>
+            <p className="text-sm text-zinc-400 mb-4">Comprímelo gratis antes de subirlo:</p>
+            <div className="space-y-2 mb-4">
+              <a
+                href="https://www.ilovepdf.com/compress_pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 rounded-sm transition-colors text-sm font-medium"
+              >
+                <ExternalLink size={16} />
+                Comprimir PDF
+              </a>
+              <a
+                href="https://www.iloveimg.com/compress-image"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 rounded-sm transition-colors text-sm font-medium"
+              >
+                <ExternalLink size={16} />
+                Comprimir imagen
+              </a>
+            </div>
+            <button
+              onClick={() => setOversizedFile(null)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold py-3 rounded-sm transition-colors"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
 
 export default ExternalUploadTickets;
