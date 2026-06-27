@@ -39,6 +39,7 @@ PIN_LOCKOUT_MINUTES = 15
 @limiter.limit("5/minute")
 async def validate_pin(
     request: Request,
+    response: Response,
     body: schemas.GuestValidatePinRequest,
     db: Session = Depends(get_db),
 ):
