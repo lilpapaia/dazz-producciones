@@ -15,6 +15,7 @@ import secrets
 from pathlib import Path
 from datetime import datetime
 
+from anthropic import APIStatusError, APITimeoutError, RateLimitError, APIError
 from fastapi import HTTPException, status, UploadFile
 from sqlalchemy import update, case
 from sqlalchemy.orm import Session
@@ -31,6 +32,20 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+
+def _safe_delete_cloudinary(cloudinary_result: dict | None) -> None:
+    """Borra los archivos ya subidos a Cloudinary si algo falla después. No lanza."""
+    if not cloudinary_result:
+        return
+    try:
+        from app.services.cloudinary_service import delete_ticket_files
+        delete_ticket_files(
+            json.dumps(cloudinary_result.get("pages", [])),
+            cloudinary_result.get("pdf_url"),
+        )
+    except Exception as e:
+        logger.error(f"Cloudinary cleanup failed: {e}")
 
 
 async def process_ticket_upload(
@@ -82,15 +97,40 @@ async def process_ticket_upload(
 
     cloudinary_result = None
     try:
+        # FIX-1: cada paso tiene su propio manejo de error con mensaje específico.
         # PERF-M1: Offload Cloudinary upload (2-5s) al thread pool
-        cloudinary_result = await asyncio.to_thread(upload_ticket_file, str(temp_path), file.filename, project_id, project.creative_code)
+        try:
+            cloudinary_result = await asyncio.to_thread(upload_ticket_file, str(temp_path), file.filename, project_id, project.creative_code)
+        except Exception as e:
+            logger.error(f"Error subiendo a Cloudinary: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al subir archivo al servidor. Reintenta en unos minutos")
 
         # 2. Extraer datos con Claude AI (usando primera página/imagen)
         ai_file_path = str(temp_path)
         ai_mime = file.content_type
 
         # PERF-M1: Offload AI extraction (3-10s) al thread pool
-        extracted_data = await asyncio.to_thread(extract_ticket_data, ai_file_path, ai_mime, file.filename)
+        # FIX-1: distinguir tipos de fallo de la IA para dar un mensaje útil al usuario.
+        try:
+            extracted_data = await asyncio.to_thread(extract_ticket_data, ai_file_path, ai_mime, file.filename)
+        except RateLimitError as e:
+            _safe_delete_cloudinary(cloudinary_result)
+            logger.error(f"Error IA (rate limit): {str(e)}")
+            raise HTTPException(status_code=500, detail="Demasiadas peticiones a la IA. Espera un momento y reintenta")
+        except APITimeoutError as e:
+            _safe_delete_cloudinary(cloudinary_result)
+            logger.error(f"Error IA (timeout): {str(e)}")
+            raise HTTPException(status_code=500, detail="La IA tardó demasiado. Reintenta en unos minutos")
+        except APIStatusError as e:
+            _safe_delete_cloudinary(cloudinary_result)
+            logger.error(f"Error IA (status {getattr(e, 'status_code', '?')}): {str(e)}")
+            if "credit balance too low" in str(e).lower():
+                raise HTTPException(status_code=500, detail="Sin créditos en el servicio de IA. Contacta con el administrador")
+            raise HTTPException(status_code=500, detail="Error al procesar con IA. Reintenta o contacta con el administrador")
+        except APIError as e:
+            _safe_delete_cloudinary(cloudinary_result)
+            logger.error(f"Error IA (api): {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al procesar con IA. Reintenta o contacta con el administrador")
 
         # 3. Procesar moneda extranjera
         is_foreign = extracted_data.get("is_foreign", False) if "error" not in extracted_data else False
@@ -237,38 +277,30 @@ async def process_ticket_upload(
         db.execute(update(Project).where(Project.id == project_id).values(**project_update))
         try:
             db.commit()
-        except Exception:
+        except Exception as e:
             db.rollback()
             # LOGIC-M4: Si falla el commit a BD, limpiar archivos ya subidos a Cloudinary
-            try:
-                from app.services.cloudinary_service import delete_ticket_files
-                delete_ticket_files(
-                    json.dumps(cloudinary_result.get("pages", [])),
-                    cloudinary_result.get("pdf_url")
-                )
-            except Exception as e:
-                logger.error(f"Cloudinary cleanup failed after DB rollback: {e}")
-            raise
+            _safe_delete_cloudinary(cloudinary_result)
+            # FIX-1: mensaje específico de fallo al guardar
+            logger.error(f"Error al guardar ticket en BD: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al guardar el ticket. Reintenta")
         db.refresh(ticket)
+        # FIX-2: la IA no pudo extraer datos → el ticket se crea igual, pero avisamos
+        # para que el frontend lo marque en ámbar en vez de verde de éxito.
+        ia_warning = "error" in extracted_data or "Error" in str(extracted_data.get("provider") or "")
         return {
             "ticket": ticket,
-            "duplicate_invoice_warning": duplicate_invoice_warning
+            "duplicate_invoice_warning": duplicate_invoice_warning,
+            "ia_warning": ia_warning,
+            "ia_message": "La IA no pudo extraer datos. Revisa el ticket manualmente" if ia_warning else None,
         }
 
     except HTTPException:
-        raise  # Re-raise HTTPExceptions from validators as-is
+        raise  # Errores específicos (Cloudinary/IA/BD) o de validación — ya con cleanup propio
     except Exception as e:
         # BUG-24: Cleanup Cloudinary if upload succeeded but later processing failed
-        if cloudinary_result:
-            try:
-                from app.services.cloudinary_service import delete_ticket_files
-                delete_ticket_files(
-                    json.dumps(cloudinary_result.get("pages", [])),
-                    cloudinary_result.get("pdf_url")
-                )
-            except Exception as cleanup_err:
-                logger.error(f"Cloudinary cleanup failed after error: {cleanup_err}")
-        # VULN-006: Logear error real, devolver genérico
+        _safe_delete_cloudinary(cloudinary_result)
+        # VULN-006: Logear error real, devolver genérico (fallback #7)
         logger.error(f"Error procesando ticket: {str(e)}")
         raise HTTPException(status_code=500, detail="Error interno al procesar ticket")
     finally:

@@ -6,7 +6,10 @@ import { showWarning } from '../utils/toast';
 import { getCurrencySymbol } from '../utils/currency';
 
 const MAX_FILES_PER_BATCH = 15;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// FIX-3: límites alineados con el backend (imágenes 10MB / PDF 30MB)
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_PDF_SIZE = 30 * 1024 * 1024; // 30MB
+const maxSizeFor = (f) => (f.type === 'application/pdf' ? MAX_PDF_SIZE : MAX_IMAGE_SIZE);
 const UPLOAD_TIMEOUT_MS = 120000; // 120s fixed
 
 const UploadTickets = () => {
@@ -55,11 +58,12 @@ const UploadTickets = () => {
 
   // append=true → acumula sobre los existentes (no reemplaza)
   const processFiles = async (selectedFiles, append = false) => {
-    // Validar tamaño máximo 10MB — mostrar modal con links a compresores
-    const oversized = selectedFiles.find(f => f.size > MAX_FILE_SIZE);
+    // Validar tamaño máximo según tipo (10MB img / 30MB PDF) — modal con compresores
+    const oversized = selectedFiles.find(f => f.size > maxSizeFor(f));
     if (oversized) {
-      setOversizedFile({ name: oversized.name, size: (oversized.size / (1024 * 1024)).toFixed(1), isPdf: oversized.type === 'application/pdf' });
-      selectedFiles = selectedFiles.filter(f => f.size <= MAX_FILE_SIZE);
+      const isPdf = oversized.type === 'application/pdf';
+      setOversizedFile({ name: oversized.name, size: (oversized.size / (1024 * 1024)).toFixed(1), isPdf, limitMb: isPdf ? 30 : 10 });
+      selectedFiles = selectedFiles.filter(f => f.size <= maxSizeFor(f));
       if (selectedFiles.length === 0) return;
     }
 
@@ -156,7 +160,10 @@ const UploadTickets = () => {
 
         const ticketData = response.data.ticket || response.data;
         const warning = response.data.duplicate_invoice_warning || null;
-        newResults.push({ file: file.name, success: true, data: ticketData, duplicate_invoice_warning: warning });
+        // FIX-2: la IA no pudo extraer datos → marcar en ámbar, no verde
+        const iaWarning = response.data.ia_warning || false;
+        const iaMessage = response.data.ia_message || null;
+        newResults.push({ file: file.name, success: true, iaWarning, iaMessage, data: ticketData, duplicate_invoice_warning: warning });
         // BUG-35: Remove successfully processed file from the list
         setFiles(prev => prev.filter(f => f.name !== file.name));
       } catch (error) {
@@ -235,7 +242,7 @@ const UploadTickets = () => {
               Arrastra archivos aquí o elige una opción
             </p>
             <p className="text-sm text-zinc-500 mb-6 font-mono">
-              Acepta: JPG, PNG, PDF • <span className="text-amber-400">Máximo 10MB</span> por archivo • <span className="text-amber-400">Máximo {MAX_FILES_PER_BATCH} archivos</span> por lote
+              Acepta: JPG, PNG, PDF • <span className="text-amber-400">Máximo 10MB imágenes / 30MB PDF</span> • <span className="text-amber-400">Máximo {MAX_FILES_PER_BATCH} archivos</span> por lote
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
@@ -405,22 +412,28 @@ const UploadTickets = () => {
                     key={index}
                     className={`p-4 rounded-sm border-2 ${
                       result.success
-                        ? 'border-green-500/30 bg-green-500/10'
+                        ? result.iaWarning
+                          ? 'border-amber-500/30 bg-amber-500/10'
+                          : 'border-green-500/30 bg-green-500/10'
                         : result.isDuplicate
                           ? 'border-amber-500/30 bg-amber-500/10'
                           : 'border-red-500/30 bg-red-500/10'
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      {result.success
+                      {result.success && !result.iaWarning
                         ? <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
-                        : <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${result.isDuplicate ? 'text-amber-400' : 'text-red-400'}`} />
+                        : <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${(result.iaWarning || result.isDuplicate) ? 'text-amber-400' : 'text-red-400'}`} />
                       }
                       <div className="flex-1">
                         <p className="font-medium text-sm mb-1">{result.file}</p>
                         {result.success ? (
                           <div className="text-xs space-y-1 font-mono text-zinc-400">
-                            <p className="text-green-400 font-semibold font-sans mb-1">Procesado · Pendiente de revisión</p>
+                            {result.iaWarning ? (
+                              <p className="text-amber-400 font-semibold font-sans mb-1">⚠ Subido pero la IA no pudo extraer datos — revisa manualmente</p>
+                            ) : (
+                              <p className="text-green-400 font-semibold font-sans mb-1">Procesado · Pendiente de revisión</p>
+                            )}
                             <p>
                               <span className="font-medium">Proveedor:</span>{' '}
                               {result.data?.provider || 'N/A'}
@@ -517,7 +530,7 @@ const UploadTickets = () => {
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-zinc-100 mb-2">Archivo demasiado grande</h3>
             <p className="text-sm text-zinc-300 mb-1">
-              <span className="font-semibold">{oversizedFile.name}</span> ({oversizedFile.size}MB) supera el límite de 10MB.
+              <span className="font-semibold">{oversizedFile.name}</span> ({oversizedFile.size}MB) supera el límite de {oversizedFile.limitMb}MB.
             </p>
             <p className="text-sm text-zinc-400 mb-4">Comprímelo gratis antes de subirlo:</p>
             <div className="space-y-2 mb-4">

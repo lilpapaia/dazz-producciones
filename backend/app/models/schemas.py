@@ -321,6 +321,9 @@ class DuplicateInvoiceWarning(BaseModel):
 class TicketUploadResponse(BaseModel):
     ticket: TicketResponse
     duplicate_invoice_warning: Optional[DuplicateInvoiceWarning] = None
+    # FIX-2: la IA no pudo extraer datos → el ticket se crea igual pero se avisa
+    ia_warning: bool = False
+    ia_message: Optional[str] = None
 
 # ============================================
 # AI EXTRACTION RESPONSE
